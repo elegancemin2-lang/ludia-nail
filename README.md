@@ -2,6 +2,11 @@
 
 Mobile-first nail salon operating system.
 
+## Supabase namespace
+- Uses the existing INBETWEEN Supabase project (`kcwahwlhzlgpzuxjqbqu`).
+- LUDIA data is isolated in `public.ludia_*` tables; existing INBETWEEN/SITEFIT tables are untouched.
+- Browser access uses the project publishable key + Auth JWT + RLS. Server-only Naver staging uses the secret key.
+
 ## Product direction
 - Main product: a simple, polished replacement for salon booking/CRM tools such as Ahasoft.
 - Product shell: Today · Booking · Customers · More.
@@ -50,4 +55,4 @@ The live editor now supports finger-level shape, length, color, texture and part
 
 
 ## Salon Cloud v2.3
-Set `SUPABASE_URL` and either `SUPABASE_PUBLISHABLE_KEY` or `SUPABASE_ANON_KEY` in Vercel. The browser receives only the public client key from `/api/salon-config`; `SUPABASE_SERVICE_ROLE_KEY` is never exposed. Apply `supabase/salon_os.sql` and `supabase/salon_onboarding.sql`, then sign in from More → Cloud account. New authenticated owners without a salon can create one through the RLS-safe onboarding RPC. Passwords are not stored by LUDIA; Supabase Auth manages the session.
+The default browser config now targets the shared INBETWEEN Supabase project. Environment variables can still override the URL/publishable key. The browser receives only the public client key from `/api/salon-config`; `SUPABASE_SERVICE_ROLE_KEY` is never exposed. Apply `supabase/salon_os.sql` and `supabase/salon_onboarding.sql`, then sign in from More → Cloud account. New authenticated owners without a salon can create one through the RLS-safe onboarding RPC. Passwords are not stored by LUDIA; Supabase Auth manages the session.

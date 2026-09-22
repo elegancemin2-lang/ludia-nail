@@ -255,3 +255,16 @@ body{font-family:-apple-system,BlinkMacSystemFont,"SF Pro Text","SF Pro Display"
 @keyframes generationShimmer{to{background-position-x:-220%}}
 @keyframes generationSpin{to{transform:rotate(360deg)}}
 @media(max-width:700px){.generation-skeleton{border-radius:14px}.generation-skeleton-copy{padding:12px}}
+
+/* ART v2.2 · finger-level precision editor */
+.precision-editor{margin:14px 0;padding:16px;background:#fff;border:1px solid rgba(0,0,0,.055);border-radius:22px}
+.precision-head,.precision-label,.parts-stepper{display:flex;align-items:center;justify-content:space-between;gap:12px}
+.precision-head{padding-bottom:13px;border-bottom:1px solid var(--line)}.precision-head b,.precision-label b,.parts-stepper b{font-size:11px}.precision-head small,.precision-label small,.parts-stepper small{display:block;color:var(--muted);font-size:8px;margin-top:3px}.precision-head>span{font-size:8px;font-weight:800;color:#007aff;background:#eef6ff;border-radius:999px;padding:7px 9px}
+.precision-grid{display:grid;grid-template-columns:1fr 1fr;gap:14px 12px;padding:15px 0}.precision-grid section{min-width:0}.precision-label{margin-bottom:8px}
+.precision-segment{display:flex;gap:5px;overflow-x:auto;padding-bottom:2px;scrollbar-width:none}.precision-segment::-webkit-scrollbar{display:none}.precision-segment button{border:0;background:#f2f2f7;color:#56565b;border-radius:10px;padding:8px 10px;font-size:8px;font-weight:800;white-space:nowrap;cursor:pointer}.precision-segment button.active{background:#1d1d1f;color:#fff}.precision-segment.compact button{padding-inline:9px}
+.precision-range{width:100%;accent-color:#007aff}.nail-color-row{display:flex;gap:8px;flex-wrap:wrap}.nail-color-swatch{width:28px;height:28px;border-radius:50%;border:2px solid #fff;background:var(--swatch);box-shadow:0 0 0 1px rgba(0,0,0,.13);cursor:pointer;transition:.14s ease}.nail-color-swatch.active{box-shadow:0 0 0 2px #007aff,0 0 0 4px #fff;transform:scale(.92)}
+.parts-stepper{border-top:1px solid var(--line);padding-top:13px}.stepper-controls{display:flex;align-items:center;gap:7px;background:#f2f2f7;border-radius:12px;padding:3px}.stepper-controls button{width:31px;height:31px;border:0;border-radius:9px;background:#fff;font-size:17px;cursor:pointer}.stepper-controls strong{min-width:28px;text-align:center;font-size:11px}
+.nail-model.shape-round{border-radius:50% 50% 44% 44%/37% 37% 30% 30%}.nail-model.shape-oval{border-radius:50% 50% 38% 38%/29% 29% 18% 18%}.nail-model.shape-almond{border-radius:62% 62% 36% 36%/21% 21% 18% 18%;transform-origin:50% 100%}.nail-model.shape-square{border-radius:24% 24% 12% 12%/13% 13% 9% 9%}.nail-model.shape-ballerina{border-radius:34% 34% 15% 15%/13% 13% 8% 8%}
+.nail-model.length-0{aspect-ratio:.76}.nail-model.length-1{aspect-ratio:.65}.nail-model.length-2{aspect-ratio:.56}.nail-model.length-3{aspect-ratio:.47}
+.viewer-nail .nail-model.length-0{height:70%}.viewer-nail .nail-model.length-1{height:82%}.viewer-nail .nail-model.length-2{height:92%}.viewer-nail .nail-model.length-3{height:100%}
+@media(max-width:620px){.precision-grid{grid-template-columns:1fr}.precision-editor{padding:14px}.precision-segment button{padding:8px 9px}.nail-color-swatch{width:30px;height:30px}}

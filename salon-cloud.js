@@ -57,7 +57,7 @@ window.LudiaSalonCloud=(()=>{
   async function loadData(){
     if(!client||!user)return;
     try{
-      const {data:mine,error:mineError}=await client.from('salon_members').select('salon_id,user_id,display_name,role,is_active').eq('user_id',user.id).eq('is_active',true).limit(1);
+      const {data:mine,error:mineError}=await client.from('ludia_salon_members').select('salon_id,user_id,display_name,role,is_active').eq('user_id',user.id).eq('is_active',true).limit(1);
       if(mineError)throw mineError;
       member=mine?.[0]||null;
       if(!member){
@@ -66,12 +66,12 @@ window.LudiaSalonCloud=(()=>{
       salonId=member.salon_id;
       const today=new Date();const from=new Date(today);from.setDate(from.getDate()-14);const to=new Date(today);to.setDate(to.getDate()+45);
       const [salonQ,staffQ,serviceQ,customerQ,membershipQ,appointmentQ]=await Promise.all([
-        client.from('salons').select('id,name,timezone').eq('id',salonId).single(),
-        client.from('salon_members').select('user_id,display_name,role,is_active,color_key').eq('salon_id',salonId).eq('is_active',true).order('created_at'),
-        client.from('services').select('id,name,duration_minutes,price,is_active,sort_order').eq('salon_id',salonId).eq('is_active',true).order('sort_order'),
-        client.from('customers').select('id,name,phone,memo,tags,visit_count,last_visit_at,preferences').eq('salon_id',salonId).order('last_visit_at',{ascending:false,nullsFirst:false}).limit(1000),
-        client.from('customer_memberships').select('id,customer_id,kind,name_snapshot,remaining_amount,remaining_count,status,expires_at').eq('salon_id',salonId).eq('status','active'),
-        client.from('appointments').select('id,customer_id,staff_user_id,service_id,source,external_source_id,customer_name_snapshot,customer_phone_snapshot,service_name_snapshot,starts_at,ends_at,status,price,memo').eq('salon_id',salonId).gte('starts_at',from.toISOString()).lt('starts_at',to.toISOString()).order('starts_at')
+        client.from('ludia_salons').select('id,name,timezone').eq('id',salonId).single(),
+        client.from('ludia_salon_members').select('user_id,display_name,role,is_active,color_key').eq('salon_id',salonId).eq('is_active',true).order('created_at'),
+        client.from('ludia_services').select('id,name,duration_minutes,price,is_active,sort_order').eq('salon_id',salonId).eq('is_active',true).order('sort_order'),
+        client.from('ludia_customers').select('id,name,phone,memo,tags,visit_count,last_visit_at,preferences').eq('salon_id',salonId).order('last_visit_at',{ascending:false,nullsFirst:false}).limit(1000),
+        client.from('ludia_customer_memberships').select('id,customer_id,kind,name_snapshot,remaining_amount,remaining_count,status,expires_at').eq('salon_id',salonId).eq('status','active'),
+        client.from('ludia_appointments').select('id,customer_id,staff_user_id,service_id,source,external_source_id,customer_name_snapshot,customer_phone_snapshot,service_name_snapshot,starts_at,ends_at,status,price,memo').eq('salon_id',salonId).gte('starts_at',from.toISOString()).lt('starts_at',to.toISOString()).order('starts_at')
       ]);
       const firstError=[salonQ,staffQ,serviceQ,customerQ,membershipQ,appointmentQ].find(x=>x.error)?.error;if(firstError)throw firstError;
       staffRecords=staffQ.data||[];serviceRecords=serviceQ.data||[];
@@ -106,10 +106,10 @@ window.LudiaSalonCloud=(()=>{
     if(!client||!salonId)return;
     if(channel)client.removeChannel(channel).catch(()=>{});
     channel=client.channel('ludia-salon-'+salonId)
-      .on('postgres_changes',{event:'*',schema:'public',table:'appointments',filter:`salon_id=eq.${salonId}`},queueReload)
-      .on('postgres_changes',{event:'*',schema:'public',table:'customers',filter:`salon_id=eq.${salonId}`},queueReload)
-      .on('postgres_changes',{event:'*',schema:'public',table:'customer_memberships',filter:`salon_id=eq.${salonId}`},queueReload)
-      .on('postgres_changes',{event:'*',schema:'public',table:'payments',filter:`salon_id=eq.${salonId}`},queueReload)
+      .on('postgres_changes',{event:'*',schema:'public',table:'ludia_appointments',filter:`salon_id=eq.${salonId}`},queueReload)
+      .on('postgres_changes',{event:'*',schema:'public',table:'ludia_customers',filter:`salon_id=eq.${salonId}`},queueReload)
+      .on('postgres_changes',{event:'*',schema:'public',table:'ludia_customer_memberships',filter:`salon_id=eq.${salonId}`},queueReload)
+      .on('postgres_changes',{event:'*',schema:'public',table:'ludia_payments',filter:`salon_id=eq.${salonId}`},queueReload)
       .subscribe(status=>emitStatus({realtime:status==='SUBSCRIBED'?'live':status==='CHANNEL_ERROR'?'error':'connecting'}));
   }
   function queueReload(){
@@ -129,21 +129,21 @@ window.LudiaSalonCloud=(()=>{
   async function signOut(){if(client)await client.auth.signOut()}
   async function createSalon({name,displayName,phone}){
     if(!client||!user)throw new Error('authentication required');
-    const {data,error}=await client.rpc('create_salon_with_owner',{salon_name:name,owner_display_name:displayName,salon_phone:phone||null});
+    const {data,error}=await client.rpc('ludia_create_salon_with_owner',{salon_name:name,owner_display_name:displayName,salon_phone:phone||null});
     if(error)throw error;salonId=data;await loadData();return data;
   }
   async function saveAppointment(payload){
     if(!client||!salonId)return false;
     const phone=normalizePhone(payload.phone);let customerId=null;
     if(phone){
-      const {data:found,error}=await client.from('customers').select('id').eq('salon_id',salonId).eq('phone_normalized',phone).limit(1);if(error)throw error;
+      const {data:found,error}=await client.from('ludia_customers').select('id').eq('salon_id',salonId).eq('phone_normalized',phone).limit(1);if(error)throw error;
       customerId=found?.[0]?.id||null;
     }else{
-      const {data:found,error}=await client.from('customers').select('id').eq('salon_id',salonId).eq('name',payload.customer).limit(2);if(error)throw error;
+      const {data:found,error}=await client.from('ludia_customers').select('id').eq('salon_id',salonId).eq('name',payload.customer).limit(2);if(error)throw error;
       if(found?.length===1)customerId=found[0].id;
     }
     if(!customerId){
-      const {data:created,error}=await client.from('customers').insert({salon_id:salonId,name:payload.customer,phone:payload.phone||null,phone_normalized:phone||null}).select('id').single();
+      const {data:created,error}=await client.from('ludia_customers').insert({salon_id:salonId,name:payload.customer,phone:payload.phone||null,phone_normalized:phone||null}).select('id').single();
       if(error)throw error;customerId=created.id;
     }
     const staff=staffRecords.find(x=>x.display_name===payload.staff)||null;
@@ -152,7 +152,7 @@ window.LudiaSalonCloud=(()=>{
     const startsAt=new Date(Date.UTC(d.getFullYear(),d.getMonth(),d.getDate(),hour-9,minute||0,0));
     const endsAt=new Date(startsAt.getTime()+payload.duration*60000);
     const price=service?.price??payload.amount??0;
-    const {error}=await client.from('appointments').insert({
+    const {error}=await client.from('ludia_appointments').insert({
       salon_id:salonId,customer_id:customerId,staff_user_id:staff?.user_id||null,service_id:service?.id||null,source:'manual',
       customer_name_snapshot:payload.customer,customer_phone_snapshot:payload.phone||null,service_name_snapshot:payload.service,
       starts_at:startsAt.toISOString(),ends_at:endsAt.toISOString(),status:'confirmed',price,memo:payload.note||''
@@ -161,7 +161,7 @@ window.LudiaSalonCloud=(()=>{
   }
   async function updateAppointmentStatus(id,nextStatus){
     if(!client||!salonId||!id)return false;
-    const {error}=await client.from('appointments').update({status:dbStatus(nextStatus)}).eq('id',id).eq('salon_id',salonId);if(error)throw error;
+    const {error}=await client.from('ludia_appointments').update({status:dbStatus(nextStatus)}).eq('id',id).eq('salon_id',salonId);if(error)throw error;
     await loadData();return true;
   }
   async function refresh(){if(client&&user)await loadData()}

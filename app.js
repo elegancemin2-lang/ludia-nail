@@ -71,27 +71,29 @@ let bookingStaff='전체', bookingDayOffset=0, activeAppointment=null;
 
 function won(v){return Math.round(v/10000*10)/10+'만'}
 function renderOpsToday(){
- const today=new Date();
+ const today=new Date(),todayAppointments=salonAppointments.filter(x=>(x.dayOffset||0)===0&&x.status!=='취소');
  const dateLabel=$('#todayDateLabel');
  if(dateLabel)dateLabel.textContent=`${today.getMonth()+1}월 ${today.getDate()}일 ${['일','월','화','수','목','금','토'][today.getDay()]}요일`;
- const done=salonAppointments.filter(x=>x.status==='완료').length;
- const total=salonAppointments.reduce((s,x)=>s+x.amount,0);
- const completedSales=salonAppointments.filter(x=>x.status==='완료').reduce((s,x)=>s+x.amount,0);
+ const done=todayAppointments.filter(x=>x.status==='완료').length;
+ const total=todayAppointments.reduce((s,x)=>s+x.amount,0);
+ const completedSales=todayAppointments.filter(x=>x.status==='완료').reduce((s,x)=>s+x.amount,0);
+ const waiting=Math.max(0,todayAppointments.length-done);
  const stats=[
-   ['예약',salonAppointments.length+'건','대기 '+(salonAppointments.length-done)],
+   ['예약',todayAppointments.length+'건','대기 '+waiting],
    ['예상 매출',won(total)+'원','완료 '+won(completedSales)+'원'],
-   ['빈 시간','2개','15:30 · 19:30'],
-   ['재방문','6명','신규 2명']
+   ['동기화',salonCloudMode==='cloud'?'실시간':'이 기기','예약 · 고객'],
+   ['고객',salonCustomers.length+'명',salonCloudMode==='cloud'?'DB 연결':'데모']
  ];
  const box=$('#todayStats');if(box)box.replaceChildren(...stats.map(([k,v,s])=>{const a=document.createElement('article');a.className='native-stat';a.innerHTML=`<span>${k}</span><b>${v}</b><small>${s}</small>`;return a}));
- if($('#todayProgress'))$('#todayProgress').textContent=`${done}/${salonAppointments.length} 완료`;
- const timeline=$('#opsTimeline');if(timeline){timeline.innerHTML='';salonAppointments.forEach(a=>{
-   const row=document.createElement('button');row.className='ops-appointment '+(a.status==='완료'?'done ':a.status==='진행중'?'progress ':'waiting ');
-   row.innerHTML=`<time>${a.time}</time><span class="agenda-dot"></span><div><b>${a.customer}</b><small>${a.service} · ${a.staff}</small></div><strong>${won(a.amount)}원</strong><i>›</i>`;
+ if($('#todayProgress'))$('#todayProgress').textContent=`${done}/${todayAppointments.length} 완료`;
+ const timeline=$('#opsTimeline');if(timeline){timeline.innerHTML='';todayAppointments.forEach(a=>{
+   const cls=a.status==='완료'?'done ':a.status==='진행중'?'progress ':a.status==='노쇼'?'cancelled ':'waiting ';
+   const row=document.createElement('button');row.className='ops-appointment '+cls;
+   row.innerHTML=`<time>${a.time}</time><span class="agenda-dot"></span><div><b>${a.customer}</b><small>${a.service} · ${a.staff}${a.source==='naver'?' · NAVER':''}</small></div><strong>${won(a.amount)}원</strong><i>›</i>`;
    row.onclick=()=>openOpsDetail(a);timeline.appendChild(row);
  })}
- const next=salonAppointments.find(x=>x.status!=='완료')||salonAppointments[0];
- const n=$('#nextCard');if(n&&next)n.innerHTML=`<button class="next-open" id="nextOpenBtn"><span class="next-kicker">다음 예약</span><div class="next-main"><div><time>${next.time}</time><h3>${next.customer}</h3><p>${next.service} · ${next.staff}</p></div><i>›</i></div><div class="next-meta"><span>${next.note}</span><span>${next.membership}</span></div></button>`;
+ const next=todayAppointments.find(x=>x.status!=='완료'&&x.status!=='노쇼')||todayAppointments[0];
+ const n=$('#nextCard');if(n)n.innerHTML=next?`<button class="next-open" id="nextOpenBtn"><span class="next-kicker">다음 예약</span><div class="next-main"><div><time>${next.time}</time><h3>${next.customer}</h3><p>${next.service} · ${next.staff}${next.source==='naver'?' · NAVER':''}</p></div><i>›</i></div><div class="next-meta"><span>${next.note||'메모 없음'}</span><span>${next.membership||'회원권 없음'}</span></div></button>`:'<div class="native-empty-next"><b>오늘 남은 예약이 없어요</b><span>캘린더에서 새 예약을 추가할 수 있어요.</span></div>';
  const nextBtn=$('#nextOpenBtn');if(nextBtn)nextBtn.onclick=()=>openOpsDetail(next);
 }
 function openOpsDetail(a){

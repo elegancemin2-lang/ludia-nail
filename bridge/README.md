@@ -11,7 +11,7 @@ This folder is the runnable C-route SmartPlace integration. It runs on the salon
 5. A dedicated Chromium window opens. Sign in to Naver manually and navigate to the SmartPlace booking list.
 6. Keep the window/session available. The bridge checks rendered booking rows every 60 seconds by default.
 
-For the Vercel deployment in this repository, `LUDIA_SYNC_URL` should point to `https://<production-domain>/api/naver-sync`. Generate a long random `LUDIA_SYNC_TOKEN` and set the **same value** in the salon PC environment and Vercel environment. Never put the Supabase service-role key on the salon PC.
+For the Vercel deployment in this repository, `LUDIA_SYNC_URL` should point to `https://<production-domain>/api/naver-sync`. Generate a long random `LUDIA_SYNC_TOKEN` and set the **same value** in the salon PC environment and Vercel environment. Never put the Supabase secret/service-role key on the salon PC.
 
 Optional environment variables:
 
@@ -26,12 +26,12 @@ Optional environment variables:
 The repository now contains `api/naver-sync.js` and `supabase/naver_bridge.sql`.
 
 1. Run `supabase/naver_bridge.sql` once in the target Supabase project.
-2. Configure Vercel server-side environment variables: `LUDIA_SYNC_TOKEN`, `SUPABASE_URL`, `SUPABASE_SERVICE_ROLE_KEY`.
+2. Configure Vercel server-side environment variables: `LUDIA_SYNC_TOKEN`, `SUPABASE_URL`, `SUPABASE_SECRET_KEY` (preferred). Legacy `SUPABASE_SERVICE_ROLE_KEY` remains supported as a fallback.
 3. Redeploy the production project.
 4. Open `/api/naver-sync` with GET to check endpoint health. It reports whether Supabase is configured, but never returns secrets.
 5. Start the local bridge with the matching sync URL/token.
 
-`SUPABASE_SERVICE_ROLE_KEY` belongs **only** in Vercel server environment variables. Do not place it in `app.js`, localStorage, the browser, the Playwright profile, or bridge environment.
+`SUPABASE_SECRET_KEY` belongs **only** in Vercel/server environment variables. Do not place it in `app.js`, localStorage, the browser, the Playwright profile, or bridge environment. Legacy `SUPABASE_SERVICE_ROLE_KEY` follows the same rule.
 
 ## Event contract
 
@@ -64,8 +64,8 @@ The bridge deliberately does **not** treat a missing row as a cancellation becau
 - No private SmartPlace API interception. The current reader inspects text already rendered in the authenticated page.
 - Session cookies live only in the local Playwright profile directory and must not be committed or uploaded.
 - The DOM reader is intentionally conservative. Before production use, validate the exact SmartPlace booking-list DOM from the salon account and replace the broad candidate selector with stable semantic selectors.
-- Customer PII should be minimized. The server endpoint accepts only normalized booking fields, caps payload size, requires a bearer token, and keeps the Supabase service-role key server-side.
+- Customer PII should be minimized. The server endpoint accepts only normalized booking fields, caps payload size, requires a bearer token, and keeps the Supabase secret key server-side.
 
 ## Next implementation step
 
-Connect the browser UI to `integration_connections`/`external_bookings` through a read-only server endpoint, then show `더보기 > 연결된 서비스 > 네이버 예약` with connection health, last sync time, imported reservation count, and a reconnect-needed state. After the real salon SmartPlace DOM is validated, tighten the parser so customer/service/staff mapping can safely feed the main calendar.
+Validate the real salon SmartPlace booking-list DOM and extract customer/service/staff fields with stable semantic selectors. Only after that validation should the bridge promote staged `external_bookings` into the main `appointments` calendar; do not invent missing customer/service data.

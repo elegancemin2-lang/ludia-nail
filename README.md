@@ -11,7 +11,7 @@ Mobile-first nail salon operating system.
 - Replit is not used.
 
 ## Current baseline
-**v1.9 — Reference-led Apple-grade Salon OS Shell**
+**v2.0 — ART Studio Live Editor**
 
 ### Reference-led principles
 - Apple HIG: deliberate toolbar/tab density, content-first hierarchy, neutral grouped surfaces.
@@ -20,7 +20,7 @@ Mobile-first nail salon operating system.
 - Square Appointments: side-by-side staff schedule.
 - Vagaro: fast staff/date switching and dense salon-calendar utility.
 
-### v1.9 highlights
+### Current highlights
 - Rebuilt Today from dashboard cards into a native mobile agenda: date, next appointment, glance metrics, schedule, alerts.
 - Rebuilt More into grouped Settings-style rows.
 - Refined Calendar with iOS-like date selection, neutral staff filters and one-accent appointment blocks.
@@ -29,3 +29,7 @@ Mobile-first nail salon operating system.
 - Preserved v1.8 continuous nail-model ART flow.
 
 Vercel should deploy the `main` branch automatically.
+
+
+## ART v2.0
+The ART editor is now a live model workspace with immediate finger-level changes, original/current comparison, undo/redo, direct Korean edit requests, and network-first core updates.

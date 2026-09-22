@@ -402,6 +402,32 @@
           <div class="edit-live-note" id="fingerHelper">전체 디자인을 수정합니다.</div>
         </div>
 
+        <div class="precision-editor" id="precisionEditor">
+          <div class="precision-head"><div><b>디테일 편집</b><small>선택한 손가락만 정밀하게 조절</small></div><span id="precisionTarget">전체 10손가락</span></div>
+          <div class="precision-grid">
+            <section>
+              <div class="precision-label"><b>쉐입</b><small>손가락별 적용</small></div>
+              <div class="precision-segment" id="nailShapeControls"></div>
+            </section>
+            <section>
+              <div class="precision-label"><b>길이</b><small id="nailLengthValue">롱</small></div>
+              <input class="precision-range" id="nailLength" type="range" min="0" max="3" step="1" value="2" />
+            </section>
+            <section>
+              <div class="precision-label"><b>컬러</b><small>한 번 터치로 적용</small></div>
+              <div class="nail-color-row" id="nailColorControls"></div>
+            </section>
+            <section>
+              <div class="precision-label"><b>질감</b><small>광택/표면감</small></div>
+              <div class="precision-segment compact" id="nailTextureControls"></div>
+            </section>
+          </div>
+          <div class="parts-stepper">
+            <div><b>파츠</b><small>선택 손가락의 포인트 개수</small></div>
+            <div class="stepper-controls"><button type="button" id="partsMinus" aria-label="파츠 줄이기">−</button><strong id="partsCount">0</strong><button type="button" id="partsPlus" aria-label="파츠 늘리기">＋</button></div>
+          </div>
+        </div>
+
         <div class="edit-section quick-live-section">
           <div class="field-label"><b>바로 바꾸기</b><small>터치 즉시 위 프리뷰에 적용</small></div>
           <div class="select-chips live-edit-chips" id="editChips"></div>

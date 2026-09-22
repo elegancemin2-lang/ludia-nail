@@ -145,6 +145,7 @@
 
         <div class="native-group-title">시스템</div>
         <div class="native-settings-group">
+          <button id="cloudAccountBtn"><span class="settings-glyph glyph-blue">☁</span><span><b>클라우드 계정</b><small id="cloudAccountStatus">연결 상태 확인 중…</small></span><em class="cloud-state-badge loading" id="cloudAccountBadge">연결</em><i>›</i></button>
           <button><span class="settings-glyph glyph-gray">⚙</span><span><b>설정</b><small>샵 · 메뉴 · 권한 · 백업</small></span><i>›</i></button>
         </div>
       </section>
@@ -495,6 +496,7 @@
         <div class="quick-booking-context" id="quickBookingContext"></div>
         <div class="quick-booking-form">
           <label><span>고객</span><input id="qbCustomer" autocomplete="off" placeholder="고객 이름" /></label>
+          <label><span>연락처 <small>선택 · 기존 고객 자동 연결</small></span><input id="qbPhone" inputmode="tel" autocomplete="tel" placeholder="010-0000-0000" /></label>
           <label><span>시술</span><select id="qbService"><option>젤 원컬러</option><option>젤 아트</option><option>이달의 아트</option><option>오마카세 아트</option><option>제거 + 젤 아트</option></select></label>
           <div class="quick-booking-two">
             <label><span>시간</span><input id="qbTime" type="time" step="1800" /></label>
@@ -525,7 +527,54 @@
     </div>
   </div>
 
+  <div class="sheet" id="cloudAuthSheet" aria-hidden="true">
+    <div class="sheet-backdrop" data-close-cloud></div>
+    <div class="sheet-card cloud-auth-card">
+      <div class="sheet-handle"></div>
+      <button class="sheet-close" data-close-cloud>×</button>
+      <div class="sheet-body">
+        <span class="mini-label">LUDIA CLOUD</span>
+        <h2>샵 데이터 연결</h2>
+        <p class="cloud-auth-intro">예약·고객·회원권·직원 데이터를 Supabase와 동기화합니다. 비밀번호는 LUDIA에 저장하지 않습니다.</p>
+        <div class="cloud-auth-error hidden" id="cloudAuthError"></div>
+
+        <div id="cloudLoginPane">
+          <div class="cloud-auth-form">
+            <label><span>이메일</span><input id="cloudEmail" type="email" autocomplete="username" placeholder="owner@example.com" /></label>
+            <label><span>비밀번호</span><input id="cloudPassword" type="password" autocomplete="current-password" placeholder="••••••••" /></label>
+          </div>
+          <button class="primary-btn wide cloud-main-action" id="cloudLoginBtn">로그인하고 동기화</button>
+          <p class="cloud-security-note">Supabase Auth로 직접 로그인합니다. 세션 토큰만 브라우저에 보관되고 비밀번호는 저장하지 않습니다.</p>
+        </div>
+
+        <div class="hidden" id="cloudSetupPane">
+          <div class="cloud-setup-note"><b>로그인은 완료됐어요.</b><span>처음 사용하는 계정이면 샵을 한 번만 만들어 주세요.</span></div>
+          <div class="cloud-auth-form">
+            <label><span>샵 이름</span><input id="cloudSalonName" placeholder="예: LUDIA NAIL" /></label>
+            <label><span>내 표시 이름</span><input id="cloudOwnerName" placeholder="예: 루디아" /></label>
+            <label><span>샵 연락처 <small>선택</small></span><input id="cloudSalonPhone" inputmode="tel" placeholder="041-000-0000" /></label>
+          </div>
+          <button class="primary-btn wide cloud-main-action" id="cloudCreateSalonBtn">샵 만들기</button>
+        </div>
+
+        <div class="hidden" id="cloudSignedIn">
+          <div class="cloud-connected-card">
+            <span class="cloud-live-dot"></span>
+            <div><b id="cloudSalonLabel">샵</b><small id="cloudRealtimeLabel">실시간 동기화 중</small></div>
+          </div>
+          <div class="cloud-account-meta"><span>계정</span><b id="cloudAuthEmail"></b></div>
+          <div class="sheet-actions">
+            <button class="soft-btn wide" id="cloudRefreshBtn">지금 동기화</button>
+            <button class="soft-btn wide" id="cloudLogoutBtn">로그아웃</button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
   <div class="toast" id="toast" role="status"></div>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.116.0/dist/umd/supabase.min.js"></script>
+  <script src="salon-cloud.js"></script>
   <script src="app.js"></script>
 </body>
 </html>

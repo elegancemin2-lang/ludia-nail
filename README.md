@@ -1,15 +1,22 @@
 # LUDIA NAIL
 
-Mobile-first nail salon operating system with **LUDIA ART STUDIO**.
+Mobile-first nail salon operating system.
 
 ## Product direction
-- “예약 프로그램계의 아이폰”: 단순하지만 필요한 기능은 빠짐없이
-- Today · Booking · ART · Customers · More
-- LUDIA ART STUDIO as the primary differentiated module
-- Vercel + Supabase + PWA direction
-- Replit is not used
+- Main product: a simple, polished replacement for salon booking/CRM tools such as Ahasoft.
+- Primary navigation: Today · Booking · Customers · More.
+- LUDIA ART STUDIO is an optional add-on under More, not the main app shell.
+- Vercel + Supabase + PWA direction.
+- Replit is not used.
 
 ## Current baseline
-**v1.4 — Quiet Luxury / iOS Minimal**
+**v1.5 — Salon OS First + Instant ART Editor**
 
-This repository is the source of truth for ongoing LUDIA NAIL updates. Vercel should be connected to the `main` branch so every push can deploy automatically.
+### v1.5 highlights
+- Finger-photo direct editing with instant visual response.
+- Quick modification chips apply immediately to selected fingers.
+- Time/price recalculation follows the live edit state.
+- Draggable perspective final preview with front/left/right/top angles.
+- Booking/customer operating flows remain the product core.
+
+This repository is the source of truth for ongoing LUDIA NAIL updates. Connect Vercel to the `main` branch for automatic deployment.

@@ -1,0 +1,445 @@
+<!doctype html>
+<html lang="ko">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover" />
+  <meta name="theme-color" content="#f8f5f1" />
+  <meta name="description" content="LUDIA NAIL - 예약·고객관리와 LUDIA ART STUDIO를 하나로 묶은 모바일 네일샵 운영 웹앱" />
+  <title>LUDIA NAIL</title>
+  <link rel="manifest" href="manifest.webmanifest" />
+  <link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+  <div class="app">
+    <aside class="desktop-rail" aria-label="메인 메뉴">
+      <button class="brand" data-nav="opsHome" aria-label="오늘 화면으로">
+        <span class="brand-mark">L</span>
+        <span class="brand-copy"><b>LUDIA</b><small>NAIL</small></span>
+      </button>
+      <nav class="rail-nav">
+        <button class="rail-link active" data-nav="opsHome"><span>●</span><em>오늘</em></button>
+        <button class="rail-link" data-nav="booking"><span>□</span><em>예약</em></button>
+        <button class="rail-link" data-nav="customers"><span>◎</span><em>고객</em></button>
+        <button class="rail-link" data-nav="more"><span>•••</span><em>더보기</em></button>
+      </nav>
+      <div class="dna-mini">
+        <div class="dna-mini-top"><span>LUDIA DNA</span><b>78%</b></div>
+        <div class="dna-bar"><i style="width:78%"></i></div>
+        <small>저장·실시술 디자인 기반</small>
+      </div>
+    </aside>
+
+    <main class="workspace">
+      <header class="topbar">
+        <div>
+          <p class="eyebrow">LUDIA · SALON OS</p>
+          <h1 id="pageTitle">오늘, 필요한 것만.</h1>
+        </div>
+        <div class="top-actions">
+          <button class="save-status" id="saveStatus" type="button" aria-label="로컬 저장 상태"><span class="save-dot"></span><span id="saveStatusText">저장 준비중</span></button>
+          <button class="icon-btn" id="themeBtn" aria-label="집중모드">◐</button>
+          <button class="avatar">LN</button>
+        </div>
+      </header>
+
+
+      <section class="screen active" id="opsHomeScreen">
+        <div class="ops-hero">
+          <div>
+            <span class="mini-label">TODAY · LUDIA NAIL</span>
+            <h2>오늘, 필요한 것만.</h2>
+            <p>예약 · 고객 · 회원권 · 매출 흐름만 빠르게 확인합니다.</p>
+          </div>
+          <button class="primary-btn ops-art-cta" data-nav="booking">＋ 빠른 예약</button>
+        </div>
+
+        <div class="today-stats" id="todayStats"></div>
+
+        <div class="ops-grid">
+          <article class="panel ops-timeline-panel">
+            <div class="panel-head">
+              <div><span class="mini-label">TODAY</span><h3>오늘 예약</h3><p id="todayProgress">진행 상황을 불러오는 중</p></div>
+              <button class="text-action" data-nav="booking">예약 전체 →</button>
+            </div>
+            <div class="ops-timeline" id="opsTimeline"></div>
+          </article>
+
+          <aside class="ops-side">
+            <article class="panel next-card" id="nextCard"></article>
+            <article class="panel quiet-card">
+              <div class="panel-head"><div><span class="mini-label">SMART CHECK</span><h3>오늘 확인할 것</h3></div></div>
+              <div class="quiet-list">
+                <button data-nav="customers"><span>회원권 만료 예정</span><b>2명</b></button>
+                <button data-nav="more"><span>답글 대기 리뷰</span><b>3건</b></button>
+                <button data-nav="settings"><span>부족 재료</span><b>1종</b></button>
+              </div>
+            </article>
+          </aside>
+        </div>
+
+        <div class="section-title-row compact-title">
+          <div><span class="mini-label">QUICK</span><h3>자주 하는 일</h3></div>
+        </div>
+        <div class="quick-work-grid">
+          <button class="quick-work" data-nav="booking"><span>＋</span><b>예약 보기</b><small>오늘 빈 시간 확인</small></button>
+          <button class="quick-work" data-nav="customers"><span>○</span><b>고객 찾기</b><small>이력·회원권·메모</small></button>
+          <button class="quick-work" data-nav="more"><span>◇</span><b>회원권</b><small>잔액 · 만료 확인</small></button>
+          <button class="quick-work" data-nav="more"><span>↗</span><b>매출 보기</b><small>오늘 핵심만</small></button>
+        </div>
+      </section>
+
+      <section class="screen" id="bookingScreen">
+        <div class="module-head">
+          <div><span class="mini-label">BOOKING</span><h2>예약</h2><p>시간과 담당자만 먼저 보고, 필요한 정보는 예약을 눌렀을 때 펼칩니다.</p></div>
+          <button class="primary-btn" id="quickAddBooking">＋ 빠른 예약</button>
+        </div>
+        <div class="booking-toolbar panel">
+          <div class="date-switch"><button id="prevDay">‹</button><div><b id="bookingDateLabel">오늘</b><small>예약 8 · 빈 시간 2</small></div><button id="nextDay">›</button></div>
+          <div class="staff-tabs" id="staffTabs"></div>
+        </div>
+        <div class="booking-board panel">
+          <div class="booking-hours" id="bookingHours"></div>
+          <div class="booking-list" id="bookingList"></div>
+        </div>
+      </section>
+
+      <section class="screen" id="customersScreen">
+        <div class="module-head">
+          <div><span class="mini-label">CUSTOMERS</span><h2>고객</h2><p>고객을 열면 최근 시술·취향·회원권·주의사항부터 보이게 했어요.</p></div>
+          <button class="soft-btn" id="newCustomerBtn">＋ 고객 등록</button>
+        </div>
+        <div class="customer-search panel">
+          <span>⌕</span><input id="customerSearch" placeholder="이름 · 전화번호 · 취향 검색"/>
+        </div>
+        <div class="customer-grid" id="customerGrid"></div>
+      </section>
+
+      <section class="screen" id="moreScreen">
+        <div class="module-head">
+          <div><span class="mini-label">MORE</span><h2>더보기</h2><p>매일 쓰지 않는 기능은 여기로 정리해 홈과 예약 화면을 가볍게 유지합니다.</p></div>
+        </div>
+        <div class="more-section-head"><span class="mini-label">SALON MANAGEMENT</span><h3>샵 운영</h3></div>
+        <div class="more-grid">
+          <button class="more-card"><span class="more-icon">₩</span><div><b>매출</b><small>오늘 62.3만 · 객단가 7.8만</small></div><em>→</em></button>
+          <button class="more-card"><span class="more-icon">◇</span><div><b>회원권</b><small>만료 예정 2명</small></div><em>→</em></button>
+          <button class="more-card"><span class="more-icon">◎</span><div><b>직원</b><small>스케줄 · 매출 · 인센티브</small></div><em>→</em></button>
+          <button class="more-card" data-nav="settings"><span class="more-icon">▦</span><div><b>재고</b><small>부족 1 · 품절 1</small></div><em>→</em></button>
+          <button class="more-card"><span class="more-icon">★</span><div><b>리뷰</b><small>답글 대기 3건</small></div><em>→</em></button>
+          <button class="more-card"><span class="more-icon">↗</span><div><b>메시지</b><small>예약 · 재방문 · 회원권 알림</small></div><em>→</em></button>
+          <button class="more-card"><span class="more-icon">◌</span><div><b>마케팅</b><small>VIP · 휴면 · 재방문 예정</small></div><em>→</em></button>
+          <button class="more-card"><span class="more-icon">⚙</span><div><b>설정</b><small>샵 · 메뉴 · 권한 · 백업</small></div><em>→</em></button>
+        </div>
+        <div class="more-section-head add-on-head"><span class="mini-label">ADD-ON</span><h3>추가 기능</h3></div>
+        <button class="addon-art-card" data-nav="home">
+          <div class="addon-art-copy"><span class="addon-art-icon">✦</span><div><b>LUDIA ART STUDIO</b><small>6안 생성 · 손가락별 즉시 수정 · 이달의 아트</small></div></div><em>열기 →</em>
+        </button>
+        <div class="panel principle-card">
+          <span class="mini-label">LUDIA PRINCIPLE</span>
+          <h3>기능은 많아도, 화면은 복잡하지 않게.</h3>
+          <p>매일 쓰는 기능만 앞에 두고 나머지는 필요할 때만 펼치는 것을 기본 원칙으로 유지합니다.</p>
+        </div>
+      </section>
+
+      <section class="screen" id="homeScreen">
+        <div class="art-tabs panel" aria-label="ART STUDIO 메뉴">
+          <div class="art-tabs-brand"><span>✦</span><div><b>ART STUDIO</b><small>5–10 min workflow</small></div></div>
+          <div class="art-tabs-scroll">
+            <button data-nav="home">홈</button><button data-nav="create">6안 만들기</button><button data-nav="library">보관함</button><button data-nav="collection">이달의 아트</button><button data-nav="settings">DNA · 재료</button>
+          </div>
+        </div>
+        <div class="hero">
+          <div class="hero-copy">
+            <span class="hero-kicker">5–10 MINUTE WORKFLOW</span>
+            <h2>생각난 무드를<br/>바로 <i>6개의 시안</i>으로.</h2>
+            <p>텍스트나 참고사진을 넣고 루디아 무드를 고르면, 실제 시술 가능한 방향으로 6안을 정리합니다.</p>
+            <div class="hero-actions">
+              <button class="primary-btn" data-nav="create">✦ 5분 아트 만들기</button>
+              <button class="soft-btn" id="quickReference">사진으로 시작</button>
+            </div>
+          </div>
+          <div class="hero-stack" aria-hidden="true">
+            <div class="stack-card s1"><img src="assets/nail_1.jpg" alt=""/></div>
+            <div class="stack-card s2"><img src="assets/nail_3.jpg" alt=""/></div>
+            <div class="stack-card s3"><img src="assets/nail_5.jpg" alt=""/></div>
+            <div class="stack-badge">LUDIA DNA<br/><b>78%</b></div>
+          </div>
+        </div>
+
+        <div class="home-grid">
+          <article class="panel quick-start">
+            <div class="panel-head"><div><span class="mini-label">QUICK START</span><h3>원하는 방향만 한 줄로</h3></div><span class="time-pill">약 5분</span></div>
+            <div class="home-prompt">
+              <textarea id="homePrompt" placeholder="예: 밀키핑크 자석, 성수 느낌, 파츠는 2개 이하"></textarea>
+              <button class="round-go" id="homeGenerate" aria-label="생성 시작">→</button>
+            </div>
+            <div class="prompt-chips" id="homePromptChips"></div>
+          </article>
+
+          <article class="panel trend-panel">
+            <div class="panel-head"><div><span class="mini-label">LUDIA PICKS</span><h3>이번 주 바로 쓰기 좋은 무드</h3></div></div>
+            <div class="trend-list" id="trendList"></div>
+          </article>
+        </div>
+
+        <div class="section-title-row">
+          <div><span class="mini-label">RECENT</span><h3>최근 작업</h3></div>
+          <button class="text-action" data-nav="library">보관함 전체 보기 →</button>
+        </div>
+        <div class="recent-strip" id="recentStrip"></div>
+      </section>
+
+      <section class="screen" id="createScreen">
+        <div class="art-tabs panel" aria-label="ART STUDIO 메뉴">
+          <div class="art-tabs-brand"><span>✦</span><div><b>ART STUDIO</b><small>5–10 min workflow</small></div></div>
+          <div class="art-tabs-scroll">
+            <button data-nav="home">홈</button><button data-nav="create">6안 만들기</button><button data-nav="library">보관함</button><button data-nav="collection">이달의 아트</button><button data-nav="settings">DNA · 재료</button>
+          </div>
+        </div>
+        <div class="fast-path" aria-label="빠른 제작 단계">
+          <span class="done"><i>1</i> 요청</span><b>→</b><span><i>2</i> 6안</span><b>→</b><span><i>3</i> 부분수정</span><b>→</b><span><i>4</i> 저장</span>
+        </div>
+        <div class="create-head">
+          <div>
+            <span class="mini-label">CREATE</span>
+            <h2>한 번에 6안 만들기</h2>
+            <p>복잡한 설정은 숨기고, 실제 시술에 필요한 조건만 남겼어요.</p>
+          </div>
+          <div class="timer-card"><span>5분 제작</span><b id="createTimer">00:00</b></div>
+        </div>
+
+        <div class="create-shell">
+          <div class="create-form panel">
+            <div class="input-block">
+              <label>원하는 디자인을 적어주세요</label>
+              <textarea id="conceptInput" placeholder="예: 가을용 밀키 누드 자석. 포인트는 약지와 엄지만, 성수 무드로. 너무 화려하지 않게."></textarea>
+            </div>
+
+            <div class="ref-upload" id="refUpload">
+              <input id="refFile" type="file" accept="image/*" hidden />
+              <div class="ref-empty" id="refEmpty">
+                <span class="upload-plus">＋</span>
+                <div><b>참고사진 추가</b><small>고객 사진·인스타 저장사진·기존 시술사진</small></div>
+                <button class="tiny-btn" id="pickRef">선택</button>
+              </div>
+              <div class="ref-preview hidden" id="refPreview"><img id="refPreviewImg" alt="참고사진 미리보기"/><button id="removeRef">×</button></div>
+            </div>
+
+            <div class="field-group">
+              <div class="field-label"><b>LUDIA DNA</b><small>한 가지를 기준으로 생성</small></div>
+              <div class="select-chips single" id="dnaChips"></div>
+            </div>
+
+            <div class="field-group">
+              <div class="field-label"><b>빠른 조건</b><small>필요한 것만 선택</small></div>
+              <div class="select-chips" id="conditionChips"></div>
+            </div>
+
+            <div class="split-fields">
+              <label><span>최대 시술시간</span><select id="maxTime"><option value="75">75분</option><option value="90" selected>90분</option><option value="105">105분</option><option value="120">120분</option></select></label>
+              <label><span>목표 가격</span><select id="targetPrice"><option value="59000">5.9만원</option><option value="69000" selected>6.9만원</option><option value="79000">7.9만원</option><option value="89000">8.9만원</option></select></label>
+            </div>
+
+            <label class="inventory-toggle"><input type="checkbox" id="stockFirst" checked/><span><b>보유재료 우선</b><small>없는 파츠는 비슷한 재료로 자동 대체 제안</small></span></label>
+
+            <button class="generate-main" id="generateMain"><span>✦</span><b>6개 디자인 만들기</b><small>현재는 UI 데모 · AI 연결 준비됨</small></button>
+          </div>
+
+          <aside class="live-brief panel">
+            <div class="brief-top"><span class="mini-label">LIVE BRIEF</span><span class="brief-count" id="briefCount">3 CONDITIONS</span></div>
+            <h3 id="briefTitle">성수 미니멀 · 밀키 자석</h3>
+            <p id="briefCopy">시술시간 90분 안에서, 파츠는 적게 쓰고 은은한 자석광을 중심으로 구성합니다.</p>
+            <div class="nail-preview" id="nailPreview"></div>
+            <div class="brief-meter">
+              <div><span>실물 시술 적합도</span><b id="fitScore">94%</b></div>
+              <div class="meter"><i id="fitMeter" style="width:94%"></i></div>
+            </div>
+            <div class="brief-list" id="briefList"></div>
+          </aside>
+        </div>
+
+        <div class="result-section hidden" id="resultSection">
+          <div class="section-title-row sticky-result-head">
+            <div><span class="mini-label">6 CONCEPTS</span><h3>마음에 드는 안을 골라 수정하세요</h3></div>
+            <div class="result-actions"><button class="soft-btn" id="compareBtn">비교</button><button class="soft-btn" id="regenerateBtn">↻ 다시 6안</button></div>
+          </div>
+          <div class="design-grid" id="designGrid"></div>
+        </div>
+      </section>
+
+      <section class="screen" id="libraryScreen">
+        <div class="art-tabs panel" aria-label="ART STUDIO 메뉴">
+          <div class="art-tabs-brand"><span>✦</span><div><b>ART STUDIO</b><small>5–10 min workflow</small></div></div>
+          <div class="art-tabs-scroll">
+            <button data-nav="home">홈</button><button data-nav="create">6안 만들기</button><button data-nav="library">보관함</button><button data-nav="collection">이달의 아트</button><button data-nav="settings">DNA · 재료</button>
+          </div>
+        </div>
+        <div class="library-head">
+          <div><span class="mini-label">LIBRARY</span><h2>디자인 보관함</h2><p>잘 나간 디자인은 다시 꺼내 변형하고, 실시술 디자인은 LUDIA DNA에 더 강하게 반영합니다.</p></div>
+          <button class="primary-btn" data-nav="create">＋ 새 디자인</button>
+        </div>
+        <div class="library-tools panel">
+          <div class="search"><span>⌕</span><input id="librarySearch" placeholder="디자인명, 태그 검색"/></div>
+          <div class="filter-row" id="libraryFilters"></div>
+        </div>
+        <div class="library-grid" id="libraryGrid"></div>
+        <div class="empty-state hidden" id="libraryEmpty"><span>♡</span><b>조건에 맞는 디자인이 없어요</b><p>필터를 바꾸거나 새 디자인을 만들어보세요.</p></div>
+      </section>
+
+      <section class="screen" id="collectionScreen">
+        <div class="art-tabs panel" aria-label="ART STUDIO 메뉴">
+          <div class="art-tabs-brand"><span>✦</span><div><b>ART STUDIO</b><small>5–10 min workflow</small></div></div>
+          <div class="art-tabs-scroll">
+            <button data-nav="home">홈</button><button data-nav="create">6안 만들기</button><button data-nav="library">보관함</button><button data-nav="collection">이달의 아트</button><button data-nav="settings">DNA · 재료</button>
+          </div>
+        </div>
+        <div class="collection-head">
+          <div><span class="mini-label">COLLECTION</span><h2>이달의 아트 6종 만들기</h2><p>저장된 디자인에서 6개를 골라 피드·스토리·가격표용 보드를 바로 정리합니다.</p></div>
+          <div class="collection-progress"><span id="collectionCount">0 / 6</span><div><i id="collectionProgress" style="width:0%"></i></div></div>
+        </div>
+        <div class="collection-layout">
+          <div class="collection-picker panel">
+            <div class="picker-head"><b>디자인 선택</b><small>최대 6개</small></div>
+            <div class="picker-grid" id="pickerGrid"></div>
+          </div>
+          <div class="output-panel panel">
+            <div class="output-toolbar"><div class="segmented" id="outputMode"><button class="active" data-mode="feed">피드</button><button data-mode="story">스토리</button><button data-mode="price">가격표</button></div><button class="tiny-btn" id="shuffleCollection">자동 구성</button></div>
+            <div class="collection-preview feed" id="collectionPreview">
+              <div class="preview-brand">LUDIA NAIL</div>
+              <h3>MONTHLY ART</h3>
+              <p>curated by LUDIA ART STUDIO</p>
+              <div class="preview-grid" id="previewGrid"></div>
+              <div class="preview-footer">OCTOBER COLLECTION</div>
+            </div>
+            <button class="generate-main compact" id="exportBtn"><span>↧</span><b>출력 미리보기</b><small>피드 · 스토리 · 가격표</small></button>
+          </div>
+        </div>
+      </section>
+
+      <section class="screen" id="settingsScreen">
+        <div class="art-tabs panel" aria-label="ART STUDIO 메뉴">
+          <div class="art-tabs-brand"><span>✦</span><div><b>ART STUDIO</b><small>5–10 min workflow</small></div></div>
+          <div class="art-tabs-scroll">
+            <button data-nav="home">홈</button><button data-nav="create">6안 만들기</button><button data-nav="library">보관함</button><button data-nav="collection">이달의 아트</button><button data-nav="settings">DNA · 재료</button>
+          </div>
+        </div>
+        <div class="settings-head"><span class="mini-label">SETTINGS</span><h2>LUDIA DNA & 재료 설정</h2><p>자주 저장한 디자인, 실시술 디자인, 즐겨찾기 패턴을 프리셋처럼 관리합니다.</p></div>
+        <div class="settings-grid">
+          <article class="panel storage-panel">
+            <div class="storage-head">
+              <div><span class="mini-label">LOCAL STORAGE</span><h3>기기 저장 & 백업</h3><p>서버 없이 이 기기에 자동 저장합니다. 브라우저를 닫아도 작업을 이어갈 수 있어요.</p></div>
+              <span class="storage-badge" id="storageEngine">IndexedDB</span>
+            </div>
+            <div class="storage-stats">
+              <div><span>자동저장</span><b id="lastSavedText">준비 중</b></div>
+              <div><span>보관 디자인</span><b id="savedDesignCount">0개</b></div>
+              <div><span>사용 공간</span><b id="storageUsage">계산 중</b></div>
+            </div>
+            <div class="storage-actions">
+              <button class="soft-btn" id="exportBackupBtn">↓ 전체 백업</button>
+              <button class="soft-btn" id="importBackupBtn">↑ 백업 복원</button>
+              <button class="soft-btn" id="persistStorageBtn">기기 저장 보호</button>
+              <input id="backupFile" type="file" accept="application/json,.json" hidden />
+            </div>
+            <div class="storage-note"><b>저장되는 항목</b><span>보관함 · 컬렉션 · 작업 중 프롬프트 · LUDIA DNA · 조건 · 참고사진 · 가격/시간 설정</span></div>
+          </article>
+          <article class="panel dna-panel">
+            <div class="panel-head"><div><h3>LUDIA DNA 프리셋</h3><p>생성 시 한 가지를 기준 무드로 사용</p></div><span class="time-pill">78% 학습</span></div>
+            <div class="dna-list" id="dnaList"></div>
+          </article>
+          <article class="panel inventory-panel">
+            <div class="panel-head"><div><h3>재료 상태</h3><p>생성 결과의 실행 가능성에 반영</p></div></div>
+            <div class="inventory-list" id="inventoryList"></div>
+          </article>
+        </div>
+      </section>
+    </main>
+
+    <nav class="mobile-nav" aria-label="모바일 메뉴">
+      <button class="active" data-nav="opsHome"><span>●</span><em>오늘</em></button>
+      <button data-nav="booking"><span>□</span><em>예약</em></button>
+      <button data-nav="customers"><span>◎</span><em>고객</em></button>
+      <button data-nav="more"><span>•••</span><em>더보기</em></button>
+    </nav>
+  </div>
+
+  <div class="sheet" id="editSheet" aria-hidden="true">
+    <div class="sheet-backdrop" data-close-sheet></div>
+    <div class="sheet-card">
+      <div class="sheet-handle"></div>
+      <button class="sheet-close" data-close-sheet>×</button>
+      <div class="sheet-body live-edit-body">
+        <div class="sheet-title-row"><div><span class="mini-label">LIVE EDIT</span><h2 id="sheetName">Soft Blush Magnet</h2></div><button class="heart-btn" id="sheetFavorite">♡</button></div>
+        <p id="sheetDesc"></p>
+
+        <div class="instant-editor">
+          <div class="instant-editor-head"><div><b>손가락을 직접 눌러 수정</b><small>선택 → 수정칩 터치 즉시 반영</small></div><span id="liveEditState">전체 선택</span></div>
+          <div class="hand-editor" id="handEditor" aria-label="손가락별 디자인 편집"></div>
+          <div class="edit-live-note" id="fingerHelper">전체 디자인을 수정합니다.</div>
+        </div>
+
+        <div class="metric-row" id="metricRow"></div>
+        <div class="edit-section quick-live-section"><div class="field-label"><b>빠른 수정</b><small>누르는 순간 선택 손가락에 반영</small></div><div class="select-chips" id="editChips"></div></div>
+        <div class="edit-section"><div class="field-label"><b>직접 요청</b><small>입력 후 적용하면 편집 이력에 저장</small></div><textarea id="editPrompt" placeholder="예: R약지만 투명하게, 실버볼 제거"></textarea></div>
+
+        <div class="service-guide" id="serviceGuide"></div>
+        <div class="sheet-actions three-actions"><button class="soft-btn" id="saveDesignBtn">♡ 저장</button><button class="soft-btn" id="final3dBtn">◫ 최종 각도뷰</button><button class="primary-btn" id="applyEditBtn">✓ 편집 확정</button></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="sheet compare-sheet" id="compareSheet" aria-hidden="true">
+    <div class="sheet-backdrop" data-close-compare></div>
+    <div class="sheet-card compare-card">
+      <div class="sheet-handle"></div>
+      <button class="sheet-close" data-close-compare>×</button>
+      <div class="sheet-body">
+        <div class="sheet-title-row"><div><span class="mini-label">COMPARE 6</span><h2>실제 시술 기준으로 비교</h2></div></div>
+        <p class="compare-intro">예쁜 순서가 아니라 시간·가격·난이도·재고 적합도를 같이 보고 고릅니다.</p>
+        <div class="compare-grid" id="compareGrid"></div>
+      </div>
+    </div>
+  </div>
+
+
+  <div class="sheet final-view-sheet" id="finalViewSheet" aria-hidden="true">
+    <div class="sheet-backdrop" data-close-final></div>
+    <div class="sheet-card final-view-card">
+      <div class="sheet-handle"></div>
+      <button class="sheet-close" data-close-final>×</button>
+      <div class="sheet-body">
+        <div class="sheet-title-row"><div><span class="mini-label">FINAL PREVIEW</span><h2>다각도 최종 확인</h2></div></div>
+        <p class="compare-intro">손가락으로 좌우·상하 드래그해서 디자인 밸런스를 확인하세요.</p>
+        <div class="viewer-shell" id="viewerShell">
+          <div class="viewer-stage" id="viewerStage"></div>
+          <div class="viewer-hint">↔ 드래그 · ↕ 기울이기</div>
+        </div>
+        <div class="viewer-angle-row">
+          <button data-view-angle="front" class="active">정면</button><button data-view-angle="left">좌 30°</button><button data-view-angle="right">우 30°</button><button data-view-angle="top">위 25°</button>
+        </div>
+        <div class="sheet-actions"><button class="soft-btn wide" data-close-final>편집 계속</button><button class="primary-btn wide" id="finalSaveBtn">최종본 저장</button></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="sheet" id="opsDetailSheet" aria-hidden="true">
+    <div class="sheet-backdrop" data-close-ops></div>
+    <div class="sheet-card ops-detail-card">
+      <div class="sheet-handle"></div>
+      <button class="sheet-close" data-close-ops>×</button>
+      <div class="sheet-body">
+        <span class="mini-label">APPOINTMENT</span>
+        <h2 id="opsDetailName">고객</h2>
+        <p id="opsDetailMeta"></p>
+        <div class="ops-customer-snapshot" id="opsCustomerSnapshot"></div>
+        <div class="sheet-actions">
+          <button class="soft-btn wide" id="opsCustomerBtn">고객 보기</button>
+          <button class="primary-btn wide" id="opsStatusBtn">시술 시작</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="toast" id="toast" role="status"></div>
+  <script src="app.js"></script>
+</body>
+</html>

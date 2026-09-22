@@ -32,8 +32,8 @@
     <main class="workspace">
       <header class="topbar">
         <div>
-          <p class="eyebrow">LUDIA · SALON OS</p>
-          <h1 id="pageTitle">오늘, 필요한 것만.</h1>
+          <p class="eyebrow">LUDIA NAIL</p>
+          <h1 id="pageTitle">오늘</h1>
         </div>
         <div class="top-actions">
           <button class="save-status" id="saveStatus" type="button" aria-label="로컬 저장 상태"><span class="save-dot"></span><span id="saveStatusText">저장 준비중</span></button>
@@ -44,47 +44,29 @@
 
 
       <section class="screen active" id="opsHomeScreen">
-        <div class="ops-hero">
+        <div class="ios-home-head">
           <div>
-            <span class="mini-label">TODAY · LUDIA NAIL</span>
-            <h2>오늘, 필요한 것만.</h2>
-            <p>예약 · 고객 · 회원권 · 매출 흐름만 빠르게 확인합니다.</p>
+            <span class="ios-date" id="todayDateLabel">9월 23일 수요일</span>
+            <h2>오늘</h2>
           </div>
-          <button class="primary-btn ops-art-cta" data-nav="booking">＋ 빠른 예약</button>
+          <button class="ios-circle-add" id="homeQuickAdd" aria-label="빠른 예약">＋</button>
         </div>
 
-        <div class="today-stats" id="todayStats"></div>
+        <article class="ios-next" id="nextCard"></article>
 
-        <div class="ops-grid">
-          <article class="panel ops-timeline-panel">
-            <div class="panel-head">
-              <div><span class="mini-label">TODAY</span><h3>오늘 예약</h3><p id="todayProgress">진행 상황을 불러오는 중</p></div>
-              <button class="text-action" data-nav="booking">예약 전체 →</button>
-            </div>
-            <div class="ops-timeline" id="opsTimeline"></div>
-          </article>
+        <div class="ios-summary" id="todayStats"></div>
 
-          <aside class="ops-side">
-            <article class="panel next-card" id="nextCard"></article>
-            <article class="panel quiet-card">
-              <div class="panel-head"><div><span class="mini-label">SMART CHECK</span><h3>오늘 확인할 것</h3></div></div>
-              <div class="quiet-list">
-                <button data-nav="customers"><span>회원권 만료 예정</span><b>2명</b></button>
-                <button data-nav="more"><span>답글 대기 리뷰</span><b>3건</b></button>
-                <button data-nav="settings"><span>부족 재료</span><b>1종</b></button>
-              </div>
-            </article>
-          </aside>
+        <div class="ios-section-head">
+          <div><h3>오늘 일정</h3><p id="todayProgress">진행 상황을 불러오는 중</p></div>
+          <button data-nav="booking">전체 보기</button>
         </div>
+        <div class="ios-schedule" id="opsTimeline"></div>
 
-        <div class="section-title-row compact-title">
-          <div><span class="mini-label">QUICK</span><h3>자주 하는 일</h3></div>
-        </div>
-        <div class="quick-work-grid">
-          <button class="quick-work" data-nav="booking"><span>＋</span><b>예약 보기</b><small>오늘 빈 시간 확인</small></button>
-          <button class="quick-work" data-nav="customers"><span>○</span><b>고객 찾기</b><small>이력·회원권·메모</small></button>
-          <button class="quick-work" data-nav="more"><span>◇</span><b>회원권</b><small>잔액 · 만료 확인</small></button>
-          <button class="quick-work" data-nav="more"><span>↗</span><b>매출 보기</b><small>오늘 핵심만</small></button>
+        <div class="ios-section-head ios-check-head"><div><h3>확인할 것</h3></div></div>
+        <div class="ios-grouped-list">
+          <button data-nav="customers"><span><b>회원권 만료 예정</b><small>오늘 확인하면 좋은 고객</small></span><em>2</em><i>›</i></button>
+          <button data-nav="more"><span><b>리뷰 답글 대기</b><small>네이버 플레이스</small></span><em>3</em><i>›</i></button>
+          <button data-nav="settings"><span><b>부족 재료</b><small>대체 가능한 재료 확인</small></span><em>1</em><i>›</i></button>
         </div>
       </section>
 
@@ -355,10 +337,10 @@
     </main>
 
     <nav class="mobile-nav" aria-label="모바일 메뉴">
-      <button class="active" data-nav="opsHome"><span>●</span><em>오늘</em></button>
-      <button data-nav="booking"><span>□</span><em>예약</em></button>
-      <button data-nav="customers"><span>◎</span><em>고객</em></button>
-      <button data-nav="more"><span>•••</span><em>더보기</em></button>
+      <button class="active" data-nav="opsHome"><span class="nav-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 10.5 12 4l8 6.5v8a1.5 1.5 0 0 1-1.5 1.5h-13A1.5 1.5 0 0 1 4 18.5z"/><path d="M9.5 20v-5.5h5V20"/></svg></span><em>오늘</em></button>
+      <button data-nav="booking"><span class="nav-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="4" y="5.5" width="16" height="14" rx="3"/><path d="M8 3.5v4M16 3.5v4M4 10h16"/></svg></span><em>예약</em></button>
+      <button data-nav="customers"><span class="nav-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="8" r="3.5"/><path d="M5.5 20c.6-4 3-6 6.5-6s5.9 2 6.5 6"/></svg></span><em>고객</em></button>
+      <button data-nav="more"><span class="nav-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="6" cy="12" r="1.3"/><circle cx="12" cy="12" r="1.3"/><circle cx="18" cy="12" r="1.3"/></svg></span><em>더보기</em></button>
     </nav>
   </div>
 
@@ -373,6 +355,7 @@
 
         <div class="instant-editor">
           <div class="instant-editor-head"><div><b>손가락을 직접 눌러 수정</b><small>선택 → 수정칩 터치 즉시 반영</small></div><span id="liveEditState">전체 선택</span></div>
+          <div class="art-live-stage" id="artLiveStage" aria-label="선택 디자인 실시간 미리보기"></div>
           <div class="hand-editor" id="handEditor" aria-label="손가락별 디자인 편집"></div>
           <div class="edit-live-note" id="fingerHelper">전체 디자인을 수정합니다.</div>
         </div>

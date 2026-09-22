@@ -3,6 +3,7 @@
 // Optional env LUDIA_DASHBOARD_TOKEN: when set, send Authorization: Bearer <token>.
 const json=(res,status,body)=>res.status(status).setHeader('content-type','application/json; charset=utf-8').end(JSON.stringify(body));
 
+function salonId(){return process.env.LUDIA_SALON_ID||null;}
 function config(){
   const url=process.env.SUPABASE_URL,key=process.env.SUPABASE_SECRET_KEY||process.env.SUPABASE_SERVICE_ROLE_KEY;
   return url&&key?{url,key,headers:{apikey:key,authorization:`Bearer ${key}`}}:null;
@@ -20,11 +21,11 @@ export default async function handler(req,res){
   if(req.method!=='GET')return json(res,405,{ok:false,error:'method_not_allowed'});
   const dashboardToken=process.env.LUDIA_DASHBOARD_TOKEN;
   if(dashboardToken&&req.headers.authorization!==`Bearer ${dashboardToken}`)return json(res,401,{ok:false,error:'unauthorized'});
-  const cfg=config();if(!cfg)return json(res,200,{ok:true,configured:false,state:'setup_required',freshness:'never',today:{total:0,confirmed:0,cancelled:0}});
+  const cfg=config(),sid=salonId();if(!cfg||!sid)return json(res,200,{ok:true,configured:false,state:'setup_required',freshness:'never',today:{total:0,confirmed:0,cancelled:0}});
   try{
-    const connection=(await readJson(`${cfg.url}/rest/v1/integration_connections?provider=eq.NAVER&select=state,last_sync_at,last_error,metadata&limit=1`,cfg.headers))[0]||null;
+    const connection=(await readJson(`${cfg.url}/rest/v1/ludia_integration_connections?salon_id=eq.${encodeURIComponent(sid)}&provider=eq.NAVER&select=state,last_sync_at,last_error,metadata&limit=1`,cfg.headers))[0]||null;
     const today=new Intl.DateTimeFormat('en-CA',{timeZone:'Asia/Seoul',year:'numeric',month:'2-digit',day:'2-digit'}).format(new Date());
-    const bookings=await readJson(`${cfg.url}/rest/v1/external_bookings?source=eq.NAVER&booking_date=eq.${encodeURIComponent(today)}&select=status`,cfg.headers);
+    const bookings=await readJson(`${cfg.url}/rest/v1/ludia_external_bookings?salon_id=eq.${encodeURIComponent(sid)}&source=eq.NAVER&booking_date=eq.${encodeURIComponent(today)}&select=status`,cfg.headers);
     const health=staleState(connection);
     return json(res,200,{ok:true,configured:true,...health,lastSyncAt:connection?.last_sync_at||null,lastError:connection?.last_error||null,today:{total:bookings.length,confirmed:bookings.filter(x=>x.status==='confirmed').length,cancelled:bookings.filter(x=>x.status==='cancelled').length,requested:bookings.filter(x=>x.status==='requested').length}});
   }catch(error){console.error('[LUDIA status]',error);return json(res,502,{ok:false,error:'status_unavailable'});}

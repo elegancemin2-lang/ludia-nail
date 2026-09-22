@@ -23,13 +23,13 @@ const baseDesigns=[
  {id:5,name:'Mini Dot Jelly',desc:'시럽 핑크에 잔도트와 글리터를 넣어 귀엽지만 담백하게.',img:img(5),diff:'쉬움',time:65,price:65000,fit:97,stock:'보유재료 100%',tags:['시럽','도트','데일리'],status:'이달의아트',materials:['핑크 시럽','미니 도트','잔글리터'],tech:'시럽 2코트 → 도트 배치 → 글리터 얇게 → 탑'},
  {id:6,name:'Aurora Glass',desc:'클리어 핑크와 오로라 필름, 초소형 스톤으로 유리알 느낌.',img:img(2),diff:'보통',time:80,price:79000,fit:91,stock:'보유재료 88%',tags:['오로라','웨딩','글라스'],status:'후보',materials:['클리어 핑크','오로라 필름','미니 스톤'],tech:'클리어 컬러 → 필름 조각 → 볼륨젤 → 미니 스톤 → 탑'}
 ];
-let state={view:'opsHome',dna:'성수 무드',conditions:new Set(['더 심플','파츠 2개 이하','실물시술 쉽게']),designs:[...baseDesigns],library:baseDesigns.slice(0,5),collection:new Set(),active:null,fingers:new Set(['전체']),filter:'전체',start:Date.now(),draft:{concept:'',homePrompt:'',maxTime:'90',targetPrice:'69000',stockFirst:true,refDataUrl:null},outputMode:'feed'};
+let state={view:'opsHome',dna:'성수 무드',conditions:new Set(['더 심플','파츠 2개 이하','실물시술 쉽게']),designs:[...baseDesigns],library:baseDesigns.slice(0,5),collection:new Set(),active:null,fingers:new Set(['전체']),filter:'전체',start:Date.now(),draft:{concept:'',homePrompt:'',maxTime:'90',targetPrice:'69000',stockFirst:true,refDataUrl:null},outputMode:'feed',generationBatch:null};
 const DB_NAME='ludia-art-studio';const DB_VERSION=1;const DB_STORE='app';const BACKUP_MAGIC='LUDIA_ART_STUDIO_BACKUP';let storageMode='IndexedDB';let saveTimer=null;let lastSavedAt=null;
 function openDB(){return new Promise((resolve,reject)=>{if(!('indexedDB'in window))return reject(new Error('IndexedDB unavailable'));const req=indexedDB.open(DB_NAME,DB_VERSION);req.onupgradeneeded=()=>{const db=req.result;if(!db.objectStoreNames.contains(DB_STORE))db.createObjectStore(DB_STORE)};req.onsuccess=()=>resolve(req.result);req.onerror=()=>reject(req.error)})}
 async function idbGet(key){const db=await openDB();return new Promise((resolve,reject)=>{const tx=db.transaction(DB_STORE,'readonly');const req=tx.objectStore(DB_STORE).get(key);req.onsuccess=()=>resolve(req.result);req.onerror=()=>reject(req.error)})}
 async function idbSet(key,value){const db=await openDB();return new Promise((resolve,reject)=>{const tx=db.transaction(DB_STORE,'readwrite');tx.objectStore(DB_STORE).put(value,key);tx.oncomplete=()=>resolve();tx.onerror=()=>reject(tx.error)})}
-function snapshot(){return{magic:BACKUP_MAGIC,schema:2,savedAt:new Date().toISOString(),data:{dna:state.dna,conditions:[...state.conditions],designs:state.designs,library:state.library,collection:[...state.collection],draft:state.draft,outputMode:state.outputMode}}}
-function applySnapshot(snap){if(!snap?.data)return false;const d=snap.data;state.dna=d.dna||state.dna;state.conditions=new Set(Array.isArray(d.conditions)?d.conditions:[...state.conditions]);state.designs=Array.isArray(d.designs)&&d.designs.length?d.designs:[...baseDesigns];state.library=Array.isArray(d.library)&&d.library.length?d.library:baseDesigns.slice(0,5);state.collection=new Set(Array.isArray(d.collection)?d.collection:[]);state.draft={...state.draft,...(d.draft||{})};state.outputMode=d.outputMode||'feed';lastSavedAt=snap.savedAt?new Date(snap.savedAt):null;return true}
+function snapshot(){return{magic:BACKUP_MAGIC,schema:3,savedAt:new Date().toISOString(),data:{dna:state.dna,conditions:[...state.conditions],designs:state.designs,library:state.library,collection:[...state.collection],draft:state.draft,outputMode:state.outputMode,generationBatch:state.generationBatch}}}
+function applySnapshot(snap){if(!snap?.data)return false;const d=snap.data;state.dna=d.dna||state.dna;state.conditions=new Set(Array.isArray(d.conditions)?d.conditions:[...state.conditions]);state.generationBatch=d.generationBatch||null;state.designs=state.generationBatch&&Array.isArray(d.designs)&&d.designs.length?d.designs:[...baseDesigns];state.library=Array.isArray(d.library)&&d.library.length?d.library:baseDesigns.slice(0,5);state.collection=new Set(Array.isArray(d.collection)?d.collection:[]);state.draft={...state.draft,...(d.draft||{})};state.outputMode=d.outputMode||'feed';lastSavedAt=snap.savedAt?new Date(snap.savedAt):null;return true}
 function setSaveStatus(mode,text){const el=$('#saveStatus');if(!el)return;el.classList.remove('saving','saved','error');if(mode)el.classList.add(mode);$('#saveStatusText').textContent=text}
 function schedulePersist(){setSaveStatus('saving','저장 중…');clearTimeout(saveTimer);saveTimer=setTimeout(()=>persistNow(),650)}
 async function persistNow(){const snap=snapshot();try{await idbSet('snapshot',snap);storageMode='IndexedDB';localStorage.removeItem('ludiaLibrary');lastSavedAt=new Date(snap.savedAt);setSaveStatus('saved','자동저장됨')}catch(err){storageMode='localStorage';try{const fallback={...snap,data:{...snap.data,draft:{...snap.data.draft,refDataUrl:null}}};localStorage.setItem('ludiaStudioFallback',JSON.stringify(fallback));lastSavedAt=new Date();setSaveStatus('saved','기기저장됨')}catch(e){setSaveStatus('error','저장 오류')}}updateStorageStats()}
@@ -184,21 +184,83 @@ const MODEL_VARIANTS=[
  {key:'aurora-glass',name:'Aurora Glass',base:'#e7cbd9',accent:'#bde8ef',magnet:1,aurora:3,french:0,gems:2,accentFingers:[2,3,7,8],texture:'glass'}
 ];
 function cloneModel(m){return JSON.parse(JSON.stringify(m))}
-function promptModelAdjust(model){
- const text=((state.draft.concept||'')+' '+(state.draft.homePrompt||'')+' '+state.dna).toLowerCase();
- if(/블루|blue/.test(text)){model.base='#bfd5ef';model.accent='#e7f3ff'}
- if(/레드|red|와인/.test(text)){model.base='#a83c4b';model.accent='#f6dbe0'}
- if(/블랙|black/.test(text)){model.base='#323238';model.accent='#d8d8df'}
- if(/화이트|white|웨딩/.test(text)){model.base='#f2ebea';model.accent='#ffffff';model.aurora=Math.max(model.aurora,1)}
- if(/자석|magnet/.test(text))model.magnet=Math.max(model.magnet,2)
- if(/오로라|aurora/.test(text))model.aurora=Math.max(model.aurora,2)
- if(/프렌치|french/.test(text))model.french=Math.max(model.french,2)
- if(/심플|minimal/.test(text)){model.gems=Math.min(model.gems,1);model.aurora=Math.min(model.aurora,1)}
+const GENERATION_VARIANTS=[
+ {key:'balanced',label:'균형형',desc:'현재 요청을 가장 자연스럽게 정리한 기본안',magnet:0,aurora:0,french:0,gems:0},
+ {key:'glow',label:'광택 변주',desc:'자석·오로라의 빛 표현을 한 단계 살린 안',magnet:1,aurora:1,french:0,gems:0},
+ {key:'point',label:'포인트형',desc:'엄지·약지 중심으로 파츠 포인트를 더한 안',magnet:0,aurora:0,french:0,gems:2},
+ {key:'minimal',label:'데일리형',desc:'파츠를 덜고 라인과 컬러 밸런스를 정돈한 안',magnet:-1,aurora:-1,french:1,gems:-2},
+ {key:'premium',label:'프리미엄',desc:'유리알·오팔 계열의 깊이감을 강화한 고급안',magnet:1,aurora:2,french:0,gems:1},
+ {key:'trend',label:'트렌드형',desc:'포인트 손가락과 질감을 과감하게 재배치한 변주안',magnet:1,aurora:1,french:1,gems:1}
+];
+const GENERATION_PALETTES=[
+ {key:'rose',label:'밀키 로즈',base:'#efc5cc',accent:'#fff0f4'},
+ {key:'nude',label:'누드 베이지',base:'#dec3b7',accent:'#f5e8df'},
+ {key:'mauve',label:'뮤트 모브',base:'#cdb8c6',accent:'#f2e9f0'},
+ {key:'ivory',label:'웨딩 아이보리',base:'#eee7e4',accent:'#ffffff'},
+ {key:'blue',label:'미스트 블루',base:'#bfd4e9',accent:'#edf6ff'},
+ {key:'wine',label:'로즈 와인',base:'#a94b59',accent:'#f4dce1'},
+ {key:'charcoal',label:'차콜 글로우',base:'#4a4950',accent:'#dedee4'}
+];
+function hashSeed(value){let h=2166136261;for(let i=0;i<value.length;i++){h^=value.charCodeAt(i);h=Math.imul(h,16777619)}return h>>>0}
+function seededRandom(seed){let a=seed>>>0;return()=>{a+=0x6D2B79F5;let t=a;t=Math.imul(t^t>>>15,t|1);t^=t+Math.imul(t^t>>>7,t|61);return((t^t>>>14)>>>0)/4294967296}}
+function mixHex(a,b,t){const read=x=>[parseInt(x.slice(1,3),16),parseInt(x.slice(3,5),16),parseInt(x.slice(5,7),16)];const A=read(a),B=read(b);return'#'+A.map((v,i)=>Math.round(v+(B[i]-v)*t).toString(16).padStart(2,'0')).join('')}
+function generationSource(){
+ const ref=state.draft.refDataUrl?'reference':'no-reference';
+ return [state.draft.concept||'',state.draft.homePrompt||'',state.dna,[...state.conditions].sort().join('|'),String($('#maxTime')?.value||state.draft.maxTime||90),String($('#targetPrice')?.value||state.draft.targetPrice||69000),$('#stockFirst')?.checked===false?'idea-first':'stock-first',ref].join('::')
+}
+function makeGenerationBatch(mode='fresh_6'){
+ const source=generationSource();const stamp=Date.now();const nonce=Math.random().toString(36).slice(2,8);
+ return{id:`batch-${stamp.toString(36)}-${nonce}`,createdAt:new Date(stamp).toISOString(),status:'running',mode,sourceFingerprint:hashSeed(source).toString(36),completed:0,total:6}
+}
+function paletteForText(text,rand){
+ const t=text.toLowerCase();
+ if(/블루|파랑|blue/.test(t))return GENERATION_PALETTES[4];
+ if(/레드|빨강|와인|wine|red/.test(t))return GENERATION_PALETTES[5];
+ if(/블랙|검정|차콜|black/.test(t))return GENERATION_PALETTES[6];
+ if(/화이트|아이보리|웨딩|white/.test(t))return GENERATION_PALETTES[3];
+ if(/누드|베이지|beige/.test(t))return GENERATION_PALETTES[1];
+ if(/모브|보라|mauve|purple/.test(t))return GENERATION_PALETTES[2];
+ return GENERATION_PALETTES[Math.floor(rand()*4)]
+}
+function randomAccentFingers(rand,count){
+ const pool=[0,1,2,3,4,5,6,7,8,9],out=[];while(pool.length&&out.length<count){out.push(pool.splice(Math.floor(rand()*pool.length),1)[0])}return out
+}
+function promptModelAdjust(model,text){
+ const t=(text||generationSource()).toLowerCase();const cond=[...state.conditions].join(' ');
+ if(/자석|magnet/.test(t)||cond.includes('자석 강하게'))model.magnet=Math.max(model.magnet,2);
+ if(/오로라|aurora/.test(t)||cond.includes('오로라'))model.aurora=Math.max(model.aurora,2);
+ if(/프렌치|french/.test(t))model.french=Math.max(model.french,2);
+ if(/심플|minimal/.test(t)||cond.includes('더 심플')){model.gems=Math.min(model.gems,1);model.aurora=Math.min(model.aurora,1)}
+ if(cond.includes('파츠 2개 이하'))model.gems=Math.min(model.gems,2);
+ if(cond.includes('실버 포인트'))model.accent='#e7e9ed';
  return model
 }
-function generatedSet(){
- const timeLimit=+$('#maxTime').value;const target=+$('#targetPrice').value;const now=Date.now();
- return baseDesigns.map((d,i)=>{const model=promptModelAdjust(cloneModel(MODEL_VARIANTS[i]||MODEL_VARIANTS[0]));return {...d,name:model.name,id:now+i,model,fingerLooks:null,time:Math.min(d.time,timeLimit),price:Math.min(d.price,target+10000),fit:Math.max(86,d.fit-(state.conditions.has('실물시술 쉽게')?0:2)),status:'후보',tags:[state.dna.split(' ')[0],...d.tags.slice(0,2)]}})
+function generatedSet(batch){
+ const source=generationSource();const timeLimit=+$('#maxTime').value||90;const target=+$('#targetPrice').value||69000;
+ const baseSeed=hashSeed(batch.id+'::'+source);const offset=baseSeed%MODEL_VARIANTS.length;
+ return GENERATION_VARIANTS.map((plan,i)=>{
+   const rand=seededRandom(baseSeed+Math.imul(i+1,2654435761));const d=baseDesigns[(i+offset)%baseDesigns.length];const template=MODEL_VARIANTS[(i+offset)%MODEL_VARIANTS.length];
+   const model=cloneModel(template);const palette=paletteForText(source+' '+state.dna,rand);const shade=.05+rand()*.22;
+   model.base=mixHex(palette.base,rand()>.5?'#ffffff':'#2d2930',shade);model.accent=mixHex(palette.accent,'#ffffff',rand()*.18);
+   model.magnet=Math.max(0,Math.min(3,model.magnet+plan.magnet));model.aurora=Math.max(0,Math.min(3,model.aurora+plan.aurora));model.french=Math.max(0,Math.min(3,model.french+plan.french));model.gems=Math.max(0,Math.min(3,model.gems+plan.gems));
+   if(plan.key==='trend'){model.texture=['glass','jelly','pearl','smoke'][Math.floor(rand()*4)];model.gems=Math.max(1,model.gems)}
+   if(plan.key==='premium')model.texture=rand()>.45?'glass':'pearl';
+   if(plan.key==='minimal')model.texture=rand()>.5?'nude':'syrup';
+   const accentCount=plan.key==='point'?4:plan.key==='minimal'?2:2+Math.floor(rand()*2);model.accentFingers=randomAccentFingers(rand,accentCount);
+   promptModelAdjust(model,source);
+   const time=Math.max(45,Math.min(timeLimit,d.time+(plan.key==='point'||plan.key==='premium'?8:plan.key==='minimal'?-8:Math.round((rand()-.5)*8))));
+   const price=Math.max(49000,Math.min(target+10000,d.price+(plan.key==='premium'?10000:plan.key==='minimal'?-7000:Math.round((rand()-.5)*6000/1000)*1000)));
+   const stockFirst=$('#stockFirst').checked;const stock=stockFirst?(d.stock.includes('대체')?'대체재 우선 구성':'보유재료 중심'):'아이디어 우선';
+   return {...d,id:`${batch.id}-${i+1}`,batchId:batch.id,variantKey:plan.key,name:`${palette.label} · ${plan.label}`,desc:plan.desc,model,fingerLooks:null,time,price,fit:Math.max(86,Math.min(99,d.fit+(state.conditions.has('실물시술 쉽게')?2:0)+Math.round((rand()-.5)*4))),stock,status:'후보',generatedAt:new Date().toISOString(),tags:[state.dna.split(' ')[0],plan.label,palette.label,state.draft.refDataUrl?'참고사진':'신규생성']}
+ })
+}
+function renderGenerationSkeleton(batch){
+ const grid=$('#designGrid');grid.innerHTML='';
+ GENERATION_VARIANTS.forEach((plan,i)=>{const a=document.createElement('article');a.className='generation-skeleton';a.dataset.generationSlot=String(i);a.innerHTML=`<div class="generation-skeleton-media"><span>0${i+1}</span><i></i></div><div class="generation-skeleton-copy"><b>${plan.label}</b><small>${i===0?'현재 요청 분석 중':'새 조합 대기 중'}</small><em></em><em class="short"></em></div>`;grid.appendChild(a)});
+ if($('#generationMeta'))$('#generationMeta').textContent='새 배치 · '+new Date(batch.createdAt).toLocaleTimeString('ko-KR',{hour:'2-digit',minute:'2-digit'})
+}
+function setGeneratingUi(on){
+ const main=$('#generateMain'),again=$('#regenerateBtn'),compare=$('#compareBtn');if(main){main.disabled=on;const b=main.querySelector('b');const s=main.querySelector('small');if(b)b.textContent=on?'새 시안 만드는 중…':'새로운 6개 시안 만들기';if(s)s.textContent=on?'완성되는 안부터 바로 표시합니다':'현재 조건으로 새 조합 생성 · 저장본 재사용 안 함'}if(again)again.disabled=on;if(compare)compare.disabled=on
 }
 function modelLookForIndex(d,i){
  const m=d.model||MODEL_VARIANTS[i%MODEL_VARIANTS.length];const accent=(m.accentFingers||[]).includes(i);
@@ -224,7 +286,8 @@ function modelPreviewHTML(d,mode='card'){
 }
 function designPreviewHTML(d,mode='card'){return d.model?modelPreviewHTML(d,mode):`<img src="${d.img}" alt="${d.name}">`}
 function designCard(d,i){const a=document.createElement('article');a.className='design-card';const stockWarn=d.stock.includes('대체')||d.stock.includes('88');a.innerHTML=`<div class="design-media">${designPreviewHTML(d,'card')}<span class="design-num">0${i+1}</span><button class="design-fav" data-fav>♡</button></div><div class="design-body"><div class="design-name-row"><b>${d.name}</b><span>${money(d.price)}</span></div><p>${d.desc}</p><div class="meta-pills"><span>${d.diff}</span><span>${d.time}분</span><span>실행 ${d.fit}%</span><span class="${stockWarn?'stock-warn':'stock-ok'}">${d.stock}</span></div><div class="design-footer"><button data-save>저장</button><button data-edit>수정</button></div></div>`;a.querySelector('[data-edit]').onclick=()=>openSheet(d);a.querySelector('.design-media').onclick=(e)=>{if(e.target.closest('[data-fav]'))return;openSheet(d)};a.querySelector('[data-save]').onclick=()=>saveDesign(d);a.querySelector('[data-fav]').onclick=(e)=>{e.currentTarget.textContent=e.currentTarget.textContent==='♡'?'♥':'♡';toast('즐겨찾기 상태를 바꿨어요')};return a}
-function generate(){state.designs=generatedSet();state.designs.forEach(ensureFingerLooks);schedulePersist();$('#resultSection').classList.remove('hidden');$('#designGrid').replaceChildren(...state.designs.map(designCard));toast('6개 시안을 손톱 모델에 입혔어요');setTimeout(()=>$('#resultSection').scrollIntoView({behavior:'smooth',block:'start'}),100);renderPicker()}
+let generationRunToken=0;const wait=ms=>new Promise(resolve=>setTimeout(resolve,ms));
+async function generate(){const token=++generationRunToken;const batch=makeGenerationBatch();state.generationBatch=batch;state.designs=[];state.active=null;setGeneratingUi(true);$('#resultSection').classList.remove('hidden');renderGenerationSkeleton(batch);setTimeout(()=>$('#resultSection').scrollIntoView({behavior:'smooth',block:'start'}),80);const fresh=generatedSet(batch);for(let i=0;i<fresh.length;i++){await wait(110+Math.round(Math.random()*90));if(token!==generationRunToken)return;const d=fresh[i];ensureFingerLooks(d);state.designs.push(d);batch.completed=i+1;const slot=$(`#designGrid [data-generation-slot="${i}"]`);if(slot)slot.replaceWith(designCard(d,i));if($('#generationMeta'))$('#generationMeta').textContent=`새 배치 · ${batch.completed}/6 생성`}batch.status='completed';if($('#generationMeta'))$('#generationMeta').textContent='새 배치 · 6/6 완료';setGeneratingUi(false);schedulePersist();renderPicker();toast('저장본을 재사용하지 않고 새로운 6개 시안을 만들었어요')}
 $('#generateMain').onclick=generate;$('#regenerateBtn').onclick=generate;function openCompare(){
  const grid=$('#compareGrid');grid.innerHTML='';
  state.designs.slice(0,6).forEach((d,i)=>{const warn=d.stock.includes('대체')||d.stock.includes('88');const c=document.createElement('button');c.className='compare-item';c.innerHTML=`<div class="compare-thumb">${designPreviewHTML(d,'compare')}<span>0${i+1}</span></div><div class="compare-copy"><b>${d.name}</b><div><span>${d.time}분</span><span>${money(d.price)}</span><span>${d.diff}</span></div><small class="${warn?'warn':''}">${d.stock} · 실행 ${d.fit}%</small></div>`;c.onclick=()=>{closeCompare();openSheet(d)};grid.appendChild(c)});
@@ -383,7 +446,7 @@ $$('#outputMode button').forEach(b=>b.onclick=()=>{$$('#outputMode button').forE
 
 function renderSettings(){$('#dnaList').replaceChildren(...DNA.map(d=>{const r=document.createElement('div');r.className='dna-row';r.innerHTML=`<div class="dna-info"><b>${d.name}</b><small>${d.desc}</small></div><span class="dna-score">${d.score}%</span>`;return r}));$('#inventoryList').replaceChildren(...inventory.map(x=>{const r=document.createElement('div');r.className='inventory-row';r.innerHTML=`<div class="inventory-info"><b>${x.name}</b><small>${x.state} · ${x.qty}</small></div><span class="stock-dot ${x.state==='부족'?'low':x.state==='품절'?'out':''}"></span>`;return r}))}
 function hydrateFromState(){if($('#homePrompt'))$('#homePrompt').value=state.draft.homePrompt||'';if($('#conceptInput'))$('#conceptInput').value=state.draft.concept||'';if($('#maxTime'))$('#maxTime').value=String(state.draft.maxTime||'90');if($('#targetPrice'))$('#targetPrice').value=String(state.draft.targetPrice||'69000');if($('#stockFirst'))$('#stockFirst').checked=state.draft.stockFirst!==false;if(state.draft.refDataUrl){$('#refPreviewImg').src=state.draft.refDataUrl;$('#refEmpty').classList.add('hidden');$('#refPreview').classList.remove('hidden')}else{$('#refPreview').classList.add('hidden');$('#refEmpty').classList.remove('hidden')}$$('#outputMode button').forEach(b=>b.classList.toggle('active',b.dataset.mode===state.outputMode));$('#collectionPreview').className='collection-preview '+state.outputMode}
-function renderAll(){renderDNAChips();renderConditions();renderNails();renderLibrary();renderRecent();renderPicker();renderCollectionPreview();renderSettings();updateBrief();updateStorageStats();const generated=state.designs.some(d=>Number(d.id)>1000);$('#resultSection').classList.toggle('hidden',!generated);if(generated)$('#designGrid').replaceChildren(...state.designs.map(designCard))}
+function renderAll(){renderDNAChips();renderConditions();renderNails();renderLibrary();renderRecent();renderPicker();renderCollectionPreview();renderSettings();updateBrief();updateStorageStats();const generated=state.generationBatch?.status==='completed'&&state.designs.length>0;$('#resultSection').classList.toggle('hidden',!generated);if(generated){$('#designGrid').replaceChildren(...state.designs.map(designCard));if($('#generationMeta'))$('#generationMeta').textContent='최근 생성 · '+new Date(state.generationBatch.createdAt).toLocaleTimeString('ko-KR',{hour:'2-digit',minute:'2-digit'})}}
 $('#saveStatus').onclick=()=>{setView('more');toast('저장 상태 · 설정/백업은 더보기에서 관리합니다')};
 $('#exportBackupBtn').onclick=exportBackup;$('#importBackupBtn').onclick=()=>$('#backupFile').click();$('#backupFile').onchange=e=>{const f=e.target.files[0];if(f)importBackupFile(f);e.target.value=''};$('#persistStorageBtn').onclick=requestPersistentStorage;
 

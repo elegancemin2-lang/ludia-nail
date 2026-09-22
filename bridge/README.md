@@ -23,10 +23,10 @@ Optional environment variables:
 
 ## Server + Supabase setup
 
-The repository now contains `api/naver-sync.js` and `supabase/naver_bridge.sql`.
+The repository now contains `api/naver-sync.js` and `supabase/naver_bridge.sql`; both use the shared INBETWEEN Supabase project's isolated `ludia_*` namespace.
 
 1. Run `supabase/naver_bridge.sql` once in the target Supabase project.
-2. Configure Vercel server-side environment variables: `LUDIA_SYNC_TOKEN`, `SUPABASE_URL`, `SUPABASE_SECRET_KEY` (preferred). Legacy `SUPABASE_SERVICE_ROLE_KEY` remains supported as a fallback.
+2. Configure Vercel server-side environment variables: `LUDIA_SYNC_TOKEN`, `SUPABASE_URL`, `SUPABASE_SECRET_KEY` (preferred), and `LUDIA_SALON_ID`. Legacy `SUPABASE_SERVICE_ROLE_KEY` remains supported as a fallback.
 3. Redeploy the production project.
 4. Open `/api/naver-sync` with GET to check endpoint health. It reports whether Supabase is configured, but never returns secrets.
 5. Start the local bridge with the matching sync URL/token.

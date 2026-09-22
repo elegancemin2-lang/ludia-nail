@@ -246,6 +246,7 @@ function generatedSet(batch){
    if(plan.key==='trend'){model.texture=['glass','jelly','pearl','smoke'][Math.floor(rand()*4)];model.gems=Math.max(1,model.gems)}
    if(plan.key==='premium')model.texture=rand()>.45?'glass':'pearl';
    if(plan.key==='minimal')model.texture=rand()>.5?'nude':'syrup';
+   model.shape=plan.key==='minimal'?'round':plan.key==='premium'?'almond':plan.key==='trend'?(rand()>.5?'ballerina':'almond'):'oval';model.length=plan.key==='minimal'?1:plan.key==='premium'?3:2;
    const accentCount=plan.key==='point'?4:plan.key==='minimal'?2:2+Math.floor(rand()*2);model.accentFingers=randomAccentFingers(rand,accentCount);
    promptModelAdjust(model,source);
    const time=Math.max(45,Math.min(timeLimit,d.time+(plan.key==='point'||plan.key==='premium'?8:plan.key==='minimal'?-8:Math.round((rand()-.5)*8))));
@@ -264,7 +265,7 @@ function setGeneratingUi(on){
 }
 function modelLookForIndex(d,i){
  const m=d.model||MODEL_VARIANTS[i%MODEL_VARIANTS.length];const accent=(m.accentFingers||[]).includes(i);
- return {mods:[],levels:{},base:m.base,accent:m.accent,magnet:accent?m.magnet:Math.max(0,m.magnet-1),aurora:accent?m.aurora:Math.max(0,m.aurora-1),french:m.french,gems:accent?m.gems:0,texture:m.texture||'syrup'}
+ return {mods:[],levels:{},base:m.base,accent:m.accent,magnet:accent?m.magnet:Math.max(0,m.magnet-1),aurora:accent?m.aurora:Math.max(0,m.aurora-1),french:m.french,gems:accent?m.gems:0,texture:m.texture||'syrup',shape:m.shape||'oval',length:Number.isFinite(m.length)?m.length:2}
 }
 function nailVisualState(look){
  const mods=look.mods||[];const lvl=look.levels||{};let base=look.base||'#edc8cf',accent=look.accent||'#ffffff';
@@ -278,8 +279,8 @@ function nailVisualState(look){
  return {base,accent,magnet:Math.min(3,magnet),aurora:Math.min(3,aurora),french:Math.min(3,french),gems:Math.min(3,gems),texture:look.texture||'syrup'}
 }
 function nailMarkup(look,cls=''){
- const v=nailVisualState(look);const gems=Array.from({length:v.gems},(_,i)=>`<i class="model-gem g${i+1}"></i>`).join('');
- return `<span class="nail-model ${cls} texture-${v.texture}" style="--nail-base:${v.base};--nail-accent:${v.accent};--mag:${v.magnet/3};--aur:${v.aurora/3};--french:${v.french/3}"><span class="model-base"></span><span class="model-wash"></span><span class="model-aurora"></span><span class="model-magnet"></span><span class="model-french"></span>${gems}<span class="model-gloss"></span></span>`
+ const v=nailVisualState(look);const gems=Array.from({length:v.gems},(_,i)=>`<i class="model-gem g${i+1}"></i>`).join('');const shape=look.shape||'oval';const length=Math.max(0,Math.min(3,Number.isFinite(look.length)?look.length:2));
+ return `<span class="nail-model ${cls} texture-${v.texture} shape-${shape} length-${length}" style="--nail-base:${v.base};--nail-accent:${v.accent};--mag:${v.magnet/3};--aur:${v.aurora/3};--french:${v.french/3}"><span class="model-base"></span><span class="model-wash"></span><span class="model-aurora"></span><span class="model-magnet"></span><span class="model-french"></span>${gems}<span class="model-gloss"></span></span>`
 }
 function modelPreviewHTML(d,mode='card'){
  ensureFingerLooks(d);const fingers=FINGERS.slice(5,10);return `<div class="model-preview ${mode}"><div class="model-palm">${fingers.map((f,i)=>`<span class="model-finger mf${i+1}">${nailMarkup(d.fingerLooks[f],'preview-nail')}</span>`).join('')}</div></div>`
@@ -298,6 +299,10 @@ $('#compareBtn').onclick=openCompare;$$('[data-close-compare]').forEach(x=>x.onc
 
 function saveDesign(d){if(state.library.some(x=>x.id===d.id)){toast('이미 보관함에 있어요');return}const sameName=state.library.filter(x=>x.name===d.name).length;const saved={...d,name:sameName?`${d.name} · V${sameName+1}`:d.name,status:d.status==='즐겨찾기'?'즐겨찾기':'후보',savedAt:new Date().toISOString()};state.library.unshift(saved);renderLibrary();renderRecent();renderPicker();schedulePersist();toast(sameName?'변형 버전으로 보관했어요':'보관함에 자동 저장했어요')}
 const FINGERS=['L엄지','L검지','L중지','L약지','L소지','R엄지','R검지','R중지','R약지','R소지'];
+const NAIL_SHAPES=[['round','라운드'],['oval','오벌'],['almond','아몬드'],['square','스퀘어'],['ballerina','발레리나']];
+const NAIL_LENGTH_LABELS=['숏','보통','롱','엑스트라'];
+const NAIL_COLORS=['#f1c7ce','#e6d0c4','#d6b7c7','#b9cee6','#f0ebe5','#a84b59','#5a5860','#ffffff'];
+const NAIL_TEXTURES=[['syrup','시럽'],['jelly','젤리'],['glass','글라스'],['pearl','펄'],['smoke','스모크']];
 let editorHistory=[],editorRedo=[],editorOriginal=null,editorPreviewMode='current';
 function snapshotFingerLooks(d){ensureFingerLooks(d);return cloneModel(d.fingerLooks)}
 function restoreFingerLooks(d,snap){d.fingerLooks=cloneModel(snap);recalcDesign(d);renderHandEditor();renderArtLiveStage();renderEditorMetrics();syncEditChipStates();render3DStage();schedulePersist()}
@@ -363,7 +368,7 @@ const lookClassMap={
 };
 function ensureFingerLooks(d){
  if(!d.fingerLooks)d.fingerLooks={};
- FINGERS.forEach((f,i)=>{if(!d.fingerLooks[f])d.fingerLooks[f]=modelLookForIndex(d,i);else{d.fingerLooks[f].mods=d.fingerLooks[f].mods||[];d.fingerLooks[f].levels=d.fingerLooks[f].levels||{}}});
+ FINGERS.forEach((f,i)=>{if(!d.fingerLooks[f])d.fingerLooks[f]=modelLookForIndex(d,i);else{d.fingerLooks[f].mods=d.fingerLooks[f].mods||[];d.fingerLooks[f].levels=d.fingerLooks[f].levels||{};d.fingerLooks[f].shape=d.fingerLooks[f].shape||'oval';if(!Number.isFinite(d.fingerLooks[f].length))d.fingerLooks[f].length=2}});
  if(!d.baseTime)d.baseTime=d.time;if(!d.basePrice)d.basePrice=d.price;return d.fingerLooks;
 }
 function selectedFingerNames(){return state.fingers.has('전체')?[...FINGERS]:[...state.fingers]}
@@ -381,14 +386,26 @@ function renderHandEditor(){
  const hands=[['LEFT',FINGERS.slice(0,5)],['RIGHT',FINGERS.slice(5)]];
  hands.forEach(([label,list])=>{const hand=document.createElement('div');hand.className='editor-hand';hand.innerHTML=`<span class="hand-label">${label}</span><div class="editor-fingers"></div>`;const row=hand.querySelector('.editor-fingers');
    list.forEach((f,i)=>{const look=state.active.fingerLooks[f];const b=document.createElement('button');b.type='button';b.className=`finger-photo ${state.fingers.has('전체')||state.fingers.has(f)?'selected':''}`;b.dataset.finger=f;b.innerHTML=`<span class="finger-model-wrap">${nailMarkup(look,'editor-model')}</span><small>${f.replace(/^L|^R/,'')}</small><i>${Object.values(look.levels||{}).reduce((a,b)=>a+b,0)||(look.mods||[]).length||''}</i>`;b.onclick=()=>toggleFingerFromPhoto(f);row.appendChild(b)});box.appendChild(hand)});
- const sel=selectedFingerNames();$('#fingerHelper').textContent=state.fingers.has('전체')?'전체 손가락에 수정이 즉시 반영됩니다.':`${sel.join(' · ')}만 수정합니다.`;$('#liveEditState').textContent=state.fingers.has('전체')?'전체 선택':`${sel.length}개 선택`;
+ const sel=selectedFingerNames();$('#fingerHelper').textContent=state.fingers.has('전체')?'전체 손가락에 수정이 즉시 반영됩니다.':`${sel.join(' · ')}만 수정합니다.`;$('#liveEditState').textContent=state.fingers.has('전체')?'전체 선택':`${sel.length}개 선택`;renderPrecisionEditor();
 }
 function toggleFingerFromPhoto(f){
  if(state.fingers.has('전체'))state.fingers=new Set([f]);else if(state.fingers.has(f)&&state.fingers.size===1)state.fingers=new Set(['전체']);else if(state.fingers.has(f))state.fingers.delete(f);else state.fingers.add(f);renderHandEditor();syncEditChipStates();
 }
 function syncEditChipStates(){
  if(!state.active)return;ensureFingerLooks(state.active);const selected=selectedFingerNames();
- $$('#editChips button').forEach(b=>{const m=b.dataset.mod||b.textContent;const on=selected.length&&selected.every(f=>state.active.fingerLooks[f].mods.includes(m));b.classList.toggle('active',on)});
+ $('#editChips button').forEach(b=>{const m=b.dataset.mod||b.textContent;const on=selected.length&&selected.every(f=>state.active.fingerLooks[f].mods.includes(m));b.classList.toggle('active',on)});
+}
+function renderPrecisionEditor(){
+ if(!state.active||!$('#precisionEditor'))return;ensureFingerLooks(state.active);const targets=selectedFingerNames();const looks=targets.map(f=>state.active.fingerLooks[f]);const same=key=>looks.every(x=>x[key]===looks[0][key]);
+ $('#precisionTarget').textContent=state.fingers.has('전체')?'전체 10손가락':targets.join(' · ');
+ $('[data-nail-shape]').forEach(b=>b.classList.toggle('active',same('shape')&&looks[0].shape===b.dataset.nailShape));
+ const lv=looks.map(x=>Number.isFinite(x.length)?x.length:2),uniform=lv.every(x=>x===lv[0]),length=Math.round(lv.reduce((a,b)=>a+b,0)/Math.max(1,lv.length));$('#nailLength').value=String(length);$('#nailLengthValue').textContent=uniform?NAIL_LENGTH_LABELS[length]:'혼합';
+ $('[data-nail-color]').forEach(b=>b.classList.toggle('active',same('base')&&looks[0].base.toLowerCase()===b.dataset.nailColor.toLowerCase()));
+ $('[data-nail-texture]').forEach(b=>b.classList.toggle('active',same('texture')&&looks[0].texture===b.dataset.nailTexture));
+ const gems=looks.map(x=>x.gems||0);$('#partsCount').textContent=gems.every(x=>x===gems[0])?String(gems[0]):'혼합'
+}
+function applyPrecisionEdit(label,mutator){
+ if(!state.active)return;pushEditorHistory();selectedFingerNames().forEach(f=>mutator(state.active.fingerLooks[f]));recalcDesign(state.active);renderHandEditor();renderArtLiveStage();renderEditorMetrics();render3DStage();syncEditChipStates();schedulePersist();updateHistoryButtons();toast(label+' 적용')
 }
 function applyLiveMod(mod,{record=true,quiet=false}={}){
  if(!state.active)return;ensureFingerLooks(state.active);if(record)pushEditorHistory();const targets=selectedFingerNames();const stepped=new Set(['자석감 강하게','오로라감 추가','포인트 추가','화려하게']);
@@ -408,6 +425,11 @@ function openSheet(d){
 function closeSheet(){$('#editSheet').classList.remove('open');$('#editSheet').setAttribute('aria-hidden','true');document.body.style.overflow=''}
 $$('[data-close-sheet]').forEach(x=>x.onclick=closeSheet);
 editOptions.forEach(t=>{const b=document.createElement('button');b.textContent=t;b.dataset.mod=t;b.onclick=()=>applyLiveMod(t);$('#editChips').appendChild(b)});
+NAIL_SHAPES.forEach(([key,label])=>{const b=document.createElement('button');b.type='button';b.textContent=label;b.dataset.nailShape=key;b.onclick=()=>applyPrecisionEdit(label,x=>x.shape=key);$('#nailShapeControls').appendChild(b)});
+NAIL_COLORS.forEach(color=>{const b=document.createElement('button');b.type='button';b.className='nail-color-swatch';b.dataset.nailColor=color;b.style.setProperty('--swatch',color);b.setAttribute('aria-label','컬러 '+color);b.onclick=()=>applyPrecisionEdit('컬러',x=>x.base=color);$('#nailColorControls').appendChild(b)});
+NAIL_TEXTURES.forEach(([key,label])=>{const b=document.createElement('button');b.type='button';b.textContent=label;b.dataset.nailTexture=key;b.onclick=()=>applyPrecisionEdit(label,x=>x.texture=key);$('#nailTextureControls').appendChild(b)});
+$('#nailLength').oninput=e=>{$('#nailLengthValue').textContent=NAIL_LENGTH_LABELS[+e.target.value]||'보통'};$('#nailLength').onchange=e=>{const value=+e.target.value;applyPrecisionEdit('길이 '+(NAIL_LENGTH_LABELS[value]||''),x=>x.length=value)};
+$('#partsMinus').onclick=()=>applyPrecisionEdit('파츠 줄이기',x=>x.gems=Math.max(0,(x.gems||0)-1));$('#partsPlus').onclick=()=>applyPrecisionEdit('파츠 추가',x=>x.gems=Math.min(3,(x.gems||0)+1));
 $('#saveDesignBtn').onclick=()=>state.active&&saveDesign(state.active);$('#sheetFavorite').onclick=e=>{e.currentTarget.textContent=e.currentTarget.textContent==='♡'?'♥':'♡';toast('즐겨찾기에 반영했어요')};
 $('#undoEditBtn').onclick=undoEditor;$('#redoEditBtn').onclick=redoEditor;
 $$('#artPreviewTabs [data-preview-mode]').forEach(b=>b.onclick=()=>{editorPreviewMode=b.dataset.previewMode;renderArtLiveStage()});

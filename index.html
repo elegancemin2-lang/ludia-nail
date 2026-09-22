@@ -32,8 +32,8 @@
     <main class="workspace">
       <header class="topbar">
         <div>
-          <p class="eyebrow">LUDIA NAIL</p>
-          <h1 id="pageTitle">오늘</h1>
+          <p class="eyebrow">LUDIA · SALON OS</p>
+          <h1 id="pageTitle">오늘, 필요한 것만.</h1>
         </div>
         <div class="top-actions">
           <button class="save-status" id="saveStatus" type="button" aria-label="로컬 저장 상태"><span class="save-dot"></span><span id="saveStatusText">저장 준비중</span></button>
@@ -44,45 +44,75 @@
 
 
       <section class="screen active" id="opsHomeScreen">
-        <div class="ios-home-head">
+        <div class="ops-hero">
           <div>
-            <span class="ios-date" id="todayDateLabel">9월 23일 수요일</span>
-            <h2>오늘</h2>
+            <span class="mini-label">TODAY · LUDIA NAIL</span>
+            <h2>오늘, 필요한 것만.</h2>
+            <p>예약 · 고객 · 회원권 · 매출 흐름만 빠르게 확인합니다.</p>
           </div>
-          <button class="ios-circle-add" id="homeQuickAdd" aria-label="빠른 예약">＋</button>
+          <button class="primary-btn ops-art-cta" data-nav="booking">＋ 빠른 예약</button>
         </div>
 
-        <article class="ios-next" id="nextCard"></article>
+        <div class="today-stats" id="todayStats"></div>
 
-        <div class="ios-summary" id="todayStats"></div>
+        <div class="ops-grid">
+          <article class="panel ops-timeline-panel">
+            <div class="panel-head">
+              <div><span class="mini-label">TODAY</span><h3>오늘 예약</h3><p id="todayProgress">진행 상황을 불러오는 중</p></div>
+              <button class="text-action" data-nav="booking">예약 전체 →</button>
+            </div>
+            <div class="ops-timeline" id="opsTimeline"></div>
+          </article>
 
-        <div class="ios-section-head">
-          <div><h3>오늘 일정</h3><p id="todayProgress">진행 상황을 불러오는 중</p></div>
-          <button data-nav="booking">전체 보기</button>
+          <aside class="ops-side">
+            <article class="panel next-card" id="nextCard"></article>
+            <article class="panel quiet-card">
+              <div class="panel-head"><div><span class="mini-label">SMART CHECK</span><h3>오늘 확인할 것</h3></div></div>
+              <div class="quiet-list">
+                <button data-nav="customers"><span>회원권 만료 예정</span><b>2명</b></button>
+                <button data-nav="more"><span>답글 대기 리뷰</span><b>3건</b></button>
+                <button data-nav="settings"><span>부족 재료</span><b>1종</b></button>
+              </div>
+            </article>
+          </aside>
         </div>
-        <div class="ios-schedule" id="opsTimeline"></div>
 
-        <div class="ios-section-head ios-check-head"><div><h3>확인할 것</h3></div></div>
-        <div class="ios-grouped-list">
-          <button data-nav="customers"><span><b>회원권 만료 예정</b><small>오늘 확인하면 좋은 고객</small></span><em>2</em><i>›</i></button>
-          <button data-nav="more"><span><b>리뷰 답글 대기</b><small>네이버 플레이스</small></span><em>3</em><i>›</i></button>
-          <button data-nav="settings"><span><b>부족 재료</b><small>대체 가능한 재료 확인</small></span><em>1</em><i>›</i></button>
+        <div class="section-title-row compact-title">
+          <div><span class="mini-label">QUICK</span><h3>자주 하는 일</h3></div>
+        </div>
+        <div class="quick-work-grid">
+          <button class="quick-work" data-nav="booking"><span>＋</span><b>예약 보기</b><small>오늘 빈 시간 확인</small></button>
+          <button class="quick-work" data-nav="customers"><span>○</span><b>고객 찾기</b><small>이력·회원권·메모</small></button>
+          <button class="quick-work" data-nav="more"><span>◇</span><b>회원권</b><small>잔액 · 만료 확인</small></button>
+          <button class="quick-work" data-nav="more"><span>↗</span><b>매출 보기</b><small>오늘 핵심만</small></button>
         </div>
       </section>
 
       <section class="screen" id="bookingScreen">
-        <div class="module-head">
-          <div><span class="mini-label">BOOKING</span><h2>예약</h2><p>시간과 담당자만 먼저 보고, 필요한 정보는 예약을 눌렀을 때 펼칩니다.</p></div>
-          <button class="primary-btn" id="quickAddBooking">＋ 빠른 예약</button>
+        <div class="ios-booking-head">
+          <div><span id="bookingMonthLabel">2026년 9월</span><h2>예약</h2></div>
+          <div class="ios-booking-actions">
+            <button class="ios-today-btn" id="bookingTodayBtn">오늘</button>
+            <button class="ios-circle-add" id="quickAddBooking" aria-label="빠른 예약">＋</button>
+          </div>
         </div>
-        <div class="booking-toolbar panel">
-          <div class="date-switch"><button id="prevDay">‹</button><div><b id="bookingDateLabel">오늘</b><small>예약 8 · 빈 시간 2</small></div><button id="nextDay">›</button></div>
-          <div class="staff-tabs" id="staffTabs"></div>
+
+        <div class="booking-week-strip" id="bookingWeekStrip" aria-label="날짜 선택"></div>
+
+        <div class="booking-filter-row">
+          <div class="staff-tabs" id="staffTabs" aria-label="담당자 필터"></div>
+          <span class="booking-count" id="bookingCountLabel">예약 0</span>
         </div>
-        <div class="booking-board panel">
-          <div class="booking-hours" id="bookingHours"></div>
-          <div class="booking-list" id="bookingList"></div>
+
+        <div class="booking-scroll-shell" aria-label="직원별 예약 스케줄">
+          <div class="booking-grid" id="bookingGrid">
+            <div class="booking-corner">시간</div>
+            <div class="booking-staff-header" id="bookingStaffHeader"></div>
+            <div class="booking-hours" id="bookingHours"></div>
+            <div class="booking-list" id="bookingList"></div>
+          </div>
         </div>
+        <p class="booking-hint">빈 시간을 누르면 바로 예약 · 예약을 누르면 고객/회원권/결제 흐름을 엽니다.</p>
       </section>
 
       <section class="screen" id="customersScreen">
@@ -337,10 +367,10 @@
     </main>
 
     <nav class="mobile-nav" aria-label="모바일 메뉴">
-      <button class="active" data-nav="opsHome"><span class="nav-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 10.5 12 4l8 6.5v8a1.5 1.5 0 0 1-1.5 1.5h-13A1.5 1.5 0 0 1 4 18.5z"/><path d="M9.5 20v-5.5h5V20"/></svg></span><em>오늘</em></button>
-      <button data-nav="booking"><span class="nav-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="4" y="5.5" width="16" height="14" rx="3"/><path d="M8 3.5v4M16 3.5v4M4 10h16"/></svg></span><em>예약</em></button>
-      <button data-nav="customers"><span class="nav-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="8" r="3.5"/><path d="M5.5 20c.6-4 3-6 6.5-6s5.9 2 6.5 6"/></svg></span><em>고객</em></button>
-      <button data-nav="more"><span class="nav-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="6" cy="12" r="1.3"/><circle cx="12" cy="12" r="1.3"/><circle cx="18" cy="12" r="1.3"/></svg></span><em>더보기</em></button>
+      <button class="active" data-nav="opsHome"><span>●</span><em>오늘</em></button>
+      <button data-nav="booking"><span>□</span><em>예약</em></button>
+      <button data-nav="customers"><span>◎</span><em>고객</em></button>
+      <button data-nav="more"><span>•••</span><em>더보기</em></button>
     </nav>
   </div>
 
@@ -355,7 +385,6 @@
 
         <div class="instant-editor">
           <div class="instant-editor-head"><div><b>손가락을 직접 눌러 수정</b><small>선택 → 수정칩 터치 즉시 반영</small></div><span id="liveEditState">전체 선택</span></div>
-          <div class="art-live-stage" id="artLiveStage" aria-label="선택 디자인 실시간 미리보기"></div>
           <div class="hand-editor" id="handEditor" aria-label="손가락별 디자인 편집"></div>
           <div class="edit-live-note" id="fingerHelper">전체 디자인을 수정합니다.</div>
         </div>
@@ -400,6 +429,29 @@
           <button data-view-angle="front" class="active">정면</button><button data-view-angle="left">좌 30°</button><button data-view-angle="right">우 30°</button><button data-view-angle="top">위 25°</button>
         </div>
         <div class="sheet-actions"><button class="soft-btn wide" data-close-final>편집 계속</button><button class="primary-btn wide" id="finalSaveBtn">최종본 저장</button></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="sheet" id="quickBookingSheet" aria-hidden="true">
+    <div class="sheet-backdrop" data-close-quick-booking></div>
+    <div class="sheet-card quick-booking-card">
+      <div class="sheet-handle"></div>
+      <button class="sheet-close" data-close-quick-booking>×</button>
+      <div class="sheet-body">
+        <span class="mini-label">NEW APPOINTMENT</span>
+        <h2>빠른 예약</h2>
+        <div class="quick-booking-context" id="quickBookingContext"></div>
+        <div class="quick-booking-form">
+          <label><span>고객</span><input id="qbCustomer" autocomplete="off" placeholder="고객 이름" /></label>
+          <label><span>시술</span><select id="qbService"><option>젤 원컬러</option><option>젤 아트</option><option>이달의 아트</option><option>오마카세 아트</option><option>제거 + 젤 아트</option></select></label>
+          <div class="quick-booking-two">
+            <label><span>시간</span><input id="qbTime" type="time" step="1800" /></label>
+            <label><span>담당</span><select id="qbStaff"><option>루디아</option><option>지안</option></select></label>
+          </div>
+          <label><span>예상 소요</span><select id="qbDuration"><option value="60">60분</option><option value="90" selected>90분</option><option value="120">120분</option></select></label>
+        </div>
+        <div class="sheet-actions"><button class="soft-btn wide" data-close-quick-booking>취소</button><button class="primary-btn wide" id="qbSaveBtn">예약 저장</button></div>
       </div>
     </div>
   </div>

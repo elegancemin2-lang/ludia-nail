@@ -10,13 +10,13 @@ Mobile-first nail salon operating system.
 - Replit is not used.
 
 ## Current baseline
-**v1.5 — Salon OS First + Instant ART Editor**
+**v1.6 — Native Salon Home + True Instant Nail Renderer**
 
-### v1.5 highlights
-- Finger-photo direct editing with instant visual response.
-- Quick modification chips apply immediately to selected fingers.
-- Time/price recalculation follows the live edit state.
-- Draggable perspective final preview with front/left/right/top angles.
-- Booking/customer operating flows remain the product core.
+### Current highlights
+- Native-mobile Today screen centered on the next appointment and schedule.
+- Finger-level ART editing with a layered visual renderer.
+- Repeated edits have 3 visible intensity levels.
+- Large LIVE nail preview plus 10-finger direct selection.
+- Multi-angle final preview uses the same live edit state.
 
-This repository is the source of truth for ongoing LUDIA NAIL updates. Connect Vercel to the `main` branch for automatic deployment.
+This repository is the source of truth for ongoing LUDIA NAIL updates. Vercel should deploy the `main` branch automatically.

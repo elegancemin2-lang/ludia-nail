@@ -11,7 +11,7 @@ Mobile-first nail salon operating system.
 - Replit is not used.
 
 ## Current baseline
-**v2.1 — Fresh ART Generation Batches**
+**v2.2 — Precision ART Editor + Fresh Batches**
 
 ### Reference-led principles
 - Apple HIG: deliberate toolbar/tab density, content-first hierarchy, neutral grouped surfaces.
@@ -21,6 +21,7 @@ Mobile-first nail salon operating system.
 - Vagaro: fast staff/date switching and dense salon-calendar utility.
 
 ### Current highlights
+- Finger-level precision editor: select one or more nails and directly change shape, length, color, texture and parts count with instant local rendering.
 - Fresh-generation batch flow: `6개 시안 만들기` now starts from the current brief instead of recycling prior generated results.
 - Six slots appear immediately, fill progressively, and each run receives a unique batch identity and variation seed.
 - Rebuilt Today from dashboard cards into a native mobile agenda: date, next appointment, glance metrics, schedule, alerts.
@@ -39,3 +40,7 @@ The ART editor is now a live model workspace with immediate finger-level changes
 
 ## ART v2.1
 ART generation is now batch-based. Restored history stays in the library, while each create/regenerate action builds six fresh local-render variants from the current concept, DNA, conditions, time/price limits and inventory preference. This is the renderer-independent scaffold for a future production image-generation backend.
+
+
+## ART v2.2
+The live editor now supports finger-level shape, length, color, texture and parts controls. Existing quick edits, natural-language edits, undo/redo, comparison and multi-angle preview remain intact. Legacy saved designs are migrated with safe default shape/length values when opened.

@@ -134,12 +134,25 @@ function renderBooking(){
  if(bookingDayOffset===0){const now=new Date();const mins=now.getHours()*60+now.getMinutes()-startHour*60;if(mins>=0&&mins<=11*60){const line=document.createElement('div');line.className='booking-now-line';line.style.top=`${mins/60*pxHour}px`;line.innerHTML='<i></i>';list.appendChild(line)}}
 }
 let quickBookingDraft={time:'13:00',staff:'루디아'};
+function syncQuickBookingOptions(){
+ const staff=$('#qbStaff'),service=$('#qbService');
+ if(staff){const current=staff.value;staff.innerHTML='';(salonStaffNames.length?salonStaffNames:['루디아']).forEach(name=>{const o=document.createElement('option');o.value=name;o.textContent=name;staff.appendChild(o)});if([...staff.options].some(o=>o.value===current))staff.value=current}
+ if(service&&salonServices.length){const current=service.value;service.innerHTML='';salonServices.forEach(s=>{const o=document.createElement('option');o.value=s.name;o.textContent=`${s.name} · ${s.duration_minutes}분 · ${won(s.price)}원`;service.appendChild(o)});if([...service.options].some(o=>o.value===current))service.value=current}
+}
 function openQuickBooking(time='13:00',staff='루디아'){
- quickBookingDraft={time,staff};$('#qbTime').value=time;$('#qbStaff').value=staff;$('#qbCustomer').value='';$('#qbDuration').value='90';$('#qbService').value='젤 아트';$('#quickBookingContext').innerHTML=`<b>${bookingDateText(bookingDayOffset)}</b><span>${time} · ${staff}</span>`;$('#quickBookingSheet').classList.add('open');$('#quickBookingSheet').setAttribute('aria-hidden','false');document.body.style.overflow='hidden';setTimeout(()=>$('#qbCustomer')?.focus(),180)
+ syncQuickBookingOptions();const safeStaff=salonStaffNames.includes(staff)?staff:(salonStaffNames[0]||staff);quickBookingDraft={time,staff:safeStaff};$('#qbTime').value=time;$('#qbStaff').value=safeStaff;$('#qbCustomer').value='';if($('#qbPhone'))$('#qbPhone').value='';$('#qbDuration').value='90';if(!salonServices.length)$('#qbService').value='젤 아트';else if($('#qbService').options.length)$('#qbService').selectedIndex=0;$('#quickBookingContext').innerHTML=`<b>${bookingDateText(bookingDayOffset)}</b><span>${time} · ${safeStaff}</span>`;$('#quickBookingSheet').classList.add('open');$('#quickBookingSheet').setAttribute('aria-hidden','false');document.body.style.overflow='hidden';setTimeout(()=>$('#qbCustomer')?.focus(),180)
 }
 function closeQuickBooking(){$('#quickBookingSheet').classList.remove('open');$('#quickBookingSheet').setAttribute('aria-hidden','true');document.body.style.overflow=''}
-function saveQuickBooking(){const customer=$('#qbCustomer').value.trim();if(!customer)return toast('고객 이름을 입력해 주세요');const service=$('#qbService').value;const time=$('#qbTime').value||quickBookingDraft.time;const staff=$('#qbStaff').value||quickBookingDraft.staff;const duration=+$(`#qbDuration`).value||90;const priceMap={'젤 원컬러':45000,'젤 아트':79000,'이달의 아트':79000,'오마카세 아트':99000,'제거 + 젤 아트':89000};salonAppointments.push({id:Date.now(),dayOffset:bookingDayOffset,time,customer,service,staff,duration,amount:priceMap[service]||69000,status:'대기',note:'빠른 예약에서 생성',membership:'확인 필요',last:'신규'});salonAppointments.sort((a,b)=>(a.dayOffset||0)-(b.dayOffset||0)||a.time.localeCompare(b.time));closeQuickBooking();renderBooking();if(bookingDayOffset===0)renderOpsToday();toast(`${customer} · ${time} 예약 저장`)}
-
+async function saveQuickBooking(){
+ const customer=$('#qbCustomer').value.trim();if(!customer)return toast('고객 이름을 입력해 주세요');const phone=$('#qbPhone')?.value.trim()||'';const service=$('#qbService').value;const time=$('#qbTime').value||quickBookingDraft.time;const staff=$('#qbStaff').value||quickBookingDraft.staff;const duration=Number($('#qbDuration').value)||salonServices.find(x=>x.name===service)?.duration_minutes||90;const priceMap={'젤 원컬러':45000,'젤 아트':79000,'이달의 아트':79000,'오마카세 아트':99000,'제거 + 젤 아트':89000};const amount=salonServices.find(x=>x.name===service)?.price||priceMap[service]||69000;
+ const btn=$('#qbSaveBtn');if(btn)btn.disabled=true;
+ try{
+   if(salonCloudMode==='cloud'&&window.LudiaSalonCloud?.isConnected()){
+     await window.LudiaSalonCloud.saveAppointment({customer,phone,service,time,staff,duration,amount,date:bookingDateFromOffset(bookingDayOffset),note:'빠른 예약'});closeQuickBooking();toast(`${customer} · ${time} 예약 저장 · 실시간 반영`);return
+   }
+   salonAppointments.push({id:Date.now(),dayOffset:bookingDayOffset,time,customer,service,staff,duration,amount,status:'대기',note:'빠른 예약에서 생성',membership:'확인 필요',last:'신규',source:'manual'});salonAppointments.sort((a,b)=>(a.dayOffset||0)-(b.dayOffset||0)||a.time.localeCompare(b.time));closeQuickBooking();renderBooking();if(bookingDayOffset===0)renderOpsToday();toast(`${customer} · ${time} 예약 저장`)
+ }catch(error){console.error(error);toast('예약 저장에 실패했어요 · 연결 상태를 확인해 주세요')}finally{if(btn)btn.disabled=false}
+}
 function renderCustomers(){
  const q=($('#customerSearch')?.value||'').trim().toLowerCase();
  const data=salonCustomers.filter(c=>!q||[c.name,c.phone,c.note,...c.tags].join(' ').toLowerCase().includes(q));

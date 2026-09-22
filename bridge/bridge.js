@@ -30,9 +30,39 @@ function statusFromText(text) {
   if (/확정/.test(text)) return 'confirmed';
   return 'unknown';
 }
+function normalizeDate(raw) {
+  if (!raw) return null;
+  const nums = raw.match(/\d+/g)?.map(Number) || [];
+  if (nums.length < 2) return null;
+  const now = new Date();
+  const [year, month, day] = nums.length >= 3 ? nums : [now.getFullYear(), nums[0], nums[1]];
+  if (!year || !month || !day) return null;
+  return `${String(year).padStart(4, '0')}-${String(month).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
+}
+function normalizeTime(raw) {
+  if (!raw) return null;
+  const m = raw.match(/(오전|오후)?\s*(\d{1,2}):(\d{2})/);
+  if (!m) return null;
+  let hour = Number(m[2]);
+  if (m[1] === '오후' && hour < 12) hour += 12;
+  if (m[1] === '오전' && hour === 12) hour = 0;
+  if (hour > 23 || Number(m[3]) > 59) return null;
+  return `${String(hour).padStart(2, '0')}:${m[3]}`;
+}
+function identityText(text) {
+  return normalizeText(text)
+    .replace(/(?:예약번호|예약 번호)\s*[:#]?\s*[A-Za-z0-9-]+/gi, ' ')
+    .replace(/\b(?:확정|신청|대기|취소|완료|노쇼|미방문)\b/g, ' ')
+    .replace(/01[016789][- ]?\d{3,4}[- ]?\d{4}/g, ' ')
+    .replace(/20\d{2}[.\/-]\d{1,2}[.\/-]\d{1,2}|\d{1,2}[.\/-]\d{1,2}/g, ' ')
+    .replace(/(?:오전|오후)?\s*\d{1,2}:\d{2}/g, ' ')
+    .replace(/\s+/g, ' ')
+    .trim()
+    .slice(0, 120);
+}
 
-// Intentionally conservative: this reader only inspects text already rendered in the
-// authenticated SmartPlace page. It does not intercept private APIs or bypass auth.
+// Conservative reader: only text already rendered in the authenticated SmartPlace page.
+// It never intercepts private APIs, reads passwords, or bypasses authentication.
 async function extractVisibleBookings(page) {
   return page.locator('body').evaluate(() => {
     const clean = v => (v || '').replace(/\s+/g, ' ').trim();
@@ -46,11 +76,16 @@ async function extractVisibleBookings(page) {
 function parseCandidate(row) {
   const text = normalizeText(row.text);
   const bookingNo = text.match(/(?:예약번호|예약 번호)\s*[:#]?\s*([A-Za-z0-9-]+)/i)?.[1] || null;
-  const date = text.match(/(20\d{2}[.\/-]\d{1,2}[.\/-]\d{1,2}|\d{1,2}[.\/-]\d{1,2})/)?.[1] || null;
-  const time = text.match(/(?:오전|오후)?\s*(\d{1,2}:\d{2})/)?.[0]?.trim() || null;
-  const phone = text.match(/01[016789][- ]?\d{3,4}[- ]?\d{4}/)?.[0] || null;
+  const rawDate = text.match(/(20\d{2}[.\/-]\d{1,2}[.\/-]\d{1,2}|\d{1,2}[.\/-]\d{1,2})/)?.[1] || null;
+  const rawTime = text.match(/(?:오전|오후)?\s*\d{1,2}:\d{2}/)?.[0] || null;
+  const phone = text.match(/01[016789][- ]?\d{3,4}[- ]?\d{4}/)?.[0]?.replace(/\D/g, '') || null;
+  const date = normalizeDate(rawDate);
+  const time = normalizeTime(rawTime);
   const status = statusFromText(text);
-  const stableKey = bookingNo || hash({ date, time, phone, text: text.slice(0, 160) }).slice(0, 24);
+  const identity = identityText(text);
+  // Status/raw text are deliberately excluded from the fallback identity so a confirmed→cancelled
+  // booking remains the same booking even when SmartPlace does not render a booking number.
+  const stableKey = bookingNo || hash({ date, time, phone, identity }).slice(0, 24);
   return { externalId: stableKey, source: 'NAVER', bookingNo, date, time, phone, status, rawText: text };
 }
 
@@ -69,15 +104,21 @@ async function pushEvents(events) {
 async function diffAndSync(rows, state) {
   const next = {};
   const events = [];
-  for (const row of rows.map(parseCandidate)) {
+  const parsed = rows.map(parseCandidate);
+  // SmartPlace can render nested rows containing the same reservation. Keep one stable identity.
+  for (const row of parsed) {
     const fingerprint = hash(row);
+    const existing = next[row.externalId];
+    if (existing && existing.row.rawText.length >= row.rawText.length) continue;
     next[row.externalId] = { fingerprint, row, seenAt: new Date().toISOString() };
-    const prev = state.bookings[row.externalId];
-    if (!prev) events.push({ type: 'created', booking: row });
-    else if (prev.fingerprint !== fingerprint) events.push({ type: 'updated', booking: row });
   }
-  // Empty event arrays are intentionally posted as a heartbeat. This lets LUDIA distinguish
-  // "no booking changes" from "the shop PC bridge is offline" without exposing credentials.
+  for (const [externalId, item] of Object.entries(next)) {
+    const prev = state.bookings[externalId];
+    if (!prev) events.push({ type: 'created', booking: item.row });
+    else if (prev.fingerprint !== item.fingerprint) events.push({ type: 'updated', booking: item.row });
+  }
+  // Missing rows are never auto-cancelled: pagination/filter/UI changes can hide valid bookings.
+  // Cancellation is emitted only when SmartPlace visibly renders a cancelled status.
   await pushEvents(events);
   state.bookings = { ...state.bookings, ...next };
   state.lastSyncAt = new Date().toISOString();

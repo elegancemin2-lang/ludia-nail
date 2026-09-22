@@ -5,8 +5,8 @@ const json=(res,status,body)=>res.status(status).setHeader('content-type','appli
 
 export default function handler(req,res){
   if(req.method!=='GET')return json(res,405,{ok:false,error:'method_not_allowed'});
-  const url=process.env.SUPABASE_URL||'';
-  const anonKey=process.env.SUPABASE_PUBLISHABLE_KEY||process.env.SUPABASE_ANON_KEY||'';
+  const url=process.env.SUPABASE_URL||'https://kcwahwlhzlgpzuxjqbqu.supabase.co';
+  const anonKey=process.env.SUPABASE_PUBLISHABLE_KEY||process.env.SUPABASE_ANON_KEY||'sb_publishable_s1pEA3miO6gMfAuquy033Q_kqitiP6C';
   if(!url||!anonKey)return json(res,200,{ok:true,configured:false});
   return json(res,200,{ok:true,configured:true,url,anonKey});
 }

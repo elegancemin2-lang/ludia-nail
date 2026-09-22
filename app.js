@@ -252,6 +252,20 @@ function renderArtLiveStage(){
  else stage.innerHTML='<div class="art-stage-single"><span class="art-stage-label live">LIVE</span>'+current+'</div>';
  $('#artPreviewTabs [data-preview-mode]').forEach(b=>b.classList.toggle('active',b.dataset.previewMode===editorPreviewMode));
 }
+function setFingerSelectionFromText(text){
+ const t=text||'';let picks=[];
+ if(/전체|모든/.test(t))picks=['전체'];
+ else if(/왼손|left/i.test(t))picks=FINGERS.slice(0,5);
+ else if(/오른손|right/i.test(t))picks=FINGERS.slice(5);
+ else{
+  const map=[['엄지',['L엄지','R엄지']],['검지',['L검지','R검지']],['중지',['L중지','R중지']],['약지',['L약지','R약지']],['소지',['L소지','R소지']]];
+  map.forEach(([k,v])=>{if(t.includes(k))picks.push(...v)});
+  if(/왼쪽|L엄|L검|L중|L약|L소/.test(t))picks=picks.filter(x=>x.startsWith('L'));
+  if(/오른쪽|R엄|R검|R중|R약|R소/.test(t))picks=picks.filter(x=>x.startsWith('R'));
+ }
+ if(picks.length){state.fingers=new Set([...new Set(picks)]);renderHandEditor();return true}
+ return false
+}
 function parseDirectRequest(text){
  const t=(text||'').toLowerCase();const mods=[];
  if(/연하게|밝게|투명/.test(t))mods.push('더 연하게');
@@ -335,7 +349,7 @@ $('#saveDesignBtn').onclick=()=>state.active&&saveDesign(state.active);$('#sheet
 $('#undoEditBtn').onclick=undoEditor;$('#redoEditBtn').onclick=redoEditor;
 $$('#artPreviewTabs [data-preview-mode]').forEach(b=>b.onclick=()=>{editorPreviewMode=b.dataset.previewMode;renderArtLiveStage()});
 $('#applyEditBtn').onclick=()=>{const text=$('#editPrompt').value.trim();if(!state.active)return toast('디자인을 먼저 선택해 주세요');if(!text)return toast('수정 내용을 입력해 주세요');
- pushEditorHistory();const mods=parseDirectRequest(text);const colored=applyDirectColor(text);mods.forEach(m=>applyLiveMod(m,{record:false,quiet:true}));
+ setFingerSelectionFromText(text);pushEditorHistory();const mods=parseDirectRequest(text);const colored=applyDirectColor(text);mods.forEach(m=>applyLiveMod(m,{record:false,quiet:true}));
  if(!mods.length&&!colored){editorHistory.pop();updateHistoryButtons();return toast('예: 약지만 오로라, 전체 더 연하게, 블루톤처럼 입력해 주세요')}
  recalcDesign(state.active);renderHandEditor();renderArtLiveStage();renderEditorMetrics();syncEditChipStates();$('#editPrompt').value='';
  const fingers=selectedFingerNames();state.active.editHistory=[...(state.active.editHistory||[]),{at:new Date().toISOString(),fingers,text,after:{time:state.active.time,price:state.active.price,diff:state.active.diff}}];

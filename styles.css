@@ -239,3 +239,19 @@ body{font-family:-apple-system,BlinkMacSystemFont,"SF Pro Text","SF Pro Display"
  .art-editor-actions{margin:18px -14px -30px;padding:10px 14px calc(10px + env(safe-area-inset-bottom))}
  .art-editor-actions button{font-size:11px;padding:10px 8px}
 }
+
+/* ART v2.1 · fresh generation batch */
+.generate-main:disabled,.soft-btn:disabled{opacity:.58;cursor:wait;transform:none}
+.generation-skeleton{overflow:hidden;border:1px solid var(--line);background:var(--surface);border-radius:16px}
+.generation-skeleton-media{position:relative;aspect-ratio:4/3;background:linear-gradient(110deg,#eee8e4 8%,#f8f5f2 18%,#eee8e4 33%);background-size:220% 100%;animation:generationShimmer 1.15s linear infinite}
+.generation-skeleton-media span{position:absolute;left:10px;top:10px;width:28px;height:28px;border-radius:9px;background:rgba(35,31,29,.74);color:#fff;display:grid;place-items:center;font-size:10px;font-weight:900}
+.generation-skeleton-media i{position:absolute;left:50%;top:50%;width:38px;height:38px;margin:-19px;border:2px solid rgba(61,53,49,.12);border-top-color:rgba(61,53,49,.5);border-radius:50%;animation:generationSpin .9s linear infinite}
+.generation-skeleton-copy{padding:14px;display:grid;gap:7px}
+.generation-skeleton-copy b{font-size:12px}
+.generation-skeleton-copy small{font-size:9px;color:var(--muted)}
+.generation-skeleton-copy em{display:block;height:8px;border-radius:99px;background:#eee8e4;width:82%}
+.generation-skeleton-copy em.short{width:48%}
+#generationMeta{color:var(--rose-dark)}
+@keyframes generationShimmer{to{background-position-x:-220%}}
+@keyframes generationSpin{to{transform:rotate(360deg)}}
+@media(max-width:700px){.generation-skeleton{border-radius:14px}.generation-skeleton-copy{padding:12px}}

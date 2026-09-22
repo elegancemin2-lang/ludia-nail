@@ -4,7 +4,7 @@
 const json=(res,status,body)=>res.status(status).setHeader('content-type','application/json; charset=utf-8').end(JSON.stringify(body));
 
 function config(){
-  const url=process.env.SUPABASE_URL,key=process.env.SUPABASE_SERVICE_ROLE_KEY;
+  const url=process.env.SUPABASE_URL,key=process.env.SUPABASE_SECRET_KEY||process.env.SUPABASE_SERVICE_ROLE_KEY;
   return url&&key?{url,key,headers:{apikey:key,authorization:`Bearer ${key}`}}:null;
 }
 async function readJson(url,headers){const r=await fetch(url,{headers});if(!r.ok)throw new Error(`${r.status}: ${await r.text()}`);return r.json();}

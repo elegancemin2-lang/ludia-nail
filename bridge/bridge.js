@@ -55,15 +55,15 @@ function parseCandidate(row) {
 }
 
 async function pushEvents(events) {
-  if (!events.length) return;
   if (!SYNC_URL) {
-    console.log(`[LUDIA] ${events.length} change(s) detected; LUDIA_SYNC_URL is not configured, so nothing was uploaded.`);
-    return;
+    if (events.length) console.log(`[LUDIA] ${events.length} change(s) detected; LUDIA_SYNC_URL is not configured, so nothing was uploaded.`);
+    return { uploaded: false };
   }
   const headers = { 'content-type': 'application/json' };
   if (SYNC_TOKEN) headers.authorization = `Bearer ${SYNC_TOKEN}`;
   const response = await fetch(SYNC_URL, { method: 'POST', headers, body: JSON.stringify({ source: 'NAVER', events }) });
   if (!response.ok) throw new Error(`sync failed: HTTP ${response.status}`);
+  return response.json().catch(() => ({ ok: true }));
 }
 
 async function diffAndSync(rows, state) {
@@ -76,7 +76,8 @@ async function diffAndSync(rows, state) {
     if (!prev) events.push({ type: 'created', booking: row });
     else if (prev.fingerprint !== fingerprint) events.push({ type: 'updated', booking: row });
   }
-  // Do not infer cancellation from disappearance. SmartPlace filters/pagination can hide rows.
+  // Empty event arrays are intentionally posted as a heartbeat. This lets LUDIA distinguish
+  // "no booking changes" from "the shop PC bridge is offline" without exposing credentials.
   await pushEvents(events);
   state.bookings = { ...state.bookings, ...next };
   state.lastSyncAt = new Date().toISOString();
@@ -104,7 +105,7 @@ async function main() {
       } else {
         const visible = await extractVisibleBookings(page);
         const events = await diffAndSync(visible, state);
-        console.log(`[LUDIA] ${new Date().toLocaleTimeString('ko-KR')} · visible ${visible.length} · changes ${events.length}`);
+        console.log(`[LUDIA] ${new Date().toLocaleTimeString('ko-KR')} · visible ${visible.length} · changes ${events.length} · heartbeat sent`);
       }
     } catch (error) {
       console.error('[LUDIA] sync cycle failed:', error.message);

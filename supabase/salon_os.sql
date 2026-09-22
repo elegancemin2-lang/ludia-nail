@@ -171,8 +171,17 @@ language sql stable security definer set search_path=public as $$
   select exists(select 1 from public.salon_members m where m.salon_id=target_salon and m.user_id=auth.uid() and m.is_active and m.role in ('owner','manager'))
 $$;
 
+revoke all on function public.is_salon_member(uuid) from public;
+revoke all on function public.is_salon_manager(uuid) from public;
 grant execute on function public.is_salon_member(uuid) to authenticated;
 grant execute on function public.is_salon_manager(uuid) to authenticated;
+
+-- Data API privileges are explicit. RLS below still decides which rows each signed-in user can reach.
+revoke all on table public.salons, public.salon_members, public.customers, public.services, public.appointments,
+  public.membership_products, public.customer_memberships, public.payments, public.membership_ledger from anon;
+grant select on table public.salons to authenticated;
+grant select, insert, update, delete on table public.salon_members, public.customers, public.services, public.appointments,
+  public.membership_products, public.customer_memberships, public.payments, public.membership_ledger to authenticated;
 
 alter table public.salons enable row level security;
 alter table public.salon_members enable row level security;

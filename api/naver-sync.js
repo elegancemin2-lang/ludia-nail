@@ -1,5 +1,5 @@
 // Vercel serverless endpoint for the local LUDIA Naver Bridge.
-// Required env: LUDIA_SYNC_TOKEN. Optional Supabase persistence: SUPABASE_URL + SUPABASE_SERVICE_ROLE_KEY.
+// Required env: LUDIA_SYNC_TOKEN. Optional Supabase persistence: SUPABASE_URL + SUPABASE_SECRET_KEY (SERVICE_ROLE accepted as legacy fallback).
 const json=(res,status,body)=>res.status(status).setHeader('content-type','application/json; charset=utf-8').end(JSON.stringify(body));
 const clean=s=>String(s??'').slice(0,2000);
 const allowedStatus=new Set(['cancelled','completed','no_show','requested','confirmed','unknown']);
@@ -23,7 +23,7 @@ function normalizeEvent(event){
 }
 
 function supabaseConfig(){
-  const url=process.env.SUPABASE_URL,key=process.env.SUPABASE_SERVICE_ROLE_KEY;
+  const url=process.env.SUPABASE_URL,key=process.env.SUPABASE_SECRET_KEY||process.env.SUPABASE_SERVICE_ROLE_KEY;
   return url&&key?{url,key,headers:{apikey:key,authorization:`Bearer ${key}`,'content-type':'application/json'}}:null;
 }
 
@@ -48,7 +48,7 @@ async function persist(rows){
 }
 
 export default async function handler(req,res){
-  if(req.method==='GET')return json(res,200,{ok:true,service:'ludia-naver-sync',supabaseConfigured:Boolean(process.env.SUPABASE_URL&&process.env.SUPABASE_SERVICE_ROLE_KEY)});
+  if(req.method==='GET')return json(res,200,{ok:true,service:'ludia-naver-sync',supabaseConfigured:Boolean(process.env.SUPABASE_URL&&(process.env.SUPABASE_SECRET_KEY||process.env.SUPABASE_SERVICE_ROLE_KEY))});
   if(req.method!=='POST')return json(res,405,{ok:false,error:'method_not_allowed'});
   const expected=process.env.LUDIA_SYNC_TOKEN;
   if(!expected)return json(res,503,{ok:false,error:'sync_token_not_configured'});

@@ -47,7 +47,7 @@ function optimizeImageFile(file,max=1600,quality=.84){return new Promise((resolv
 function money(v){return (v/10000).toFixed(v%10000?1:0)+'만원'}
 function toast(t){const n=$('#toast');n.textContent=t;n.classList.add('show');clearTimeout(window.__toast);window.__toast=setTimeout(()=>n.classList.remove('show'),1700)}
 
-const salonAppointments=[
+const DEMO_APPOINTMENTS=[
  {id:1,time:'10:00',customer:'김서연',service:'젤 원컬러 + 제거',staff:'루디아',amount:49000,status:'완료',note:'밀키핑크 선호',membership:'금액권 8.1만',last:'8/29 자석 시럽'},
  {id:2,time:'11:30',customer:'박지민',service:'이달의 아트',staff:'루디아',amount:79000,status:'완료',note:'짧은 손톱 · 파츠 적게',membership:'없음',last:'8/26 프렌치'},
  {id:3,time:'13:00',customer:'이유나',service:'젤 아트',staff:'루디아',amount:89000,status:'대기',note:'리본/진주 좋아함',membership:'금액권 12.4만',last:'9/02 오로라'},
@@ -56,14 +56,17 @@ const salonAppointments=[
  {id:6,time:'17:00',customer:'한소희',service:'이달의 아트',staff:'지안',amount:79000,status:'대기',note:'자석 선호',membership:'금액권 5.0만',last:'8/27 자석'},
  {id:7,time:'18:30',customer:'윤아름',service:'젤 아트 + 제거',staff:'루디아',amount:89000,status:'대기',note:'화려한 포인트 2손',membership:'없음',last:'8/20 파츠'},
  {id:8,time:'20:00',customer:'송나경',service:'젤 원컬러',staff:'지안',amount:45000,status:'대기',note:'늦지 않게 60분',membership:'없음',last:'신규'}
-];
-const salonCustomers=[
+]; 
+let salonAppointments=DEMO_APPOINTMENTS.map(x=>({...x}));
+const DEMO_CUSTOMERS=[
  {name:'이유나',phone:'010-••••-3481',visit:18,last:'9/02',tags:['VIP','리본','여리'],membership:'금액권 12.4만',note:'리본/진주, 맑은 베이스 선호',img:img(3)},
  {name:'김서연',phone:'010-••••-8214',visit:11,last:'9/22',tags:['시럽','자석'],membership:'금액권 8.1만',note:'밀키핑크, 파츠 적게',img:img(1)},
  {name:'박지민',phone:'010-••••-0952',visit:7,last:'9/22',tags:['숏네일','심플'],membership:'없음',note:'짧은 손톱, 실버 프렌치 선호',img:img(2)},
  {name:'최하린',phone:'010-••••-7740',visit:4,last:'8/30',tags:['오마카세','사진참고'],membership:'횟수권 2회',note:'참고사진을 가져오고 변형 요청',img:img(4)},
  {name:'한소희',phone:'010-••••-5317',visit:9,last:'8/27',tags:['자석','베스트'],membership:'금액권 5.0만',note:'자석 강도는 은은하게',img:img(5)}
-];
+]; 
+let salonCustomers=DEMO_CUSTOMERS.map(x=>({...x}));
+let salonStaffNames=['루디아','지안'],salonServices=[],salonCloudMode='demo';
 let bookingStaff='전체', bookingDayOffset=0, activeAppointment=null;
 
 function won(v){return Math.round(v/10000*10)/10+'만'}
@@ -111,12 +114,12 @@ function renderBookingWeek(){
   b.onclick=()=>{bookingDayOffset=o;renderBooking()};strip.appendChild(b)
  }
 }
-function getVisibleBookingStaff(){return bookingStaff==='전체'?['루디아','지안']:[bookingStaff]}
+function getVisibleBookingStaff(){return bookingStaff==='전체'?[...salonStaffNames]:[bookingStaff]}
 function bookingDataForDay(){return salonAppointments.filter(a=>(a.dayOffset||0)===bookingDayOffset&&(bookingStaff==='전체'||a.staff===bookingStaff))}
 function renderBooking(){
  const d=bookingDateFromOffset(bookingDayOffset);if($('#bookingMonthLabel'))$('#bookingMonthLabel').textContent=`${d.getFullYear()}년 ${d.getMonth()+1}월`;
  renderBookingWeek();
- const staffNames=['전체','루디아','지안'];
+ const staffNames=['전체',...salonStaffNames];
  const tabs=$('#staffTabs');if(tabs){tabs.innerHTML='';staffNames.forEach(s=>{const b=document.createElement('button');b.type='button';b.textContent=s;b.classList.toggle('active',bookingStaff===s);b.onclick=()=>{bookingStaff=s;renderBooking()};tabs.appendChild(b)})}
  const visibleStaff=getVisibleBookingStaff();const data=bookingDataForDay();
  if($('#bookingCountLabel'))$('#bookingCountLabel').textContent=`${bookingDateText(bookingDayOffset)} · 예약 ${data.length}`;

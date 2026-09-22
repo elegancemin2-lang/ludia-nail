@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover" />
-  <meta name="theme-color" content="#f8f5f1" />
+  <meta name="theme-color" content="#f5f5f7" />
   <meta name="description" content="LUDIA NAIL - 예약·고객관리와 LUDIA ART STUDIO를 하나로 묶은 모바일 네일샵 운영 웹앱" />
   <title>LUDIA NAIL</title>
   <link rel="manifest" href="manifest.webmanifest" />
@@ -44,47 +44,37 @@
 
 
       <section class="screen active" id="opsHomeScreen">
-        <div class="ops-hero">
+        <div class="native-home-head">
           <div>
-            <span class="mini-label">TODAY · LUDIA NAIL</span>
-            <h2>오늘, 필요한 것만.</h2>
-            <p>예약 · 고객 · 회원권 · 매출 흐름만 빠르게 확인합니다.</p>
+            <span class="native-date" id="todayDateLabel">9월 23일 수요일</span>
+            <h2>오늘</h2>
           </div>
-          <button class="primary-btn ops-art-cta" data-nav="booking">＋ 빠른 예약</button>
+          <div class="native-head-actions">
+            <button class="native-icon-btn" data-nav="customers" aria-label="고객 검색">
+              <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="11" cy="11" r="6.5"></circle><path d="m16 16 4.2 4.2"></path></svg>
+            </button>
+            <button class="native-icon-btn primary" id="homeQuickAdd" aria-label="빠른 예약">
+              <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 5v14M5 12h14"></path></svg>
+            </button>
+          </div>
         </div>
 
-        <div class="today-stats" id="todayStats"></div>
+        <article class="native-next" id="nextCard"></article>
+        <div class="native-glance" id="todayStats"></div>
 
-        <div class="ops-grid">
-          <article class="panel ops-timeline-panel">
-            <div class="panel-head">
-              <div><span class="mini-label">TODAY</span><h3>오늘 예약</h3><p id="todayProgress">진행 상황을 불러오는 중</p></div>
-              <button class="text-action" data-nav="booking">예약 전체 →</button>
-            </div>
-            <div class="ops-timeline" id="opsTimeline"></div>
-          </article>
-
-          <aside class="ops-side">
-            <article class="panel next-card" id="nextCard"></article>
-            <article class="panel quiet-card">
-              <div class="panel-head"><div><span class="mini-label">SMART CHECK</span><h3>오늘 확인할 것</h3></div></div>
-              <div class="quiet-list">
-                <button data-nav="customers"><span>회원권 만료 예정</span><b>2명</b></button>
-                <button data-nav="more"><span>답글 대기 리뷰</span><b>3건</b></button>
-                <button data-nav="settings"><span>부족 재료</span><b>1종</b></button>
-              </div>
-            </article>
-          </aside>
+        <div class="native-section-head">
+          <div><h3>오늘 일정</h3><p id="todayProgress">진행 상황을 불러오는 중</p></div>
+          <button data-nav="booking">캘린더</button>
         </div>
+        <div class="native-agenda" id="opsTimeline"></div>
 
-        <div class="section-title-row compact-title">
-          <div><span class="mini-label">QUICK</span><h3>자주 하는 일</h3></div>
+        <div class="native-section-head native-section-head-tight">
+          <div><h3>확인할 것</h3></div>
         </div>
-        <div class="quick-work-grid">
-          <button class="quick-work" data-nav="booking"><span>＋</span><b>예약 보기</b><small>오늘 빈 시간 확인</small></button>
-          <button class="quick-work" data-nav="customers"><span>○</span><b>고객 찾기</b><small>이력·회원권·메모</small></button>
-          <button class="quick-work" data-nav="more"><span>◇</span><b>회원권</b><small>잔액 · 만료 확인</small></button>
-          <button class="quick-work" data-nav="more"><span>↗</span><b>매출 보기</b><small>오늘 핵심만</small></button>
+        <div class="native-group-list">
+          <button data-nav="customers"><span class="native-row-icon">◇</span><span class="native-row-copy"><b>회원권 만료 예정</b><small>오늘 확인하면 좋은 고객</small></span><em>2</em><i>›</i></button>
+          <button data-nav="more"><span class="native-row-icon">☆</span><span class="native-row-copy"><b>리뷰 답글 대기</b><small>네이버 플레이스</small></span><em>3</em><i>›</i></button>
+          <button data-nav="settings"><span class="native-row-icon">▦</span><span class="native-row-copy"><b>부족 재료</b><small>대체 가능한 재료 확인</small></span><em>1</em><i>›</i></button>
         </div>
       </section>
 
@@ -127,28 +117,35 @@
       </section>
 
       <section class="screen" id="moreScreen">
-        <div class="module-head">
-          <div><span class="mini-label">MORE</span><h2>더보기</h2><p>매일 쓰지 않는 기능은 여기로 정리해 홈과 예약 화면을 가볍게 유지합니다.</p></div>
+        <div class="native-page-head">
+          <div><span>관리와 설정</span><h2>더보기</h2></div>
         </div>
-        <div class="more-section-head"><span class="mini-label">SALON MANAGEMENT</span><h3>샵 운영</h3></div>
-        <div class="more-grid">
-          <button class="more-card"><span class="more-icon">₩</span><div><b>매출</b><small>오늘 62.3만 · 객단가 7.8만</small></div><em>→</em></button>
-          <button class="more-card"><span class="more-icon">◇</span><div><b>회원권</b><small>만료 예정 2명</small></div><em>→</em></button>
-          <button class="more-card"><span class="more-icon">◎</span><div><b>직원</b><small>스케줄 · 매출 · 인센티브</small></div><em>→</em></button>
-          <button class="more-card" data-nav="settings"><span class="more-icon">▦</span><div><b>재고</b><small>부족 1 · 품절 1</small></div><em>→</em></button>
-          <button class="more-card"><span class="more-icon">★</span><div><b>리뷰</b><small>답글 대기 3건</small></div><em>→</em></button>
-          <button class="more-card"><span class="more-icon">↗</span><div><b>메시지</b><small>예약 · 재방문 · 회원권 알림</small></div><em>→</em></button>
-          <button class="more-card"><span class="more-icon">◌</span><div><b>마케팅</b><small>VIP · 휴면 · 재방문 예정</small></div><em>→</em></button>
-          <button class="more-card"><span class="more-icon">⚙</span><div><b>설정</b><small>샵 · 메뉴 · 권한 · 백업</small></div><em>→</em></button>
+
+        <div class="native-group-title">샵 운영</div>
+        <div class="native-settings-group">
+          <button><span class="settings-glyph glyph-blue">₩</span><span><b>매출</b><small>오늘 62.3만 · 객단가 7.8만</small></span><i>›</i></button>
+          <button><span class="settings-glyph glyph-violet">◇</span><span><b>회원권</b><small>잔액 · 만료 · 사용이력</small></span><i>›</i></button>
+          <button><span class="settings-glyph glyph-indigo">◎</span><span><b>직원</b><small>스케줄 · 매출 · 인센티브</small></span><i>›</i></button>
+          <button data-nav="settings"><span class="settings-glyph glyph-green">▦</span><span><b>재고</b><small>부족 1 · 품절 1</small></span><i>›</i></button>
         </div>
-        <div class="more-section-head add-on-head"><span class="mini-label">ADD-ON</span><h3>추가 기능</h3></div>
-        <button class="addon-art-card" data-nav="home">
-          <div class="addon-art-copy"><span class="addon-art-icon">✦</span><div><b>LUDIA ART STUDIO</b><small>6안 생성 · 손가락별 즉시 수정 · 이달의 아트</small></div></div><em>열기 →</em>
+
+        <div class="native-group-title">고객 관리</div>
+        <div class="native-settings-group">
+          <button><span class="settings-glyph glyph-yellow">★</span><span><b>리뷰</b><small>답글 대기 3건</small></span><i>›</i></button>
+          <button><span class="settings-glyph glyph-cyan">↗</span><span><b>메시지</b><small>예약 · 재방문 · 회원권 알림</small></span><i>›</i></button>
+          <button><span class="settings-glyph glyph-pink">◌</span><span><b>마케팅</b><small>VIP · 휴면 · 재방문 예정</small></span><i>›</i></button>
+        </div>
+
+        <div class="native-group-title">추가 기능</div>
+        <button class="native-art-addon" data-nav="home">
+          <span class="native-art-mark">✦</span>
+          <span class="native-art-copy"><b>LUDIA ART STUDIO</b><small>6안 생성 · 손가락별 즉시 수정 · 이달의 아트</small></span>
+          <i>›</i>
         </button>
-        <div class="panel principle-card">
-          <span class="mini-label">LUDIA PRINCIPLE</span>
-          <h3>기능은 많아도, 화면은 복잡하지 않게.</h3>
-          <p>매일 쓰는 기능만 앞에 두고 나머지는 필요할 때만 펼치는 것을 기본 원칙으로 유지합니다.</p>
+
+        <div class="native-group-title">시스템</div>
+        <div class="native-settings-group">
+          <button><span class="settings-glyph glyph-gray">⚙</span><span><b>설정</b><small>샵 · 메뉴 · 권한 · 백업</small></span><i>›</i></button>
         </div>
       </section>
 
@@ -367,10 +364,10 @@
     </main>
 
     <nav class="mobile-nav" aria-label="모바일 메뉴">
-      <button class="active" data-nav="opsHome"><span>●</span><em>오늘</em></button>
-      <button data-nav="booking"><span>□</span><em>예약</em></button>
-      <button data-nav="customers"><span>◎</span><em>고객</em></button>
-      <button data-nav="more"><span>•••</span><em>더보기</em></button>
+      <button class="active" data-nav="opsHome"><span class="nav-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 11.2 12 4l8 7.2v8.3a.5.5 0 0 1-.5.5H15v-5.5H9V20H4.5a.5.5 0 0 1-.5-.5z"></path></svg></span><em>오늘</em></button>
+      <button data-nav="booking"><span class="nav-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3.5" y="5.5" width="17" height="15" rx="3"></rect><path d="M7 3.5v4M17 3.5v4M3.5 9.5h17"></path></svg></span><em>예약</em></button>
+      <button data-nav="customers"><span class="nav-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="8" r="3.5"></circle><path d="M5.5 20c.7-4 3-6 6.5-6s5.8 2 6.5 6"></path></svg></span><em>고객</em></button>
+      <button data-nav="more"><span class="nav-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="5" cy="12" r="1.4"></circle><circle cx="12" cy="12" r="1.4"></circle><circle cx="19" cy="12" r="1.4"></circle></svg></span><em>더보기</em></button>
     </nav>
   </div>
 

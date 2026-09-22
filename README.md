@@ -4,21 +4,28 @@ Mobile-first nail salon operating system.
 
 ## Product direction
 - Main product: a simple, polished replacement for salon booking/CRM tools such as Ahasoft.
-- Primary navigation: Today · Booking · Customers · More.
+- Product shell: Today · Booking · Customers · More.
 - Booking keeps the proven salon-scheduler structure, redesigned with an iPhone-like interaction system.
-- LUDIA ART STUDIO is an optional add-on under More.
+- LUDIA ART STUDIO stays under More as a differentiated add-on.
 - Vercel + Supabase + PWA direction.
 - Replit is not used.
 
 ## Current baseline
-**v1.8 — Continuous Nail Model Renderer**
+**v1.9 — Reference-led Apple-grade Salon OS Shell**
 
-### Current highlights
-- Six ART concepts render on a shared procedural nail model instead of rotating fixed JPG samples.
-- Each concept has base color, accent, magnet, aurora, french, gems, texture and accent-finger state.
-- The same model data persists from concept generation through finger editing, library reuse and multi-angle final preview.
-- Repeated magnet / aurora / accent edits have visible 3-step intensity.
-- Staff-by-time daily schedule with iOS-style date strip and quick booking.
-- ART STUDIO remains an add-on; Salon OS stays the main product.
+### Reference-led principles
+- Apple HIG: deliberate toolbar/tab density, content-first hierarchy, neutral grouped surfaces.
+- Fresha: tap an empty time slot to create an appointment.
+- GlossGenius: day/week/team filtering and team overview.
+- Square Appointments: side-by-side staff schedule.
+- Vagaro: fast staff/date switching and dense salon-calendar utility.
 
-This repository is the source of truth for ongoing LUDIA NAIL updates. Vercel should deploy the `main` branch automatically.
+### v1.9 highlights
+- Rebuilt Today from dashboard cards into a native mobile agenda: date, next appointment, glance metrics, schedule, alerts.
+- Rebuilt More into grouped Settings-style rows.
+- Refined Calendar with iOS-like date selection, neutral staff filters and one-accent appointment blocks.
+- Reworked customer list and bottom tab bar into the same visual system.
+- Restored app.js/styles.css/sw.js after an empty-file regression and bumped service-worker cache to v1.9.
+- Preserved v1.8 continuous nail-model ART flow.
+
+Vercel should deploy the `main` branch automatically.

@@ -235,6 +235,49 @@ $('#compareBtn').onclick=openCompare;$$('[data-close-compare]').forEach(x=>x.onc
 
 function saveDesign(d){if(state.library.some(x=>x.id===d.id)){toast('이미 보관함에 있어요');return}const sameName=state.library.filter(x=>x.name===d.name).length;const saved={...d,name:sameName?`${d.name} · V${sameName+1}`:d.name,status:d.status==='즐겨찾기'?'즐겨찾기':'후보',savedAt:new Date().toISOString()};state.library.unshift(saved);renderLibrary();renderRecent();renderPicker();schedulePersist();toast(sameName?'변형 버전으로 보관했어요':'보관함에 자동 저장했어요')}
 const FINGERS=['L엄지','L검지','L중지','L약지','L소지','R엄지','R검지','R중지','R약지','R소지'];
+let editorHistory=[],editorRedo=[],editorOriginal=null,editorPreviewMode='current';
+function snapshotFingerLooks(d){ensureFingerLooks(d);return cloneModel(d.fingerLooks)}
+function restoreFingerLooks(d,snap){d.fingerLooks=cloneModel(snap);recalcDesign(d);renderHandEditor();renderArtLiveStage();renderEditorMetrics();syncEditChipStates();render3DStage();schedulePersist()}
+function pushEditorHistory(){if(!state.active)return;editorHistory.push(snapshotFingerLooks(state.active));if(editorHistory.length>40)editorHistory.shift();editorRedo=[];updateHistoryButtons()}
+function updateHistoryButtons(){const u=$('#undoEditBtn'),r=$('#redoEditBtn');if(u)u.disabled=!editorHistory.length;if(r)r.disabled=!editorRedo.length}
+function undoEditor(){if(!state.active||!editorHistory.length)return;editorRedo.push(snapshotFingerLooks(state.active));restoreFingerLooks(state.active,editorHistory.pop());updateHistoryButtons();toast('한 단계 되돌렸어요')}
+function redoEditor(){if(!state.active||!editorRedo.length)return;editorHistory.push(snapshotFingerLooks(state.active));restoreFingerLooks(state.active,editorRedo.pop());updateHistoryButtons();toast('다시 적용했어요')}
+function designWithFingerSnapshot(snap){return {...state.active,fingerLooks:cloneModel(snap||{})}}
+function renderArtLiveStage(){
+ const stage=$('#artLiveStage');if(!stage||!state.active)return;
+ const current=modelPreviewHTML(state.active,'editor-live');
+ const original=editorOriginal?modelPreviewHTML(designWithFingerSnapshot(editorOriginal),'editor-live'):'';
+ if(editorPreviewMode==='original')stage.innerHTML='<div class="art-stage-single"><span class="art-stage-label">원본</span>'+original+'</div>';
+ else if(editorPreviewMode==='split')stage.innerHTML='<div class="art-stage-split"><div><span class="art-stage-label">원본</span>'+original+'</div><div><span class="art-stage-label">현재</span>'+current+'</div></div>';
+ else stage.innerHTML='<div class="art-stage-single"><span class="art-stage-label live">LIVE</span>'+current+'</div>';
+ $('#artPreviewTabs [data-preview-mode]').forEach(b=>b.classList.toggle('active',b.dataset.previewMode===editorPreviewMode));
+}
+function parseDirectRequest(text){
+ const t=(text||'').toLowerCase();const mods=[];
+ if(/연하게|밝게|투명/.test(t))mods.push('더 연하게');
+ if(/진하게|딥|짙게/.test(t))mods.push('더 진하게');
+ if(/심플|깔끔|단순/.test(t))mods.push('더 심플');
+ if(/파츠.*줄|스톤.*줄|장식.*줄|제거/.test(t))mods.push('파츠 줄이기');
+ if(/포인트.*추|스톤.*추|파츠.*추/.test(t))mods.push('포인트 추가');
+ if(/자석|캣아이/.test(t))mods.push('자석감 강하게');
+ if(/오로라|유리알|글라스/.test(t))mods.push('오로라감 추가');
+ if(/성수|뉴트럴|미니멀/.test(t))mods.push('성수 무드');
+ if(/강남|화려|블링/.test(t))mods.push('강남 무드');
+ if(/청순|여리|웨딩/.test(t))mods.push('청순하게');
+ if(/가격|저렴|낮춰/.test(t))mods.push('가격 낮춰서');
+ return [...new Set(mods)];
+}
+function applyDirectColor(text){
+ if(!state.active)return false;const t=(text||'').toLowerCase();let palette=null;
+ if(/블루|파랑|blue/.test(t))palette=['#b8d2ef','#edf6ff'];
+ else if(/레드|빨강|와인|red/.test(t))palette=['#a84655','#f3d6dc'];
+ else if(/블랙|검정|black/.test(t))palette=['#34343a','#e9e9ed'];
+ else if(/화이트|흰색|white/.test(t))palette=['#efe8e7','#ffffff'];
+ else if(/핑크|분홍|pink/.test(t))palette=['#efbec8','#fff1f5'];
+ else if(/누드|베이지|beige/.test(t))palette=['#dfc4b7','#f4e8df'];
+ if(!palette)return false;
+ selectedFingerNames().forEach(f=>{state.active.fingerLooks[f].base=palette[0];state.active.fingerLooks[f].accent=palette[1]});return true;
+}
 const lookClassMap={
  '더 연하게':'look-light','더 진하게':'look-deep','더 심플':'look-simple','파츠 줄이기':'look-simple',
  '포인트 추가':'look-accent','자석감 강하게':'look-magnet','오로라감 추가':'look-aurora','성수 무드':'look-seongsu',
@@ -270,24 +313,35 @@ function syncEditChipStates(){
  if(!state.active)return;ensureFingerLooks(state.active);const selected=selectedFingerNames();
  $$('#editChips button').forEach(b=>{const m=b.dataset.mod||b.textContent;const on=selected.length&&selected.every(f=>state.active.fingerLooks[f].mods.includes(m));b.classList.toggle('active',on)});
 }
-function applyLiveMod(mod){
- if(!state.active)return;ensureFingerLooks(state.active);const targets=selectedFingerNames();const stepped=new Set(['자석감 강하게','오로라감 추가','포인트 추가','화려하게']);
+function applyLiveMod(mod,{record=true,quiet=false}={}){
+ if(!state.active)return;ensureFingerLooks(state.active);if(record)pushEditorHistory();const targets=selectedFingerNames();const stepped=new Set(['자석감 강하게','오로라감 추가','포인트 추가','화려하게']);
  targets.forEach(f=>{const look=state.active.fingerLooks[f];look.levels=look.levels||{};look.mods=look.mods||[];
-   if(mod==='원본으로'){state.active.fingerLooks[f]=modelLookForIndex(state.active,FINGERS.indexOf(f));return}
-   if(stepped.has(mod)){look.levels[mod]=((look.levels[mod]||0)%3)+1;if(!look.mods.includes(mod))look.mods.push(mod)}
+   if(mod==='원본으로'){state.active.fingerLooks[f]=editorOriginal?.[f]?cloneModel(editorOriginal[f]):modelLookForIndex(state.active,FINGERS.indexOf(f));return}
+   if(stepped.has(mod)){look.levels[mod]=Math.min(3,(look.levels[mod]||0)+1);if(!look.mods.includes(mod))look.mods.push(mod)}
    else{look.mods=look.mods.includes(mod)?look.mods.filter(x=>x!==mod):[...look.mods,mod]}
  });
- recalcDesign(state.active);renderHandEditor();syncEditChipStates();renderEditorMetrics();render3DStage();schedulePersist();toast(`${targets.length===10?'전체':targets.join(' · ')} · ${mod} 즉시 반영`);
+ recalcDesign(state.active);renderHandEditor();syncEditChipStates();renderArtLiveStage();renderEditorMetrics();render3DStage();schedulePersist();updateHistoryButtons();if(!quiet)toast((targets.length===10?'전체':targets.join(' · '))+' · '+mod+' 즉시 반영');
 }
 function renderEditorMetrics(){const d=state.active;if(!d)return;$('#metricRow').innerHTML=`<div class="metric"><span>난이도</span><b>${d.diff}</b></div><div class="metric"><span>시간</span><b>${d.time}분</b></div><div class="metric"><span>권장가</span><b>${money(d.price)}</b></div><div class="metric"><span>실행성</span><b>${d.fit}%</b></div>`}
 function openSheet(d){
- state.active=d;state.fingers=new Set(['전체']);ensureFingerLooks(d);recalcDesign(d);$('#sheetName').textContent=d.name;$('#sheetDesc').textContent=d.desc;renderEditorMetrics();$('#serviceGuide').innerHTML=`<b>실제 시술 가이드</b><span>재료 · ${d.materials.join(' · ')}</span><span>순서 · ${d.tech}</span><span>대체 · 품절 파츠가 있으면 미니 스톤/실버 라인/진주 계열로 우선 대체</span>`;renderHandEditor();syncEditChipStates();$('#editPrompt').value='';$('#editSheet').classList.add('open');$('#editSheet').setAttribute('aria-hidden','false');document.body.style.overflow='hidden'
+ state.active=d;state.fingers=new Set(['전체']);ensureFingerLooks(d);recalcDesign(d);editorOriginal=snapshotFingerLooks(d);editorHistory=[];editorRedo=[];editorPreviewMode='current';
+ $('#sheetName').textContent=d.name;$('#sheetDesc').textContent=d.desc;renderEditorMetrics();$('#serviceGuide').innerHTML='<b>실제 시술 가이드</b><span>재료 · '+d.materials.join(' · ')+'</span><span>순서 · '+d.tech+'</span><span>대체 · 품절 파츠가 있으면 미니 스톤/실버 라인/진주 계열로 우선 대체</span>';
+ renderHandEditor();renderArtLiveStage();syncEditChipStates();updateHistoryButtons();$('#editPrompt').value='';$('#editSheet').classList.add('open');$('#editSheet').setAttribute('aria-hidden','false');document.body.style.overflow='hidden'
 }
 function closeSheet(){$('#editSheet').classList.remove('open');$('#editSheet').setAttribute('aria-hidden','true');document.body.style.overflow=''}
 $$('[data-close-sheet]').forEach(x=>x.onclick=closeSheet);
 editOptions.forEach(t=>{const b=document.createElement('button');b.textContent=t;b.dataset.mod=t;b.onclick=()=>applyLiveMod(t);$('#editChips').appendChild(b)});
 $('#saveDesignBtn').onclick=()=>state.active&&saveDesign(state.active);$('#sheetFavorite').onclick=e=>{e.currentTarget.textContent=e.currentTarget.textContent==='♡'?'♥':'♡';toast('즐겨찾기에 반영했어요')};
-$('#applyEditBtn').onclick=()=>{const text=$('#editPrompt').value.trim();if(!state.active)return toast('디자인을 먼저 선택해 주세요');const fingers=selectedFingerNames();const mods=[...new Set(fingers.flatMap(f=>state.active.fingerLooks[f].mods))];state.active.editHistory=[...(state.active.editHistory||[]),{at:new Date().toISOString(),fingers,mods,text,after:{time:state.active.time,price:state.active.price,diff:state.active.diff}}];const ix=state.library.findIndex(x=>x.id===state.active.id||x.name===state.active.name);if(ix>=0)state.library[ix]={...state.library[ix],...state.active};renderLibrary();schedulePersist();toast('현재 편집 상태를 확정했어요')};
+$('#undoEditBtn').onclick=undoEditor;$('#redoEditBtn').onclick=redoEditor;
+$$('#artPreviewTabs [data-preview-mode]').forEach(b=>b.onclick=()=>{editorPreviewMode=b.dataset.previewMode;renderArtLiveStage()});
+$('#applyEditBtn').onclick=()=>{const text=$('#editPrompt').value.trim();if(!state.active)return toast('디자인을 먼저 선택해 주세요');if(!text)return toast('수정 내용을 입력해 주세요');
+ pushEditorHistory();const mods=parseDirectRequest(text);const colored=applyDirectColor(text);mods.forEach(m=>applyLiveMod(m,{record:false,quiet:true}));
+ if(!mods.length&&!colored){editorHistory.pop();updateHistoryButtons();return toast('예: 약지만 오로라, 전체 더 연하게, 블루톤처럼 입력해 주세요')}
+ recalcDesign(state.active);renderHandEditor();renderArtLiveStage();renderEditorMetrics();syncEditChipStates();$('#editPrompt').value='';
+ const fingers=selectedFingerNames();state.active.editHistory=[...(state.active.editHistory||[]),{at:new Date().toISOString(),fingers,text,after:{time:state.active.time,price:state.active.price,diff:state.active.diff}}];
+ schedulePersist();toast('요청을 LIVE 프리뷰에 바로 반영했어요')
+};
+$('#finalSaveFromEditor').onclick=()=>{if(!state.active)return;saveDesign(state.active);toast('현재 시술안을 저장했어요')};
 
 let viewerRotX=-8,viewerRotY=0,viewerDragging=false,viewerPX=0,viewerPY=0;
 function render3DStage(){

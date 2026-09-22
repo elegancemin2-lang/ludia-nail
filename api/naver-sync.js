@@ -22,15 +22,28 @@ function normalizeEvent(event){
   };
 }
 
+function supabaseConfig(){
+  const url=process.env.SUPABASE_URL,key=process.env.SUPABASE_SERVICE_ROLE_KEY;
+  return url&&key?{url,key,headers:{apikey:key,authorization:`Bearer ${key}`,'content-type':'application/json'}}:null;
+}
+
+async function updateConnection(cfg,{state='connected',lastError=null,eventCount=0}={}){
+  if(!cfg)return;
+  const now=new Date().toISOString();
+  const body=[{provider:'NAVER',display_name:'네이버 예약',state,last_sync_at:now,last_error:lastError,metadata:{last_event_count:eventCount,bridge:'windows-playwright'},updated_at:now}];
+  const r=await fetch(`${cfg.url}/rest/v1/integration_connections?on_conflict=provider`,{method:'POST',headers:{...cfg.headers,prefer:'resolution=merge-duplicates,return=minimal'},body:JSON.stringify(body)});
+  if(!r.ok)throw new Error(`integration_connections ${r.status}: ${await r.text()}`);
+}
+
 async function persist(rows){
-  const url=process.env.SUPABASE_URL, key=process.env.SUPABASE_SERVICE_ROLE_KEY;
-  if(!url||!key)return {persisted:false,reason:'supabase_not_configured'};
-  const headers={apikey:key,authorization:`Bearer ${key}`,'content-type':'application/json',prefer:'resolution=merge-duplicates,return=minimal'};
+  const cfg=supabaseConfig();
+  if(!cfg)return {persisted:false,reason:'supabase_not_configured'};
   const bookings=rows.map(r=>({external_id:r.external_id,source:r.source,booking_no:r.booking_no,booking_date:r.booking_date,booking_time:r.booking_time,phone:r.phone,status:r.status,raw_text:r.raw_text,last_synced_at:r.received_at}));
-  const bookingRes=await fetch(`${url}/rest/v1/external_bookings?on_conflict=source,external_id`,{method:'POST',headers,body:JSON.stringify(bookings)});
+  const bookingRes=await fetch(`${cfg.url}/rest/v1/external_bookings?on_conflict=source,external_id`,{method:'POST',headers:{...cfg.headers,prefer:'resolution=merge-duplicates,return=minimal'},body:JSON.stringify(bookings)});
   if(!bookingRes.ok)throw new Error(`external_bookings ${bookingRes.status}: ${await bookingRes.text()}`);
-  const eventRes=await fetch(`${url}/rest/v1/booking_sync_events`,{method:'POST',headers:{...headers,prefer:'return=minimal'},body:JSON.stringify(rows)});
+  const eventRes=await fetch(`${cfg.url}/rest/v1/booking_sync_events`,{method:'POST',headers:{...cfg.headers,prefer:'return=minimal'},body:JSON.stringify(rows)});
   if(!eventRes.ok)throw new Error(`booking_sync_events ${eventRes.status}: ${await eventRes.text()}`);
+  await updateConnection(cfg,{eventCount:rows.length});
   return {persisted:true};
 }
 
@@ -40,11 +53,16 @@ export default async function handler(req,res){
   const expected=process.env.LUDIA_SYNC_TOKEN;
   if(!expected)return json(res,503,{ok:false,error:'sync_token_not_configured'});
   if(req.headers.authorization!==`Bearer ${expected}`)return json(res,401,{ok:false,error:'unauthorized'});
-  const body=typeof req.body==='string'?JSON.parse(req.body||'{}'):(req.body||{});
+  let body;
+  try{body=typeof req.body==='string'?JSON.parse(req.body||'{}'):(req.body||{});}catch{return json(res,400,{ok:false,error:'invalid_json'});}
   if(body.source!=='NAVER'||!Array.isArray(body.events))return json(res,400,{ok:false,error:'invalid_payload'});
   if(body.events.length>200)return json(res,413,{ok:false,error:'too_many_events'});
   const rows=body.events.map(normalizeEvent).filter(Boolean);
-  if(!rows.length)return json(res,200,{ok:true,accepted:0,persisted:false});
+  const cfg=supabaseConfig();
+  if(!rows.length){
+    try{if(cfg)await updateConnection(cfg,{eventCount:0});}catch(error){console.error('[LUDIA sync heartbeat]',error);return json(res,502,{ok:false,error:'heartbeat_persistence_failed'});}
+    return json(res,200,{ok:true,accepted:0,persisted:Boolean(cfg),heartbeat:true});
+  }
   try{const result=await persist(rows);return json(res,200,{ok:true,accepted:rows.length,...result});}
   catch(error){console.error('[LUDIA sync]',error);return json(res,502,{ok:false,error:'persistence_failed'});}
 }

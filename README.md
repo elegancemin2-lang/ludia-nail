@@ -11,7 +11,7 @@ Mobile-first nail salon operating system.
 - Replit is not used.
 
 ## Current baseline
-**v2.2 — Precision ART Editor + Fresh Batches**
+**v2.3 — Realtime Salon OS + Precision ART**
 
 ### Reference-led principles
 - Apple HIG: deliberate toolbar/tab density, content-first hierarchy, neutral grouped surfaces.
@@ -21,6 +21,9 @@ Mobile-first nail salon operating system.
 - Vagaro: fast staff/date switching and dense salon-calendar utility.
 
 ### Current highlights
+- Supabase Auth + RLS salon runtime: authenticated shops replace demo arrays with live appointments, customers, staff, services and memberships.
+- Realtime subscriptions refresh booking/customer/member/payment changes across logged-in devices; demo mode remains a safe fallback when cloud config is absent.
+- Quick booking can match/create customers by phone and persist appointments directly to Supabase; appointment status changes persist too.
 - Finger-level precision editor: select one or more nails and directly change shape, length, color, texture and parts count with instant local rendering.
 - Fresh-generation batch flow: `6개 시안 만들기` now starts from the current brief instead of recycling prior generated results.
 - Six slots appear immediately, fill progressively, and each run receives a unique batch identity and variation seed.
@@ -44,3 +47,7 @@ ART generation is now batch-based. Restored history stays in the library, while 
 
 ## ART v2.2
 The live editor now supports finger-level shape, length, color, texture and parts controls. Existing quick edits, natural-language edits, undo/redo, comparison and multi-angle preview remain intact. Legacy saved designs are migrated with safe default shape/length values when opened.
+
+
+## Salon Cloud v2.3
+Set `SUPABASE_URL` and either `SUPABASE_PUBLISHABLE_KEY` or `SUPABASE_ANON_KEY` in Vercel. The browser receives only the public client key from `/api/salon-config`; `SUPABASE_SERVICE_ROLE_KEY` is never exposed. Apply `supabase/salon_os.sql` and `supabase/salon_onboarding.sql`, then sign in from More → Cloud account. New authenticated owners without a salon can create one through the RLS-safe onboarding RPC. Passwords are not stored by LUDIA; Supabase Auth manages the session.

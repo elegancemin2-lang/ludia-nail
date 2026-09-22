@@ -250,7 +250,7 @@
 
             <label class="inventory-toggle"><input type="checkbox" id="stockFirst" checked/><span><b>보유재료 우선</b><small>없는 파츠는 비슷한 재료로 자동 대체 제안</small></span></label>
 
-            <button class="generate-main" id="generateMain"><span>✦</span><b>6개 디자인 만들기</b><small>현재는 UI 데모 · AI 연결 준비됨</small></button>
+            <button class="generate-main" id="generateMain"><span>✦</span><b>새로운 6개 시안 만들기</b><small>현재 조건으로 새 조합 생성 · 저장본 재사용 안 함</small></button>
           </div>
 
           <aside class="live-brief panel">
@@ -268,7 +268,7 @@
 
         <div class="result-section hidden" id="resultSection">
           <div class="section-title-row sticky-result-head">
-            <div><span class="mini-label">6 CONCEPTS</span><h3>마음에 드는 안을 골라 수정하세요</h3></div>
+            <div><span class="mini-label" id="generationMeta">NEW BATCH</span><h3>지금 조건으로 새로 만든 6개 시안</h3></div>
             <div class="result-actions"><button class="soft-btn" id="compareBtn">비교</button><button class="soft-btn" id="regenerateBtn">↻ 다시 6안</button></div>
           </div>
           <div class="design-grid" id="designGrid"></div>

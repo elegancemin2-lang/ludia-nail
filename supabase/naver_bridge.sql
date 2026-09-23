@@ -56,5 +56,78 @@ create policy ludia_external_bookings_no_client_access on public.ludia_external_
 create policy ludia_booking_sync_events_no_client_access on public.ludia_booking_sync_events for all to anon, authenticated using (false) with check (false);
 create policy ludia_integration_connections_no_client_access on public.ludia_integration_connections for all to anon, authenticated using (false) with check (false);
 
+-- Projects a normalized SmartPlace reservation into the same appointment table used by the live calendar.
+-- It intentionally does not invent a customer, staff, service or price when SmartPlace does not expose them reliably.
+create or replace function public.ludia_sync_naver_booking_to_appointment(
+  p_salon_id uuid,
+  p_external_id text,
+  p_booking_no text,
+  p_booking_date text,
+  p_booking_time text,
+  p_phone text,
+  p_status text,
+  p_raw_text text
+) returns uuid
+language plpgsql
+security definer
+set search_path = public
+as $$
+declare
+  v_id uuid;
+  v_start timestamptz;
+  v_status text;
+  v_label text;
+begin
+  if p_salon_id is null or nullif(trim(p_external_id),'') is null then
+    raise exception 'salon_id and external_id are required';
+  end if;
+  if p_booking_date is null or p_booking_time is null then return null; end if;
+  begin
+    v_start := ((p_booking_date::date + p_booking_time::time) at time zone 'Asia/Seoul');
+  exception when others then
+    return null;
+  end;
+
+  v_status := case p_status
+    when 'cancelled' then 'cancelled'
+    when 'completed' then 'completed'
+    when 'no_show' then 'no_show'
+    when 'requested' then 'pending'
+    else 'confirmed'
+  end;
+  v_label := case when nullif(regexp_replace(coalesce(p_phone,''),'\D','','g'),'') is not null
+    then '네이버 예약 · ' || right(regexp_replace(p_phone,'\D','','g'),4)
+    else '네이버 예약' end;
+
+  select id into v_id from public.ludia_appointments
+  where salon_id=p_salon_id and source='naver' and external_source_id=p_external_id limit 1;
+
+  if v_id is null then
+    insert into public.ludia_appointments(
+      salon_id,source,external_source_id,customer_name_snapshot,customer_phone_snapshot,
+      service_name_snapshot,starts_at,ends_at,status,price,memo,source_updated_at
+    ) values (
+      p_salon_id,'naver',p_external_id,v_label,nullif(p_phone,''),'네이버 예약',
+      v_start,v_start+interval '90 minutes',v_status,0,
+      case when p_booking_no is not null then '네이버 예약번호 '||p_booking_no else '' end,now()
+    ) returning id into v_id;
+  else
+    update public.ludia_appointments
+    set starts_at=v_start,
+        ends_at=v_start+greatest(interval '5 minutes',ends_at-starts_at),
+        customer_phone_snapshot=coalesce(nullif(p_phone,''),customer_phone_snapshot),
+        customer_name_snapshot=case when customer_id is null then v_label else customer_name_snapshot end,
+        status=v_status,
+        memo=case when p_booking_no is not null then '네이버 예약번호 '||p_booking_no else memo end,
+        source_updated_at=now()
+    where id=v_id;
+  end if;
+  return v_id;
+end;
+$$;
+
+revoke all on function public.ludia_sync_naver_booking_to_appointment(uuid,text,text,text,text,text,text,text) from public,anon,authenticated;
+grant execute on function public.ludia_sync_naver_booking_to_appointment(uuid,text,text,text,text,text,text,text) to service_role;
+
 -- Server-side Naver bridge must attach LUDIA_SALON_ID and use SUPABASE_SECRET_KEY.
 -- Never store Naver password, browser profile, cookies, or storageState here.

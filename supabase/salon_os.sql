@@ -145,8 +145,15 @@ create table if not exists public.ludia_membership_ledger (
 );
 create index if not exists ludia_membership_ledger_membership_idx on public.ludia_membership_ledger(membership_id,created_at desc);
 
-create or replace function public.ludia_touch_updated_at() returns trigger language plpgsql set search_path=public as $
-begin new.updated_at = now(); return new; end $$;
+create or replace function public.ludia_touch_updated_at() returns trigger
+language plpgsql
+set search_path=public
+as $$
+begin
+  new.updated_at = now();
+  return new;
+end
+$$;
 
 do $$ begin
   create trigger ludia_salons_touch before update on public.ludia_salons for each row execute function public.ludia_touch_updated_at();
@@ -177,7 +184,6 @@ revoke all on function public.ludia_is_salon_manager(uuid) from public, anon;
 grant execute on function public.ludia_is_salon_member(uuid) to authenticated;
 grant execute on function public.ludia_is_salon_manager(uuid) to authenticated;
 
--- Data API privileges are explicit. RLS below still decides which rows each signed-in user can reach.
 revoke all on table public.ludia_salons, public.ludia_salon_members, public.ludia_customers, public.ludia_services, public.ludia_appointments,
   public.ludia_membership_products, public.ludia_customer_memberships, public.ludia_payments, public.ludia_membership_ledger from anon;
 grant select on table public.ludia_salons to authenticated;
@@ -212,15 +218,15 @@ exception when duplicate_object then null; end $$;
 do $$ begin
   create policy ludia_salon_members_member_select on public.ludia_salon_members for select to authenticated using (public.ludia_is_salon_member(salon_id));
 exception when duplicate_object then null; end $$;
-do $ begin
+do $$ begin
   create policy ludia_salon_members_manager_insert on public.ludia_salon_members for insert to authenticated with check (public.ludia_is_salon_manager(salon_id));
-exception when duplicate_object then null; end $;
-do $ begin
+exception when duplicate_object then null; end $$;
+do $$ begin
   create policy ludia_salon_members_manager_update on public.ludia_salon_members for update to authenticated using (public.ludia_is_salon_manager(salon_id)) with check (public.ludia_is_salon_manager(salon_id));
-exception when duplicate_object then null; end $;
-do $ begin
+exception when duplicate_object then null; end $$;
+do $$ begin
   create policy ludia_salon_members_manager_delete on public.ludia_salon_members for delete to authenticated using (public.ludia_is_salon_manager(salon_id));
-exception when duplicate_object then null; end $;
+exception when duplicate_object then null; end $$;
 
 -- Realtime: calendar/customer/member changes should appear immediately on every logged-in device.
 do $$ begin alter publication supabase_realtime add table public.ludia_appointments; exception when duplicate_object then null; end $$;

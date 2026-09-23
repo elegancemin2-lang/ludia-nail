@@ -18,6 +18,13 @@
   function renderLoading(c){$('#customer360Body').innerHTML=`<div class="c360-kicker">CUSTOMER</div><div class="c360-head"><div><h2>${esc(c.name)}</h2><p>${esc(c.phone||'연락처 없음')}</p></div><span class="c360-live">불러오는 중</span></div><div class="c360-skeleton"><i></i><i></i><i></i></div>`;}
   function membershipText(m){if(m.kind==='amount')return won(m.remainingAmount);if(m.kind==='count')return `${Number(m.remainingCount||0)}회`;return '사용중';}
   function dispatchChange(el){if(el)el.dispatchEvent(new Event('change',{bubbles:true}))}
+  function bindPrefillIdentity(name,c){
+    if(!name)return;
+    name.dataset.cloudCustomerId=c.id||c.cloudId||'';
+    name.dataset.cloudCustomerName=c.name||'';
+    const clear=()=>{if(name.value!==(name.dataset.cloudCustomerName||'')){delete name.dataset.cloudCustomerId;delete name.dataset.cloudCustomerName;name.removeEventListener('input',clear)}};
+    name.addEventListener('input',clear);
+  }
   function bookCustomer(data,fallback){
     const c=data?.customer||fallback||activeCustomer||{};
     const history=(data?.appointments||[]).filter(a=>!['cancelled','no_show'].includes(a.status));
@@ -27,7 +34,7 @@
       $('#quickAddBooking')?.click();
       setTimeout(()=>{
         const name=$('#qbCustomer'),phone=$('#qbPhone'),staff=$('#qbStaff'),service=$('#qbService'),duration=$('#qbDuration');
-        if(name)name.value=c.name||'';
+        if(name){name.value=c.name||'';bindPrefillIdentity(name,c)}
         if(phone)phone.value=(c.phone&&c.phone!=='연락처 없음')?c.phone:'';
         if(recent?.staffName&&staff&&[...staff.options].some(o=>o.value===recent.staffName)){staff.value=recent.staffName;dispatchChange(staff)}
         if(recent?.service&&service&&[...service.options].some(o=>o.value===recent.service)){service.value=recent.service;dispatchChange(service)}

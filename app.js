@@ -467,10 +467,10 @@ function syncEditChipStates(){
 function renderPrecisionEditor(){
  if(!state.active||!$('#precisionEditor'))return;ensureFingerLooks(state.active);const targets=selectedFingerNames();const looks=targets.map(f=>state.active.fingerLooks[f]);const same=key=>looks.every(x=>x[key]===looks[0][key]);
  $('#precisionTarget').textContent=state.fingers.has('전체')?'전체 10손가락':targets.join(' · ');
- $('[data-nail-shape]').forEach(b=>b.classList.toggle('active',same('shape')&&looks[0].shape===b.dataset.nailShape));
+ $$('[data-nail-shape]').forEach(b=>b.classList.toggle('active',same('shape')&&looks[0].shape===b.dataset.nailShape));
  const lv=looks.map(x=>Number.isFinite(x.length)?x.length:2),uniform=lv.every(x=>x===lv[0]),length=Math.round(lv.reduce((a,b)=>a+b,0)/Math.max(1,lv.length));$('#nailLength').value=String(length);$('#nailLengthValue').textContent=uniform?NAIL_LENGTH_LABELS[length]:'혼합';
- $('[data-nail-color]').forEach(b=>b.classList.toggle('active',same('base')&&looks[0].base.toLowerCase()===b.dataset.nailColor.toLowerCase()));
- $('[data-nail-texture]').forEach(b=>b.classList.toggle('active',same('texture')&&looks[0].texture===b.dataset.nailTexture));
+ $$('[data-nail-color]').forEach(b=>b.classList.toggle('active',same('base')&&looks[0].base.toLowerCase()===b.dataset.nailColor.toLowerCase()));
+ $$('[data-nail-texture]').forEach(b=>b.classList.toggle('active',same('texture')&&looks[0].texture===b.dataset.nailTexture));
  const gems=looks.map(x=>x.gems||0);$('#partsCount').textContent=gems.every(x=>x===gems[0])?String(gems[0]):'혼합'
 }
 function applyPrecisionEdit(label,mutator){

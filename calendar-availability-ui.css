@@ -1,0 +1,11 @@
+/* LUDIA NAIL · restrained iOS calendar availability */
+#bookingList .booking-slot{transition:background .16s ease,opacity .16s ease}
+#bookingList .booking-slot.availability-loading{opacity:.68}
+#bookingList .booking-slot.availability-open{background:rgba(0,122,255,.018)}
+#bookingList .booking-slot.availability-blocked{background:rgba(120,120,128,.085);cursor:not-allowed;opacity:1}
+#bookingList .booking-slot.availability-blocked::after{content:attr(data-availability-reason);position:absolute;inset:auto 8px 8px 8px;font-size:10px;font-weight:650;letter-spacing:-.02em;color:rgba(60,60,67,.52);text-align:right;pointer-events:none}
+#bookingList .booking-slot.availability-blocked:hover{background:rgba(120,120,128,.1)}
+.booking-staff-person{position:relative}
+.booking-staff-person .staff-availability-badge{display:inline-flex;align-items:center;justify-content:center;min-height:18px;padding:2px 7px;border-radius:999px;background:rgba(52,199,89,.1);color:#248a3d;font-size:10px;font-weight:700;line-height:1;white-space:nowrap}
+.booking-staff-person .staff-availability-badge.muted{background:rgba(120,120,128,.09);color:rgba(60,60,67,.58)}
+@media (prefers-color-scheme:dark){#bookingList .booking-slot.availability-open{background:rgba(10,132,255,.035)}#bookingList .booking-slot.availability-blocked{background:rgba(142,142,147,.11)}#bookingList .booking-slot.availability-blocked::after{color:rgba(235,235,245,.46)}}

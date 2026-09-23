@@ -8,6 +8,8 @@
   const $=s=>document.querySelector(s);
   const won=n=>`${Number(n||0).toLocaleString('ko-KR')}원`;
   const labels={card:'카드',cash:'현금',transfer:'이체',membership:'회원권',other:'기타'};
+  function salesMenuButton(){return [...document.querySelectorAll('.native-settings-group button')].find(b=>b.querySelector('b')?.textContent.trim()==='매출')||null}
+  function clearPlaceholder(){const small=salesMenuButton()?.querySelector('small');if(small)small.textContent='실제 결제 데이터 · 오늘 / 주 / 월'}
 
   function ensureSheet(){
     if($('#salesSheet'))return;
@@ -58,5 +60,6 @@
   }
   function open(){ensureSheet();const s=$('#salesSheet');s.classList.add('open');s.setAttribute('aria-hidden','false');document.body.style.overflow='hidden';load()}
   function close(){const s=$('#salesSheet');if(!s)return;s.classList.remove('open');s.setAttribute('aria-hidden','true');document.body.style.overflow=''}
+  clearPlaceholder();
   document.addEventListener('click',e=>{const b=e.target.closest('.native-settings-group button');if(!b||b.querySelector('b')?.textContent.trim()!=='매출')return;e.preventDefault();open()});
 })();

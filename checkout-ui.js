@@ -1,0 +1,103 @@
+/* LUDIA NAIL · native checkout bottom sheet
+ * Cloud-only enhancement. Uses the same Supabase Auth storage key as salon-cloud.js.
+ * No credentials are stored here; checkout is executed by ludia_checkout_appointment().
+ */
+(()=>{
+  'use strict';
+  let client=null,active=null,memberships=[],busy=false;
+  const $=s=>document.querySelector(s);
+  const won=n=>`${Number(n||0).toLocaleString('ko-KR')}원`;
+  const methodLabels={card:'카드',cash:'현금',transfer:'이체',membership:'회원권',other:'기타'};
+
+  function ensureSheet(){
+    if($('#checkoutSheet'))return;
+    document.body.insertAdjacentHTML('beforeend',`<div class="sheet checkout-sheet" id="checkoutSheet" aria-hidden="true">
+      <div class="sheet-backdrop" data-close-checkout></div>
+      <div class="sheet-card checkout-card">
+        <div class="sheet-handle"></div>
+        <button class="sheet-close" data-close-checkout aria-label="닫기">×</button>
+        <div class="sheet-body checkout-body">
+          <span class="mini-label">CHECKOUT</span>
+          <div class="checkout-title"><div><h2 id="checkoutCustomer">결제</h2><p id="checkoutService"></p></div><strong id="checkoutAmount"></strong></div>
+          <div class="checkout-section"><span class="checkout-label">결제 방법</span><div class="checkout-methods" id="checkoutMethods">
+            <button data-method="card" class="active"><i>▣</i><b>카드</b></button><button data-method="cash"><i>₩</i><b>현금</b></button><button data-method="transfer"><i>↗</i><b>이체</b></button><button data-method="membership"><i>◇</i><b>회원권</b></button>
+          </div></div>
+          <div class="checkout-membership hidden" id="checkoutMembershipBox"><span class="checkout-label">사용할 회원권</span><div id="checkoutMembershipList"></div></div>
+          <label class="checkout-price"><span>결제 금액</span><div><input id="checkoutPaidAmount" inputmode="numeric" pattern="[0-9]*"/><em>원</em></div></label>
+          <label class="checkout-memo"><span>메모 <small>선택</small></span><input id="checkoutMemo" placeholder="예: 현금영수증 발급"/></label>
+          <div class="checkout-summary" id="checkoutSummary"></div>
+          <button class="checkout-confirm" id="checkoutConfirm">결제하고 시술 완료</button>
+          <p class="checkout-footnote">결제·회원권 차감·시술 완료가 한 번에 저장됩니다.</p>
+        </div>
+      </div>
+    </div>`);
+    document.querySelectorAll('[data-close-checkout]').forEach(x=>x.addEventListener('click',close));
+    $('#checkoutMethods').addEventListener('click',e=>{const b=e.target.closest('[data-method]');if(!b)return;selectMethod(b.dataset.method)});
+    $('#checkoutConfirm').addEventListener('click',submit);
+    $('#checkoutPaidAmount').addEventListener('input',renderSummary);
+  }
+
+  async function getClient(){
+    if(client)return client;
+    const r=await fetch('/api/salon-config',{cache:'no-store'}),cfg=await r.json();
+    if(!cfg?.configured||!window.supabase?.createClient)throw new Error('cloud unavailable');
+    client=window.supabase.createClient(cfg.url,cfg.anonKey,{auth:{persistSession:true,autoRefreshToken:true,detectSessionInUrl:false,storageKey:'ludia-salon-auth'}});
+    return client;
+  }
+
+  function currentAppointment(){
+    const cloud=window.LudiaSalonCloud;if(!cloud?.isConnected?.())return null;
+    const title=$('#opsDetailName')?.textContent||'';
+    const m=title.match(/^(\d{2}:\d{2})\s*·\s*(.+)$/);if(!m)return null;
+    const rows=cloud.getLastPayload?.()?.appointments||[];
+    return rows.find(a=>a.time===m[1]&&a.customer===m[2]&&a.status!=='완료')||null;
+  }
+
+  async function open(appointment){
+    ensureSheet();active=appointment;memberships=[];
+    $('#checkoutCustomer').textContent=appointment.customer;
+    $('#checkoutService').textContent=`${appointment.time} · ${appointment.service} · ${appointment.staff}`;
+    $('#checkoutAmount').textContent=won(appointment.amount);
+    $('#checkoutPaidAmount').value=String(appointment.amount||0);$('#checkoutMemo').value='';
+    selectMethod('card');
+    const sheet=$('#checkoutSheet');sheet.classList.add('open');sheet.setAttribute('aria-hidden','false');document.body.style.overflow='hidden';
+    try{
+      const c=await getClient();
+      const {data:a,error:aErr}=await c.from('ludia_appointments').select('id,customer_id,salon_id,price,status').eq('id',appointment.cloudId).single();if(aErr)throw aErr;
+      active={...appointment,db:a};
+      const {data,error}=await c.from('ludia_customer_memberships').select('id,kind,name_snapshot,remaining_amount,remaining_count,expires_at,status').eq('salon_id',a.salon_id).eq('customer_id',a.customer_id).eq('status','active').order('expires_at',{ascending:true,nullsFirst:false});if(error)throw error;
+      memberships=data||[];renderMemberships();
+    }catch(error){console.warn('[LUDIA checkout]',error);renderMemberships('회원권 정보를 불러오지 못했어요')}
+    renderSummary();
+  }
+
+  function close(){const s=$('#checkoutSheet');if(!s)return;s.classList.remove('open');s.setAttribute('aria-hidden','true');document.body.style.overflow=$('#opsDetailSheet')?.classList.contains('open')?'hidden':'';active=null;busy=false}
+  function selectedMethod(){return $('#checkoutMethods [data-method].active')?.dataset.method||'card'}
+  function selectMethod(method){document.querySelectorAll('#checkoutMethods [data-method]').forEach(b=>b.classList.toggle('active',b.dataset.method===method));$('#checkoutMembershipBox')?.classList.toggle('hidden',method!=='membership');renderSummary()}
+  function membershipText(m){return m.kind==='amount'?`${m.name_snapshot} · ${won(m.remaining_amount)}`:`${m.name_snapshot} · ${m.remaining_count||0}회`}
+  function renderMemberships(errorText=''){
+    const box=$('#checkoutMembershipList');if(!box)return;box.innerHTML='';
+    if(errorText){box.innerHTML=`<div class="checkout-empty">${errorText}</div>`;return}
+    if(!memberships.length){box.innerHTML='<div class="checkout-empty">사용 가능한 회원권이 없어요.</div>';return}
+    memberships.forEach((m,i)=>{const b=document.createElement('button');b.type='button';b.className='checkout-membership-option'+(i===0?' active':'');b.dataset.membership=m.id;b.innerHTML=`<span><b>${m.name_snapshot}</b><small>${m.kind==='amount'?won(m.remaining_amount):`${m.remaining_count||0}회 남음`}</small></span><i>✓</i>`;b.onclick=()=>{document.querySelectorAll('.checkout-membership-option').forEach(x=>x.classList.remove('active'));b.classList.add('active');renderSummary()};box.appendChild(b)})
+  }
+  function renderSummary(){const box=$('#checkoutSummary');if(!box||!active)return;const method=selectedMethod(),amount=Number(($('#checkoutPaidAmount')?.value||'0').replace(/\D/g,''))||0;const membership=memberships.find(x=>x.id===$('.checkout-membership-option.active')?.dataset.membership);box.innerHTML=`<div><span>결제</span><b>${methodLabels[method]}</b></div><div><span>금액</span><b>${won(amount)}</b></div>${method==='membership'?`<div><span>차감</span><b>${membership?membershipText(membership):'회원권 선택 필요'}</b></div>`:''}`}
+
+  async function submit(){
+    if(busy||!active?.cloudId)return;const method=selectedMethod(),amount=Number(($('#checkoutPaidAmount').value||'0').replace(/\D/g,''));const membershipId=$('.checkout-membership-option.active')?.dataset.membership||null;
+    if(!Number.isFinite(amount)||amount<0)return alert('결제 금액을 확인해 주세요.');
+    if(method==='membership'&&!membershipId)return alert('사용할 회원권을 선택해 주세요.');
+    busy=true;const btn=$('#checkoutConfirm');btn.disabled=true;btn.textContent='결제 저장 중…';
+    try{
+      const c=await getClient();const {data,error}=await c.rpc('ludia_checkout_appointment',{target_appointment:active.cloudId,payment_method:method,paid_amount:amount,target_membership:method==='membership'?membershipId:null,payment_memo:$('#checkoutMemo').value.trim()});if(error)throw error;
+      await window.LudiaSalonCloud?.refresh?.();close();document.querySelector('[data-close-ops]')?.click();
+      const toast=$('#toast');if(toast){toast.textContent=`${methodLabels[method]} ${won(data?.amount??amount)} · 결제 완료`;toast.classList.add('show');setTimeout(()=>toast.classList.remove('show'),1800)}
+    }catch(error){console.error('[LUDIA checkout]',error);alert(error?.message?.includes('already paid')?'이미 결제 완료된 예약입니다.':error?.message?.includes('insufficient')?'회원권 잔액/횟수가 부족합니다.':'결제를 저장하지 못했어요. 다시 확인해 주세요.')}finally{busy=false;if(btn){btn.disabled=false;btn.textContent='결제하고 시술 완료'}}
+  }
+
+  document.addEventListener('click',e=>{
+    const btn=e.target.closest('#opsStatusBtn');if(!btn||btn.disabled||btn.textContent.trim()!=='시술 완료')return;
+    const a=currentAppointment();if(!a)return;
+    e.preventDefault();e.stopImmediatePropagation();open(a);
+  },true);
+})();

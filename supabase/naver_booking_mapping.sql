@@ -80,6 +80,9 @@ begin
 
   if not found then raise exception 'appointment not found'; end if;
   if a.source <> 'naver' then raise exception 'not a Naver appointment'; end if;
+  if auth.role() <> 'service_role' and not public.ludia_is_salon_member(a.salon_id) then
+    raise exception 'forbidden';
+  end if;
 
   select * into ext
   from public.ludia_external_bookings
@@ -105,7 +108,7 @@ begin
   where m.salon_id=a.salon_id
     and m.is_active
     and nullif(trim(m.match_text),'') is not null
-    and coalesce(ext.raw_text,'') ilike '%' || replace(replace(m.match_text,'\\','\\\\'),'%','\\%') || '%' escape '\\'
+    and strpos(lower(coalesce(ext.raw_text,'')),lower(m.match_text)) > 0
   order by m.priority asc, length(m.match_text) desc, m.created_at asc
   limit 1;
 

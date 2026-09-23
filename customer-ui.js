@@ -5,7 +5,7 @@
   const won=v=>`${Number(v||0).toLocaleString('ko-KR')}원`;
   const date=v=>v?new Intl.DateTimeFormat('ko-KR',{timeZone:'Asia/Seoul',month:'short',day:'numeric',weekday:'short'}).format(new Date(v)):'-';
   const statusLabel=s=>({completed:'완료',in_service:'진행중',arrived:'도착',confirmed:'예약',pending:'대기',cancelled:'취소',no_show:'노쇼'}[s]||s||'예약');
-  let sheet=null,activeCustomer=null;
+  let sheet=null,activeCustomer=null,activeProfile=null;
 
   function ensureSheet(){
     if(sheet)return sheet;
@@ -14,11 +14,32 @@
     document.body.appendChild(sheet);sheet.querySelectorAll('[data-c360-close]').forEach(x=>x.addEventListener('click',close));return sheet;
   }
   function close(){ensureSheet().classList.remove('open');sheet.setAttribute('aria-hidden','true');document.body.style.overflow='';}
-  function openShell(customer){activeCustomer=customer;ensureSheet();sheet.classList.add('open');sheet.setAttribute('aria-hidden','false');document.body.style.overflow='hidden';renderLoading(customer);}
+  function openShell(customer){activeCustomer=customer;activeProfile=null;ensureSheet();sheet.classList.add('open');sheet.setAttribute('aria-hidden','false');document.body.style.overflow='hidden';renderLoading(customer);}
   function renderLoading(c){$('#customer360Body').innerHTML=`<div class="c360-kicker">CUSTOMER</div><div class="c360-head"><div><h2>${esc(c.name)}</h2><p>${esc(c.phone||'연락처 없음')}</p></div><span class="c360-live">불러오는 중</span></div><div class="c360-skeleton"><i></i><i></i><i></i></div>`;}
   function membershipText(m){if(m.kind==='amount')return won(m.remainingAmount);if(m.kind==='count')return `${Number(m.remainingCount||0)}회`;return '사용중';}
+  function dispatchChange(el){if(el)el.dispatchEvent(new Event('change',{bubbles:true}))}
+  function bookCustomer(data,fallback){
+    const c=data?.customer||fallback||activeCustomer||{};
+    const history=(data?.appointments||[]).filter(a=>!['cancelled','no_show'].includes(a.status));
+    const recent=history[0]||null;
+    close();document.querySelector('[data-nav="booking"]')?.click();
+    setTimeout(()=>{
+      $('#quickAddBooking')?.click();
+      setTimeout(()=>{
+        const name=$('#qbCustomer'),phone=$('#qbPhone'),staff=$('#qbStaff'),service=$('#qbService'),duration=$('#qbDuration');
+        if(name)name.value=c.name||'';
+        if(phone)phone.value=(c.phone&&c.phone!=='연락처 없음')?c.phone:'';
+        if(recent?.staffName&&staff&&[...staff.options].some(o=>o.value===recent.staffName)){staff.value=recent.staffName;dispatchChange(staff)}
+        if(recent?.service&&service&&[...service.options].some(o=>o.value===recent.service)){service.value=recent.service;dispatchChange(service)}
+        const selected=window.LudiaSalonCloud?.getLastPayload?.()?.services?.find(s=>s.name===service?.value);
+        if(selected?.duration_minutes&&duration){duration.value=String(selected.duration_minutes);dispatchChange(duration)}
+        name?.focus();name?.setSelectionRange?.(name.value.length,name.value.length);
+        const note=$('#qbAvailabilityNote');if(note&&recent)note.textContent=`${recent.staffName||'최근 담당자'} · ${recent.service||'최근 시술'} 기준으로 먼저 채웠어요. 시간만 선택해 주세요.`;
+      },90);
+    },80);
+  }
   function renderProfile(data,fallback){
-    const c=data.customer||fallback||{};const memberships=data.memberships||[];const appointments=data.appointments||[];
+    activeProfile=data;const c=data.customer||fallback||{};const memberships=data.memberships||[];const appointments=data.appointments||[];
     const tags=(c.tags||[]).map(t=>`<span>${esc(t)}</span>`).join('');
     const pref=c.preferences&&typeof c.preferences==='object'?Object.entries(c.preferences).filter(([,v])=>v!==null&&v!==''&&v!==false).slice(0,5):[];
     const active=memberships.filter(m=>m.status==='active');
@@ -32,7 +53,7 @@
       <section class="c360-section"><div class="c360-title"><b>최근 시술</b><span>${appointments.length}건</span></div>${appointments.length?`<div class="c360-timeline">${appointments.slice(0,8).map(a=>`<div class="c360-visit"><i></i><div><b>${esc(a.service||'시술')}</b><small>${date(a.startsAt)} · ${esc(a.staffName||'미지정')}${a.source==='naver'?' · 네이버':''}</small>${a.memo?`<p>${esc(a.memo)}</p>`:''}</div><span class="state-${esc(a.status)}">${esc(statusLabel(a.status))}</span></div>`).join('')}</div>`:'<p class="c360-empty">아직 시술 이력이 없습니다.</p>'}</section>
       <div class="c360-actions"><button class="soft-btn" data-c360-call ${c.phone?'':'disabled'}>전화</button><button class="primary-btn" data-c360-book>바로 예약</button></div>`;
     $('[data-c360-call]')?.addEventListener('click',()=>{if(c.phone)location.href='tel:'+String(c.phone).replace(/[^0-9+]/g,'')});
-    $('[data-c360-book]')?.addEventListener('click',()=>{close();document.querySelector('[data-nav="booking"]')?.click();setTimeout(()=>document.querySelector('#quickAddBooking')?.click(),120)});
+    $('[data-c360-book]')?.addEventListener('click',()=>bookCustomer(data,c));
   }
   function renderFallback(c){renderProfile({customer:{...c,visitCount:c.visit||0,memo:c.note||'',preferences:c.preferences||{}},lifetimeSales:0,averageTicket:0,memberships:[],appointments:[]},c);}
   async function openCustomer(c){openShell(c);if(!c.cloudId||!window.LudiaSalonCloud?.isConnected()){renderFallback(c);return}try{const data=await window.LudiaSalonCloud.getCustomer360(c.cloudId);renderProfile(data,c)}catch(error){console.error('[LUDIA Customer 360]',error);renderFallback(c)}}

@@ -15,11 +15,13 @@
     return `${year}-${String(month).padStart(2,'0')}-${String(day).padStart(2,'0')}`;
   }
   async function cloud(){
-    if(client)return client;
+    if(client&&salonId)return client;
     if(!window.supabase?.createClient)return null;
-    const r=await fetch('/api/salon-config',{cache:'no-store'}),cfg=await r.json();
-    if(!cfg?.configured)return null;
-    client=window.supabase.createClient(cfg.url,cfg.anonKey,{auth:{persistSession:true,autoRefreshToken:true,detectSessionInUrl:false,storageKey:'ludia-salon-auth'}});
+    if(!client){
+      const r=await fetch('/api/salon-config',{cache:'no-store'}),cfg=await r.json();
+      if(!cfg?.configured)return null;
+      client=window.supabase.createClient(cfg.url,cfg.anonKey,{auth:{persistSession:true,autoRefreshToken:true,detectSessionInUrl:false,storageKey:'ludia-salon-auth'}});
+    }
     const {data:{session}}=await client.auth.getSession();if(!session?.user)return null;
     const {data:mine}=await client.from('ludia_salon_members').select('salon_id').eq('user_id',session.user.id).eq('is_active',true).limit(1);
     salonId=mine?.[0]?.salon_id||null;
@@ -51,12 +53,12 @@
       $('#qbAvailabilityState').textContent=`가능 ${rows.filter(x=>x.available).length}`;
       $('#qbAvailabilityMeta').textContent=`${staffName} · ${duration}분 기준`;
       markSelected(rows);
-    }catch(error){console.warn('[LUDIA availability]',error);$('#qbAvailabilityState').textContent='확인 실패';$('#qbSlotStrip').innerHTML='<span class="qb-slot-loading">시간 확인에 실패했어요. 저장 시 서버가 다시 검증합니다.</span>'}
+    }catch(error){console.warn('[LUDIA availability]',error);$('#qbAvailabilityState').textContent='확인 실패';$('#qbSlotStrip').innerHTML='<span class="qb-slot-loading">시간 확인에 실패했어요. 저장 시 서버가 다시 검증합니다.</span>';const save=$('#qbSaveBtn');if(save)save.disabled=false}
   }
   function markSelected(rows=[]){
     const time=$('#qbTime')?.value||'';document.querySelectorAll('.qb-slot').forEach(b=>b.classList.toggle('selected',b.dataset.time===time));
-    const exact=rows.find(r=>r.slot_start&&new Intl.DateTimeFormat('en-GB',{timeZone:'Asia/Seoul',hour:'2-digit',minute:'2-digit',hour12:false}).format(new Date(r.slot_start))===time);
-    const save=$('#qbSaveBtn');if(save&&exact)save.disabled=!exact.available;
+    const fmt=v=>new Intl.DateTimeFormat('en-GB',{timeZone:'Asia/Seoul',hour:'2-digit',minute:'2-digit',hour12:false}).format(new Date(v));
+    const exact=rows.find(r=>r.slot_start&&fmt(r.slot_start)===time),save=$('#qbSaveBtn');if(save)save.disabled=Boolean(exact&&!exact.available);
     const note=$('#qbAvailabilityNote');if(note&&exact&&!exact.available)note.textContent=reasonLabel[exact.reason]||'선택한 시간은 예약할 수 없어요.';else if(note)note.textContent='회색 시간은 근무·휴무·기존 예약 기준으로 선택할 수 없어요.';
   }
   function bind(){

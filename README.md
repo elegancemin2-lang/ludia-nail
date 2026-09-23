@@ -16,7 +16,7 @@ Mobile-first nail salon operating system.
 - Replit is not used.
 
 ## Current baseline
-**v2.4 — Shared INBETWEEN Supabase Namespace**
+**v2.5 — Direct LIVE Nail Studio**
 
 ### Reference-led principles
 - Apple HIG: deliberate toolbar/tab density, content-first hierarchy, neutral grouped surfaces.
@@ -26,6 +26,8 @@ Mobile-first nail salon operating system.
 - Vagaro: fast staff/date switching and dense salon-calendar utility.
 
 ### Current highlights
+- Six-concept draft/result screen removed. ART now opens directly into the LIVE nail editor; there are no static 6-photo candidates to pick before editing.
+- Fixed finger precision control state updates so shape/color/texture controls re-render correctly and visibly change the live nail model.
 - Default salon onboarding seeds five practical nail services so a new LUDIA salon can create bookings immediately.
 - LUDIA Salon OS, Naver staging, and ART Studio now share the INBETWEEN Supabase project while remaining isolated behind `ludia_*` table names.
 - Supabase Auth + RLS salon runtime: authenticated shops replace demo arrays with live appointments, customers, staff, services and memberships.

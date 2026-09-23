@@ -279,3 +279,19 @@ body{font-family:-apple-system,BlinkMacSystemFont,"SF Pro Text","SF Pro Display"
 .native-empty-next{padding:22px 18px;background:#fff;border-radius:20px}.native-empty-next b{display:block;font-size:14px}.native-empty-next span{display:block;color:var(--muted);font-size:9px;margin-top:5px}
 .ops-appointment.cancelled,.booking-block.cancelled{opacity:.5;text-decoration:line-through}
 .quick-booking-form label>span small{font-size:7px;color:var(--muted);font-weight:600}
+
+/* v2.5 · direct live nail studio — no six-concept draft screen */
+.studio-compat-fields{display:none!important}
+.direct-studio-home{display:grid;grid-template-columns:minmax(0,1fr) minmax(360px,.85fr);gap:28px;align-items:center;padding:42px 8px 26px}
+.direct-studio-copy{max-width:620px}.direct-studio-copy h2{font-size:clamp(34px,5vw,64px);line-height:1.03;letter-spacing:-.055em;margin:10px 0 16px}.direct-studio-copy p{max-width:560px;color:var(--muted);font-size:13px;line-height:1.7}
+.direct-studio-actions{display:flex;gap:9px;flex-wrap:wrap;margin-top:22px}
+.direct-studio-demo{min-height:390px;border-radius:34px;background:#efefef;display:grid;place-items:center;overflow:hidden;border:1px solid rgba(0,0,0,.04)}
+.direct-studio-demo .model-hand,.direct-studio-demo .model-preview{transform:scale(1.08)}
+.studio-hints{display:flex;align-items:center;justify-content:center;gap:18px;padding:17px 22px;margin-top:8px}.studio-hints div{display:flex;align-items:center;gap:8px}.studio-hints div b{display:grid;place-items:center;width:27px;height:27px;border-radius:9px;background:#1d1d1f;color:#fff;font-size:8px}.studio-hints div span{font-size:9px;font-weight:800}.studio-hints>i{color:#c7c7cc;font-style:normal}
+#editSheet.direct-studio-mode .sheet-backdrop{background:rgba(0,0,0,.24)}
+#editSheet.direct-studio-mode .sheet-card{width:min(980px,calc(100vw - 24px));max-width:980px;max-height:94dvh;border-radius:28px 28px 0 0}
+#editSheet.direct-studio-mode .live-edit-body{padding-bottom:40px}
+@media(max-width:760px){
+ .direct-studio-home{grid-template-columns:1fr;padding:22px 2px 18px;gap:16px}.direct-studio-copy h2{font-size:36px}.direct-studio-demo{min-height:280px;border-radius:24px}.studio-hints{justify-content:flex-start;overflow-x:auto;gap:10px}.studio-hints>i{display:none}.studio-hints div{min-width:max-content}
+ #editSheet.direct-studio-mode .sheet-card{width:100%;max-width:none;height:96dvh;max-height:96dvh;border-radius:24px 24px 0 0}
+}

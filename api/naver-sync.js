@@ -86,10 +86,17 @@ export default async function handler(req,res){
   if(body.events.length>200)return json(res,413,{ok:false,error:'too_many_events'});
   const rows=body.events.map(normalizeEvent).filter(Boolean);
   const cfg=supabaseConfig();
+  const sid=salonId();
+  if(rows.length&&!cfg)return json(res,503,{ok:false,error:'supabase_not_configured',retryable:true});
+  if(rows.length&&!sid)return json(res,503,{ok:false,error:'salon_not_configured',retryable:true});
   if(!rows.length){
-    try{if(cfg)await updateConnection(cfg,{eventCount:0,appointmentCount:0});}catch(error){console.error('[LUDIA sync heartbeat]',error);return json(res,502,{ok:false,error:'heartbeat_persistence_failed'});}
-    return json(res,200,{ok:true,accepted:0,persisted:Boolean(cfg),heartbeat:true});
+    try{if(cfg&&sid)await updateConnection(cfg,{eventCount:0,appointmentCount:0});}catch(error){console.error('[LUDIA sync heartbeat]',error);return json(res,502,{ok:false,error:'heartbeat_persistence_failed'});}
+    return json(res,200,{ok:true,accepted:0,persisted:Boolean(cfg&&sid),heartbeat:true});
   }
-  try{const result=await persist(rows);return json(res,200,{ok:true,accepted:rows.length,...result});}
-  catch(error){console.error('[LUDIA sync]',error);return json(res,502,{ok:false,error:'persistence_failed'});}
+  try{
+    const result=await persist(rows);
+    if(!result.persisted)return json(res,503,{ok:false,error:result.reason||'persistence_unavailable',retryable:true});
+    return json(res,200,{ok:true,accepted:rows.length,...result});
+  }
+  catch(error){console.error('[LUDIA sync]',error);return json(res,502,{ok:false,error:'persistence_failed',retryable:true});}
 }

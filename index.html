@@ -139,7 +139,7 @@
         <div class="native-group-title">추가 기능</div>
         <button class="native-art-addon" data-nav="home">
           <span class="native-art-mark">✦</span>
-          <span class="native-art-copy"><b>LUDIA ART STUDIO</b><small>6안 생성 · 손가락별 즉시 수정 · 이달의 아트</small></span>
+          <span class="native-art-copy"><b>LUDIA ART STUDIO</b><small>실시간 네일 편집 · 손가락별 수정 · 이달의 아트</small></span>
           <i>›</i>
         </button>
 
@@ -154,16 +154,16 @@
         <div class="art-tabs panel" aria-label="ART STUDIO 메뉴">
           <div class="art-tabs-brand"><span>✦</span><div><b>ART STUDIO</b><small>5–10 min workflow</small></div></div>
           <div class="art-tabs-scroll">
-            <button data-nav="home">홈</button><button data-nav="create">6안 만들기</button><button data-nav="library">보관함</button><button data-nav="collection">이달의 아트</button><button data-nav="settings">DNA · 재료</button>
+            <button data-nav="home">홈</button><button data-nav="create">디자인</button><button data-nav="library">보관함</button><button data-nav="collection">이달의 아트</button><button data-nav="settings">DNA · 재료</button>
           </div>
         </div>
         <div class="hero">
           <div class="hero-copy">
             <span class="hero-kicker">5–10 MINUTE WORKFLOW</span>
-            <h2>생각난 무드를<br/>바로 <i>6개의 시안</i>으로.</h2>
-            <p>텍스트나 참고사진을 넣고 루디아 무드를 고르면, 실제 시술 가능한 방향으로 6안을 정리합니다.</p>
+            <h2>생각난 무드를<br/>바로 <i>내 네일</i>로.</h2>
+            <p>손가락을 직접 고르고 컬러·쉐입·길이·질감·파츠를 즉시 바꿔보세요.</p>
             <div class="hero-actions">
-              <button class="primary-btn" data-nav="create">✦ 5분 아트 만들기</button>
+              <button class="primary-btn" data-nav="create">✦ 네일 디자인 시작</button>
               <button class="soft-btn" id="quickReference">사진으로 시작</button>
             </div>
           </div>
@@ -200,79 +200,44 @@
 
       <section class="screen" id="createScreen">
         <div class="art-tabs panel" aria-label="ART STUDIO 메뉴">
-          <div class="art-tabs-brand"><span>✦</span><div><b>ART STUDIO</b><small>5–10 min workflow</small></div></div>
+          <div class="art-tabs-brand"><span>✦</span><div><b>ART STUDIO</b><small>LIVE NAIL EDITOR</small></div></div>
           <div class="art-tabs-scroll">
-            <button data-nav="home">홈</button><button data-nav="create">6안 만들기</button><button data-nav="library">보관함</button><button data-nav="collection">이달의 아트</button><button data-nav="settings">DNA · 재료</button>
+            <button data-nav="home">홈</button><button data-nav="create">디자인</button><button data-nav="library">보관함</button><button data-nav="collection">이달의 아트</button><button data-nav="settings">DNA · 재료</button>
           </div>
         </div>
-        <div class="fast-path" aria-label="빠른 제작 단계">
-          <span class="done"><i>1</i> 요청</span><b>→</b><span><i>2</i> 6안</span><b>→</b><span><i>3</i> 부분수정</span><b>→</b><span><i>4</i> 저장</span>
-        </div>
-        <div class="create-head">
-          <div>
-            <span class="mini-label">CREATE</span>
-            <h2>한 번에 6안 만들기</h2>
-            <p>복잡한 설정은 숨기고, 실제 시술에 필요한 조건만 남겼어요.</p>
+
+        <div class="direct-studio-home">
+          <div class="direct-studio-copy">
+            <span class="mini-label">LIVE DESIGN STUDIO</span>
+            <h2>시안 고르지 말고<br/>바로 손톱을 수정하세요.</h2>
+            <p>정적인 사진 시안은 사용하지 않습니다. 손가락을 선택하면 컬러·쉐입·길이·질감·파츠가 LIVE 모델에 즉시 반영됩니다.</p>
+            <div class="direct-studio-actions">
+              <button class="primary-btn" id="openStudioBtn">✦ 디자인 편집 시작</button>
+              <button class="soft-btn" id="newStudioBtn">새 디자인</button>
+            </div>
           </div>
-          <div class="timer-card"><span>5분 제작</span><b id="createTimer">00:00</b></div>
-        </div>
-
-        <div class="create-shell">
-          <div class="create-form panel">
-            <div class="input-block">
-              <label>원하는 디자인을 적어주세요</label>
-              <textarea id="conceptInput" placeholder="예: 가을용 밀키 누드 자석. 포인트는 약지와 엄지만, 성수 무드로. 너무 화려하지 않게."></textarea>
-            </div>
-
-            <div class="ref-upload" id="refUpload">
-              <input id="refFile" type="file" accept="image/*" hidden />
-              <div class="ref-empty" id="refEmpty">
-                <span class="upload-plus">＋</span>
-                <div><b>참고사진 추가</b><small>고객 사진·인스타 저장사진·기존 시술사진</small></div>
-                <button class="tiny-btn" id="pickRef">선택</button>
-              </div>
-              <div class="ref-preview hidden" id="refPreview"><img id="refPreviewImg" alt="참고사진 미리보기"/><button id="removeRef">×</button></div>
-            </div>
-
-            <div class="field-group">
-              <div class="field-label"><b>LUDIA DNA</b><small>한 가지를 기준으로 생성</small></div>
-              <div class="select-chips single" id="dnaChips"></div>
-            </div>
-
-            <div class="field-group">
-              <div class="field-label"><b>빠른 조건</b><small>필요한 것만 선택</small></div>
-              <div class="select-chips" id="conditionChips"></div>
-            </div>
-
-            <div class="split-fields">
-              <label><span>최대 시술시간</span><select id="maxTime"><option value="75">75분</option><option value="90" selected>90분</option><option value="105">105분</option><option value="120">120분</option></select></label>
-              <label><span>목표 가격</span><select id="targetPrice"><option value="59000">5.9만원</option><option value="69000" selected>6.9만원</option><option value="79000">7.9만원</option><option value="89000">8.9만원</option></select></label>
-            </div>
-
-            <label class="inventory-toggle"><input type="checkbox" id="stockFirst" checked/><span><b>보유재료 우선</b><small>없는 파츠는 비슷한 재료로 자동 대체 제안</small></span></label>
-
-            <button class="generate-main" id="generateMain"><span>✦</span><b>새로운 6개 시안 만들기</b><small>현재 조건으로 새 조합 생성 · 저장본 재사용 안 함</small></button>
-          </div>
-
-          <aside class="live-brief panel">
-            <div class="brief-top"><span class="mini-label">LIVE BRIEF</span><span class="brief-count" id="briefCount">3 CONDITIONS</span></div>
-            <h3 id="briefTitle">성수 미니멀 · 밀키 자석</h3>
-            <p id="briefCopy">시술시간 90분 안에서, 파츠는 적게 쓰고 은은한 자석광을 중심으로 구성합니다.</p>
-            <div class="nail-preview" id="nailPreview"></div>
-            <div class="brief-meter">
-              <div><span>실물 시술 적합도</span><b id="fitScore">94%</b></div>
-              <div class="meter"><i id="fitMeter" style="width:94%"></i></div>
-            </div>
-            <div class="brief-list" id="briefList"></div>
-          </aside>
+          <div class="direct-studio-demo" id="directStudioPreview" aria-label="실시간 네일 모델 미리보기"></div>
         </div>
 
-        <div class="result-section hidden" id="resultSection">
-          <div class="section-title-row sticky-result-head">
-            <div><span class="mini-label" id="generationMeta">NEW BATCH</span><h3>지금 조건으로 새로 만든 6개 시안</h3></div>
-            <div class="result-actions"><button class="soft-btn" id="compareBtn">비교</button><button class="soft-btn" id="regenerateBtn">↻ 다시 6안</button></div>
-          </div>
-          <div class="design-grid" id="designGrid"></div>
+        <div class="studio-hints panel">
+          <div><b>01</b><span>손가락 선택</span></div>
+          <i>›</i>
+          <div><b>02</b><span>컬러·쉐입·질감</span></div>
+          <i>›</i>
+          <div><b>03</b><span>LIVE 확인</span></div>
+          <i>›</i>
+          <div><b>04</b><span>저장</span></div>
+        </div>
+
+        <!-- compatibility state fields: no 6-concept UI is rendered -->
+        <div class="studio-compat-fields" aria-hidden="true">
+          <textarea id="conceptInput"></textarea>
+          <select id="maxTime"><option value="90" selected>90</option></select>
+          <select id="targetPrice"><option value="69000" selected>69000</option></select>
+          <input type="checkbox" id="stockFirst" checked />
+          <input id="refFile" type="file" accept="image/*" />
+          <div id="refUpload"></div><div id="refEmpty"></div><div id="refPreview"></div><img id="refPreviewImg" alt=""/><button id="pickRef"></button><button id="removeRef"></button>
+          <div id="dnaChips"></div><div id="conditionChips"></div><span id="briefCount"></span><h3 id="briefTitle"></h3><p id="briefCopy"></p><div id="nailPreview"></div><b id="fitScore"></b><i id="fitMeter"></i><div id="briefList"></div><b id="createTimer"></b>
         </div>
       </section>
 
@@ -280,7 +245,7 @@
         <div class="art-tabs panel" aria-label="ART STUDIO 메뉴">
           <div class="art-tabs-brand"><span>✦</span><div><b>ART STUDIO</b><small>5–10 min workflow</small></div></div>
           <div class="art-tabs-scroll">
-            <button data-nav="home">홈</button><button data-nav="create">6안 만들기</button><button data-nav="library">보관함</button><button data-nav="collection">이달의 아트</button><button data-nav="settings">DNA · 재료</button>
+            <button data-nav="home">홈</button><button data-nav="create">디자인</button><button data-nav="library">보관함</button><button data-nav="collection">이달의 아트</button><button data-nav="settings">DNA · 재료</button>
           </div>
         </div>
         <div class="library-head">
@@ -299,7 +264,7 @@
         <div class="art-tabs panel" aria-label="ART STUDIO 메뉴">
           <div class="art-tabs-brand"><span>✦</span><div><b>ART STUDIO</b><small>5–10 min workflow</small></div></div>
           <div class="art-tabs-scroll">
-            <button data-nav="home">홈</button><button data-nav="create">6안 만들기</button><button data-nav="library">보관함</button><button data-nav="collection">이달의 아트</button><button data-nav="settings">DNA · 재료</button>
+            <button data-nav="home">홈</button><button data-nav="create">디자인</button><button data-nav="library">보관함</button><button data-nav="collection">이달의 아트</button><button data-nav="settings">DNA · 재료</button>
           </div>
         </div>
         <div class="collection-head">
@@ -329,7 +294,7 @@
         <div class="art-tabs panel" aria-label="ART STUDIO 메뉴">
           <div class="art-tabs-brand"><span>✦</span><div><b>ART STUDIO</b><small>5–10 min workflow</small></div></div>
           <div class="art-tabs-scroll">
-            <button data-nav="home">홈</button><button data-nav="create">6안 만들기</button><button data-nav="library">보관함</button><button data-nav="collection">이달의 아트</button><button data-nav="settings">DNA · 재료</button>
+            <button data-nav="home">홈</button><button data-nav="create">디자인</button><button data-nav="library">보관함</button><button data-nav="collection">이달의 아트</button><button data-nav="settings">DNA · 재료</button>
           </div>
         </div>
         <div class="settings-head"><span class="mini-label">SETTINGS</span><h2>LUDIA DNA & 재료 설정</h2><p>자주 저장한 디자인, 실시술 디자인, 즐겨찾기 패턴을 프리셋처럼 관리합니다.</p></div>

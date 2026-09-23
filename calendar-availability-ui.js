@@ -40,6 +40,7 @@
     document.querySelectorAll('#bookingList .booking-slot').forEach(el=>{
       el.classList.remove('availability-blocked','availability-open','availability-loading');
       el.removeAttribute('data-availability-reason');
+      if(el.dataset.availabilityLabel)el.setAttribute('aria-label',el.dataset.availabilityLabel);
       el.disabled=false;
     });
     document.querySelectorAll('#bookingStaffHeader .staff-availability-badge').forEach(el=>el.remove());
@@ -63,7 +64,9 @@
     });
     let open=0,blocked=0;
     document.querySelectorAll('#bookingList .booking-slot').forEach(slot=>{
-      const m=(slot.getAttribute('aria-label')||'').match(/^(.*?)\s+(\d{1,2})시\s+빈 시간 예약$/);
+      const label=slot.dataset.availabilityLabel||slot.getAttribute('aria-label')||'';
+      if(!slot.dataset.availabilityLabel)slot.dataset.availabilityLabel=label;
+      const m=label.match(/^(.*?)\s+(\d{1,2})시\s+빈 시간 예약$/);
       if(!m||m[1]!==name)return;
       const row=byHour.get(Number(m[2]));if(!row)return;
       slot.classList.remove('availability-loading');
@@ -79,11 +82,11 @@
     const screen=$('#bookingScreen');if(!screen?.classList.contains('active'))return;
     const seq=++refreshSeq;clearState();
     const slots=[...document.querySelectorAll('#bookingList .booking-slot')];if(!slots.length)return;
-    slots.forEach(x=>x.classList.add('availability-loading'));
+    slots.forEach(x=>{if(!x.dataset.availabilityLabel)x.dataset.availabilityLabel=x.getAttribute('aria-label')||'';x.classList.add('availability-loading')});
     try{
       const c=await cloud();if(seq!==refreshSeq)return;
       if(!c){slots.forEach(x=>x.classList.remove('availability-loading'));return}
-      const names=[...new Set(slots.map(x=>(x.getAttribute('aria-label')||'').match(/^(.*?)\s+\d{1,2}시/)?.[1]).filter(Boolean))];
+      const names=[...new Set(slots.map(x=>(x.dataset.availabilityLabel||'').match(/^(.*?)\s+\d{1,2}시/)?.[1]).filter(Boolean))];
       await Promise.all(names.map(async name=>{
         const person=staff.find(x=>x.display_name===name);if(!person)return addHeaderBadge(name,'직원 확인','muted');
         const {data,error}=await c.rpc('ludia_staff_day_slots',{p_salon_id:salonId,p_staff_user_id:person.user_id,p_local_date:selectedDate(),p_duration_minutes:60,p_step_minutes:60});

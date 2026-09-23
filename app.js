@@ -181,6 +181,33 @@ async function initSalonCloud(){
  if(!window.LudiaSalonCloud){updateCloudAccountStatus({configured:false});return}
  await window.LudiaSalonCloud.init({applyData:applyCloudSalonData,onSignedOut:resetCloudSalonData,onStatus:updateCloudAccountStatus,toast})
 }
+function buildDirectStudioDesign({fresh=false}={}){
+ if(!fresh&&state.active){ensureFingerLooks(state.active);return state.active}
+ const source=state.draft.homePrompt||state.draft.concept||'';
+ const base=cloneModel(baseDesigns[0]);
+ base.id='studio-'+Date.now();
+ base.name='내 네일 디자인';
+ base.desc=source||'손가락을 선택하고 원하는 디자인을 직접 만들어보세요.';
+ base.status='작업중';
+ base.model=promptModelAdjust(cloneModel(MODEL_VARIANTS[0]),source);
+ base.fingerLooks=null;
+ ensureFingerLooks(base);
+ state.active=base;
+ state.designs=[base];
+ state.fingers=new Set(['전체']);
+ return base
+}
+function renderDirectStudioPreview(){
+ const box=$('#directStudioPreview');if(!box)return;
+ const d=buildDirectStudioDesign();
+ box.innerHTML=modelPreviewHTML(d,'direct-studio-preview');
+}
+function openDirectStudio({fresh=false}={}){
+ const d=buildDirectStudioDesign({fresh});
+ renderDirectStudioPreview();
+ openSheet(d);
+ $('#editSheet')?.classList.add('direct-studio-mode');
+}
 function setView(v){
  state.view=v;$$('.screen').forEach(x=>x.classList.remove('active'));const target=$(`#${v}Screen`);if(!target)return;target.classList.add('active');
  const artViews=new Set(['home','create','library','collection','settings']);
@@ -190,19 +217,20 @@ function setView(v){
    x.classList.toggle('active',active);
  });
  $$('.art-tabs [data-nav]').forEach(x=>x.classList.toggle('active',x.dataset.nav===v));
- const titles={opsHome:'오늘, 필요한 것만.',booking:'예약',customers:'고객',more:'더보기',home:'ART STUDIO',create:'6안 만들기',library:'ART 보관함',collection:'이달의 아트',settings:'DNA · 재료'};
+ const titles={opsHome:'오늘, 필요한 것만.',booking:'예약',customers:'고객',more:'더보기',home:'ART STUDIO',create:'디자인 스튜디오',library:'ART 보관함',collection:'이달의 아트',settings:'DNA · 재료'};
  $('#pageTitle').textContent=titles[v]||'LUDIA NAIL';
- if(v==='create')state.start=Date.now();
+ if(v==='create'){state.start=Date.now();renderDirectStudioPreview();setTimeout(()=>openDirectStudio(),40)}
  if(v==='booking')renderBooking();
  if(v==='customers')renderCustomers();
  window.scrollTo({top:0,behavior:'smooth'});
 }
-$$('[data-nav]').forEach(b=>b.onclick=()=>setView(b.dataset.nav));
+$('[data-nav]').forEach(b=>b.onclick=()=>setView(b.dataset.nav));
+$('#openStudioBtn')?.addEventListener('click',()=>openDirectStudio());$('#newStudioBtn')?.addEventListener('click',()=>{state.active=null;openDirectStudio({fresh:true})});
 $('#themeBtn').onclick=()=>document.body.classList.toggle('focus-mode');
 
 const homeChipTexts=['가을 자석','성수 미니멀','웨딩 여리','강남 글리터','숏네일 심플'];
 homeChipTexts.forEach(t=>{const b=document.createElement('button');b.textContent=t;b.onclick=()=>{$('#homePrompt').value=t+' 느낌으로 6개';startFromHome()};$('#homePromptChips').appendChild(b)});
-function startFromHome(){const v=$('#homePrompt').value.trim();state.draft.homePrompt=v;setView('create');if(v){$('#conceptInput').value=v;state.draft.concept=v}updateBrief();schedulePersist()}
+function startFromHome(){const v=$('#homePrompt').value.trim();state.draft.homePrompt=v;if(v){state.draft.concept=v;if($('#conceptInput'))$('#conceptInput').value=v}state.active=null;setView('create');updateBrief();schedulePersist()}
 $('#homePrompt').oninput=()=>{state.draft.homePrompt=$('#homePrompt').value;schedulePersist()};$('#homeGenerate').onclick=startFromHome;$('#quickReference').onclick=()=>{setView('create');setTimeout(()=>$('#pickRef').click(),180)};
 const trendData=[['Rose Smoke Magnet','누드핑크 · 실버 캣아이'],['Clear Chrome Point','클리어 · 미러 포인트'],['Soft Wedding Glass','오팔 · 여리한 광']];
 trendData.forEach((x,i)=>{const d=document.createElement('div');d.className='trend-item';d.innerHTML=`<div class="trend-main"><span class="trend-swatch" style="filter:hue-rotate(${i*25}deg)"></span><div><b>${x[0]}</b><small>${x[1]}</small></div></div><span>→</span>`;d.onclick=()=>{$('#homePrompt').value=x[0]+' '+x[1];startFromHome()};$('#trendList').appendChild(d)});
@@ -330,13 +358,13 @@ function designPreviewHTML(d,mode='card'){return d.model?modelPreviewHTML(d,mode
 function designCard(d,i){const a=document.createElement('article');a.className='design-card';const stockWarn=d.stock.includes('대체')||d.stock.includes('88');a.innerHTML=`<div class="design-media">${designPreviewHTML(d,'card')}<span class="design-num">0${i+1}</span><button class="design-fav" data-fav>♡</button></div><div class="design-body"><div class="design-name-row"><b>${d.name}</b><span>${money(d.price)}</span></div><p>${d.desc}</p><div class="meta-pills"><span>${d.diff}</span><span>${d.time}분</span><span>실행 ${d.fit}%</span><span class="${stockWarn?'stock-warn':'stock-ok'}">${d.stock}</span></div><div class="design-footer"><button data-save>저장</button><button data-edit>수정</button></div></div>`;a.querySelector('[data-edit]').onclick=()=>openSheet(d);a.querySelector('.design-media').onclick=(e)=>{if(e.target.closest('[data-fav]'))return;openSheet(d)};a.querySelector('[data-save]').onclick=()=>saveDesign(d);a.querySelector('[data-fav]').onclick=(e)=>{e.currentTarget.textContent=e.currentTarget.textContent==='♡'?'♥':'♡';toast('즐겨찾기 상태를 바꿨어요')};return a}
 let generationRunToken=0;const wait=ms=>new Promise(resolve=>setTimeout(resolve,ms));
 async function generate(){const token=++generationRunToken;const batch=makeGenerationBatch();state.generationBatch=batch;state.designs=[];state.active=null;setGeneratingUi(true);$('#resultSection').classList.remove('hidden');renderGenerationSkeleton(batch);setTimeout(()=>$('#resultSection').scrollIntoView({behavior:'smooth',block:'start'}),80);const fresh=generatedSet(batch);for(let i=0;i<fresh.length;i++){await wait(110+Math.round(Math.random()*90));if(token!==generationRunToken)return;const d=fresh[i];ensureFingerLooks(d);state.designs.push(d);batch.completed=i+1;const slot=$(`#designGrid [data-generation-slot="${i}"]`);if(slot)slot.replaceWith(designCard(d,i));if($('#generationMeta'))$('#generationMeta').textContent=`새 배치 · ${batch.completed}/6 생성`}batch.status='completed';if($('#generationMeta'))$('#generationMeta').textContent='새 배치 · 6/6 완료';setGeneratingUi(false);schedulePersist();renderPicker();toast('저장본을 재사용하지 않고 새로운 6개 시안을 만들었어요')}
-$('#generateMain').onclick=generate;$('#regenerateBtn').onclick=generate;function openCompare(){
+if($('#generateMain'))$('#generateMain').onclick=generate;if($('#regenerateBtn'))$('#regenerateBtn').onclick=generate;function openCompare(){
  const grid=$('#compareGrid');grid.innerHTML='';
  state.designs.slice(0,6).forEach((d,i)=>{const warn=d.stock.includes('대체')||d.stock.includes('88');const c=document.createElement('button');c.className='compare-item';c.innerHTML=`<div class="compare-thumb">${designPreviewHTML(d,'compare')}<span>0${i+1}</span></div><div class="compare-copy"><b>${d.name}</b><div><span>${d.time}분</span><span>${money(d.price)}</span><span>${d.diff}</span></div><small class="${warn?'warn':''}">${d.stock} · 실행 ${d.fit}%</small></div>`;c.onclick=()=>{closeCompare();openSheet(d)};grid.appendChild(c)});
  $('#compareSheet').classList.add('open');$('#compareSheet').setAttribute('aria-hidden','false');document.body.style.overflow='hidden';
 }
 function closeCompare(){$('#compareSheet').classList.remove('open');$('#compareSheet').setAttribute('aria-hidden','true');document.body.style.overflow=''}
-$('#compareBtn').onclick=openCompare;$$('[data-close-compare]').forEach(x=>x.onclick=closeCompare);
+if($('#compareBtn'))$('#compareBtn').onclick=openCompare;$('[data-close-compare]').forEach(x=>x.onclick=closeCompare);
 
 function saveDesign(d){if(state.library.some(x=>x.id===d.id)){toast('이미 보관함에 있어요');return}const sameName=state.library.filter(x=>x.name===d.name).length;const saved={...d,name:sameName?`${d.name} · V${sameName+1}`:d.name,status:d.status==='즐겨찾기'?'즐겨찾기':'후보',savedAt:new Date().toISOString()};state.library.unshift(saved);renderLibrary();renderRecent();renderPicker();schedulePersist();toast(sameName?'변형 버전으로 보관했어요':'보관함에 자동 저장했어요')}
 const FINGERS=['L엄지','L검지','L중지','L약지','L소지','R엄지','R검지','R중지','R약지','R소지'];
@@ -446,7 +474,7 @@ function renderPrecisionEditor(){
  const gems=looks.map(x=>x.gems||0);$('#partsCount').textContent=gems.every(x=>x===gems[0])?String(gems[0]):'혼합'
 }
 function applyPrecisionEdit(label,mutator){
- if(!state.active)return;pushEditorHistory();selectedFingerNames().forEach(f=>mutator(state.active.fingerLooks[f]));recalcDesign(state.active);renderHandEditor();renderArtLiveStage();renderEditorMetrics();render3DStage();syncEditChipStates();schedulePersist();updateHistoryButtons();toast(label+' 적용')
+ if(!state.active)return;pushEditorHistory();selectedFingerNames().forEach(f=>mutator(state.active.fingerLooks[f]));recalcDesign(state.active);renderHandEditor();renderArtLiveStage();renderEditorMetrics();render3DStage();syncEditChipStates();schedulePersist();updateHistoryButtons();renderDirectStudioPreview();toast(label+' 적용')
 }
 function applyLiveMod(mod,{record=true,quiet=false}={}){
  if(!state.active)return;ensureFingerLooks(state.active);if(record)pushEditorHistory();const targets=selectedFingerNames();const stepped=new Set(['자석감 강하게','오로라감 추가','포인트 추가','화려하게']);
@@ -455,7 +483,7 @@ function applyLiveMod(mod,{record=true,quiet=false}={}){
    if(stepped.has(mod)){look.levels[mod]=Math.min(3,(look.levels[mod]||0)+1);if(!look.mods.includes(mod))look.mods.push(mod)}
    else{look.mods=look.mods.includes(mod)?look.mods.filter(x=>x!==mod):[...look.mods,mod]}
  });
- recalcDesign(state.active);renderHandEditor();syncEditChipStates();renderArtLiveStage();renderEditorMetrics();render3DStage();schedulePersist();updateHistoryButtons();if(!quiet)toast((targets.length===10?'전체':targets.join(' · '))+' · '+mod+' 즉시 반영');
+ recalcDesign(state.active);renderHandEditor();syncEditChipStates();renderArtLiveStage();renderEditorMetrics();render3DStage();schedulePersist();updateHistoryButtons();renderDirectStudioPreview();if(!quiet)toast((targets.length===10?'전체':targets.join(' · '))+' · '+mod+' 즉시 반영');
 }
 function renderEditorMetrics(){const d=state.active;if(!d)return;$('#metricRow').innerHTML=`<div class="metric"><span>난이도</span><b>${d.diff}</b></div><div class="metric"><span>시간</span><b>${d.time}분</b></div><div class="metric"><span>권장가</span><b>${money(d.price)}</b></div><div class="metric"><span>실행성</span><b>${d.fit}%</b></div>`}
 function openSheet(d){
@@ -463,7 +491,7 @@ function openSheet(d){
  $('#sheetName').textContent=d.name;$('#sheetDesc').textContent=d.desc;renderEditorMetrics();$('#serviceGuide').innerHTML='<b>실제 시술 가이드</b><span>재료 · '+d.materials.join(' · ')+'</span><span>순서 · '+d.tech+'</span><span>대체 · 품절 파츠가 있으면 미니 스톤/실버 라인/진주 계열로 우선 대체</span>';
  renderHandEditor();renderArtLiveStage();syncEditChipStates();updateHistoryButtons();$('#editPrompt').value='';$('#editSheet').classList.add('open');$('#editSheet').setAttribute('aria-hidden','false');document.body.style.overflow='hidden'
 }
-function closeSheet(){$('#editSheet').classList.remove('open');$('#editSheet').setAttribute('aria-hidden','true');document.body.style.overflow=''}
+function closeSheet(){$('#editSheet').classList.remove('open','direct-studio-mode');$('#editSheet').setAttribute('aria-hidden','true');document.body.style.overflow='';renderDirectStudioPreview()}
 $$('[data-close-sheet]').forEach(x=>x.onclick=closeSheet);
 editOptions.forEach(t=>{const b=document.createElement('button');b.textContent=t;b.dataset.mod=t;b.onclick=()=>applyLiveMod(t);$('#editChips').appendChild(b)});
 NAIL_SHAPES.forEach(([key,label])=>{const b=document.createElement('button');b.type='button';b.textContent=label;b.dataset.nailShape=key;b.onclick=()=>applyPrecisionEdit(label,x=>x.shape=key);$('#nailShapeControls').appendChild(b)});
@@ -509,7 +537,7 @@ $$('#outputMode button').forEach(b=>b.onclick=()=>{$$('#outputMode button').forE
 
 function renderSettings(){$('#dnaList').replaceChildren(...DNA.map(d=>{const r=document.createElement('div');r.className='dna-row';r.innerHTML=`<div class="dna-info"><b>${d.name}</b><small>${d.desc}</small></div><span class="dna-score">${d.score}%</span>`;return r}));$('#inventoryList').replaceChildren(...inventory.map(x=>{const r=document.createElement('div');r.className='inventory-row';r.innerHTML=`<div class="inventory-info"><b>${x.name}</b><small>${x.state} · ${x.qty}</small></div><span class="stock-dot ${x.state==='부족'?'low':x.state==='품절'?'out':''}"></span>`;return r}))}
 function hydrateFromState(){if($('#homePrompt'))$('#homePrompt').value=state.draft.homePrompt||'';if($('#conceptInput'))$('#conceptInput').value=state.draft.concept||'';if($('#maxTime'))$('#maxTime').value=String(state.draft.maxTime||'90');if($('#targetPrice'))$('#targetPrice').value=String(state.draft.targetPrice||'69000');if($('#stockFirst'))$('#stockFirst').checked=state.draft.stockFirst!==false;if(state.draft.refDataUrl){$('#refPreviewImg').src=state.draft.refDataUrl;$('#refEmpty').classList.add('hidden');$('#refPreview').classList.remove('hidden')}else{$('#refPreview').classList.add('hidden');$('#refEmpty').classList.remove('hidden')}$$('#outputMode button').forEach(b=>b.classList.toggle('active',b.dataset.mode===state.outputMode));$('#collectionPreview').className='collection-preview '+state.outputMode}
-function renderAll(){renderDNAChips();renderConditions();renderNails();renderLibrary();renderRecent();renderPicker();renderCollectionPreview();renderSettings();updateBrief();updateStorageStats();const generated=state.generationBatch?.status==='completed'&&state.designs.length>0;$('#resultSection').classList.toggle('hidden',!generated);if(generated){$('#designGrid').replaceChildren(...state.designs.map(designCard));if($('#generationMeta'))$('#generationMeta').textContent='최근 생성 · '+new Date(state.generationBatch.createdAt).toLocaleTimeString('ko-KR',{hour:'2-digit',minute:'2-digit'})}}
+function renderAll(){renderDNAChips();renderConditions();renderNails();renderLibrary();renderRecent();renderPicker();renderCollectionPreview();renderSettings();updateBrief();updateStorageStats();const generated=state.generationBatch?.status==='completed'&&state.designs.length>0;const result=$('#resultSection');if(result){result.classList.toggle('hidden',!generated);if(generated){$('#designGrid')?.replaceChildren(...state.designs.map(designCard));if($('#generationMeta'))$('#generationMeta').textContent='최근 생성 · '+new Date(state.generationBatch.createdAt).toLocaleTimeString('ko-KR',{hour:'2-digit',minute:'2-digit'})}}}
 $('#saveStatus').onclick=()=>{setView('more');toast('저장 상태 · 설정/백업은 더보기에서 관리합니다')};
 $('#exportBackupBtn').onclick=exportBackup;$('#importBackupBtn').onclick=()=>$('#backupFile').click();$('#backupFile').onchange=e=>{const f=e.target.files[0];if(f)importBackupFile(f);e.target.value=''};$('#persistStorageBtn').onclick=requestPersistentStorage;
 

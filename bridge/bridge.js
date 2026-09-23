@@ -90,15 +90,17 @@ function parseCandidate(row) {
 }
 
 async function pushEvents(events) {
+  if (!events.length) return { uploaded: true, skipped: true };
   if (!SYNC_URL) {
-    if (events.length) console.log(`[LUDIA] ${events.length} change(s) detected; LUDIA_SYNC_URL is not configured, so nothing was uploaded.`);
-    return { uploaded: false };
+    console.log(`[LUDIA] ${events.length} change(s) detected; LUDIA_SYNC_URL is not configured. Changes stay pending and will retry after setup.`);
+    return { uploaded: false, reason: 'sync_url_missing' };
   }
   const headers = { 'content-type': 'application/json' };
   if (SYNC_TOKEN) headers.authorization = `Bearer ${SYNC_TOKEN}`;
   const response = await fetch(SYNC_URL, { method: 'POST', headers, body: JSON.stringify({ source: 'NAVER', events }) });
   if (!response.ok) throw new Error(`sync failed: HTTP ${response.status}`);
-  return response.json().catch(() => ({ ok: true }));
+  const body = await response.json().catch(() => ({ ok: true }));
+  return { ...body, uploaded: true };
 }
 
 async function diffAndSync(rows, state) {
@@ -119,11 +121,16 @@ async function diffAndSync(rows, state) {
   }
   // Missing rows are never auto-cancelled: pagination/filter/UI changes can hide valid bookings.
   // Cancellation is emitted only when SmartPlace visibly renders a cancelled status.
-  await pushEvents(events);
-  state.bookings = { ...state.bookings, ...next };
-  state.lastSyncAt = new Date().toISOString();
-  await writeState(state);
-  return events;
+  const result = await pushEvents(events);
+  // Critical durability rule: never acknowledge detected changes locally until the remote endpoint
+  // accepted them. This prevents first-run reservations from disappearing when setup is incomplete,
+  // the network is down, or the sync endpoint temporarily fails.
+  if (result.uploaded) {
+    state.bookings = { ...state.bookings, ...next };
+    state.lastSyncAt = new Date().toISOString();
+    await writeState(state);
+  }
+  return { events, uploaded: result.uploaded, pending: events.length && !result.uploaded };
 }
 
 async function main() {
@@ -145,8 +152,9 @@ async function main() {
         console.log('[LUDIA] Waiting for manual Naver login…');
       } else {
         const visible = await extractVisibleBookings(page);
-        const events = await diffAndSync(visible, state);
-        console.log(`[LUDIA] ${new Date().toLocaleTimeString('ko-KR')} · visible ${visible.length} · changes ${events.length} · heartbeat sent`);
+        const result = await diffAndSync(visible, state);
+        const syncState = result.pending ? `pending ${result.events.length}` : `changes ${result.events.length}`;
+        console.log(`[LUDIA] ${new Date().toLocaleTimeString('ko-KR')} · visible ${visible.length} · ${syncState}`);
       }
     } catch (error) {
       console.error('[LUDIA] sync cycle failed:', error.message);

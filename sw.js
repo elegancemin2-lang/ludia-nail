@@ -1,4 +1,4 @@
-const CACHE='ludia-nail-v2.4';
+const CACHE='ludia-nail-v2.5';
 const CORE=['./','index.html','styles.css','salon-cloud.js','app.js','manifest.webmanifest'];
 const ASSETS=['assets/icon-192.png','assets/icon-512.png','assets/nail_1.jpg','assets/nail_2.jpg','assets/nail_3.jpg','assets/nail_4.jpg','assets/nail_5.jpg'];
 self.addEventListener('install',e=>{self.skipWaiting();e.waitUntil(caches.open(CACHE).then(c=>c.addAll([...CORE,...ASSETS])))});

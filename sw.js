@@ -1,5 +1,5 @@
-const CACHE='ludia-nail-v2.6.1';
-const CORE=['./','index.html','styles.css','salon-cloud.js','app.js','checkout-ui.js','checkout-ui.css','manifest.webmanifest'];
+const CACHE='ludia-nail-v2.7.0';
+const CORE=['./','index.html','styles.css','salon-cloud.js','app.js','checkout-ui.js','checkout-ui.css','sales-ui.js','sales-ui.css','manifest.webmanifest'];
 const ASSETS=['assets/icon-192.png','assets/icon-512.png','assets/nail_1.jpg','assets/nail_2.jpg','assets/nail_3.jpg','assets/nail_4.jpg','assets/nail_5.jpg'];
 self.addEventListener('install',e=>{self.skipWaiting();e.waitUntil(caches.open(CACHE).then(c=>c.addAll([...CORE,...ASSETS])))});
 self.addEventListener('activate',e=>e.waitUntil(Promise.all([self.clients.claim(),caches.keys().then(keys=>Promise.all(keys.filter(k=>(k.startsWith('ludia-art-')||k.startsWith('ludia-nail-'))&&k!==CACHE).map(k=>caches.delete(k))))])));
@@ -9,7 +9,9 @@ async function appShell(request){
   if(!type.includes('text/html')){const clone=res.clone();caches.open(CACHE).then(c=>c.put(request,clone)).catch(()=>{});return res}
   let html=await res.text();
   if(!html.includes('checkout-ui.css'))html=html.replace('</head>','  <link rel="stylesheet" href="checkout-ui.css" />\n</head>');
+  if(!html.includes('sales-ui.css'))html=html.replace('</head>','  <link rel="stylesheet" href="sales-ui.css" />\n</head>');
   if(!html.includes('checkout-ui.js'))html=html.replace('<script src="app.js"></script>','<script src="app.js"></script>\n  <script src="checkout-ui.js"></script>');
+  if(!html.includes('sales-ui.js'))html=html.replace('</body>','  <script src="sales-ui.js"></script>\n</body>');
   const headers=new Headers(res.headers);headers.delete('content-length');headers.delete('content-encoding');
   const out=new Response(html,{status:res.status,statusText:res.statusText,headers});
   caches.open(CACHE).then(c=>c.put(request,out.clone())).catch(()=>{});return out

@@ -486,16 +486,15 @@
       <div class="sheet-body">
         <span class="mini-label">LUDIA CLOUD</span>
         <h2>샵 데이터 연결</h2>
-        <p class="cloud-auth-intro">예약·고객·회원권·직원 데이터를 Supabase와 동기화합니다. 비밀번호는 LUDIA에 저장하지 않습니다.</p>
+        <p class="cloud-auth-intro">예약·고객·회원권·직원 데이터를 안전하게 동기화합니다. 비밀번호 없이 이메일 인증 링크로 한 번만 연결합니다.</p>
         <div class="cloud-auth-error hidden" id="cloudAuthError"></div>
 
         <div id="cloudLoginPane">
           <div class="cloud-auth-form">
-            <label><span>이메일</span><input id="cloudEmail" type="email" autocomplete="username" placeholder="owner@example.com" /></label>
-            <label><span>비밀번호</span><input id="cloudPassword" type="password" autocomplete="current-password" placeholder="••••••••" /></label>
+            <label><span>이메일</span><input id="cloudEmail" type="email" autocomplete="email" placeholder="owner@example.com" /></label>
           </div>
-          <button class="primary-btn wide cloud-main-action" id="cloudLoginBtn">로그인하고 동기화</button>
-          <p class="cloud-security-note">Supabase Auth로 직접 로그인합니다. 세션 토큰만 브라우저에 보관되고 비밀번호는 저장하지 않습니다.</p>
+          <button class="primary-btn wide cloud-main-action" id="cloudLoginBtn">인증 링크 받고 연결</button>
+          <p class="cloud-security-note">비밀번호 입력 없음 · 이메일로 받은 링크를 누르면 이 기기에 로그인 상태가 유지됩니다.</p>
         </div>
 
         <div class="hidden" id="cloudSetupPane">

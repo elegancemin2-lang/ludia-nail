@@ -323,3 +323,13 @@ body{font-family:-apple-system,BlinkMacSystemFont,"SF Pro Text","SF Pro Display"
 .home-more-tasks>summary{list-style:none;display:grid;grid-template-columns:auto 1fr auto;align-items:center;gap:8px;padding:14px 3px;color:#3a3a3c;cursor:pointer}
 .home-more-tasks>summary::-webkit-details-marker{display:none}.home-more-tasks>summary span{font-size:12px;font-weight:700}.home-more-tasks>summary small{font-size:9px;color:#8e8e93}.home-more-tasks>summary i{font-style:normal;color:#c7c7cc;transition:.18s ease}.home-more-tasks[open]>summary i{transform:rotate(90deg)}.home-more-tasks .native-group-list{margin-top:0!important}
 @media(max-width:760px){#opsHomeScreen .native-glance-compact{grid-template-columns:repeat(2,minmax(0,1fr));gap:6px}#opsHomeScreen .native-glance-compact .native-stat{padding:9px 10px}.home-more-tasks{margin-top:10px}}
+
+/* Home final density pass — one glance above the fold */
+.home-focus-row{display:grid;grid-template-columns:minmax(0,1.65fr) minmax(300px,.85fr);gap:10px;align-items:stretch}
+.home-focus-row .native-next{margin:0!important;height:100%}
+.home-focus-row .native-glance-compact{display:grid!important;grid-template-columns:1fr 1fr!important;gap:6px!important;margin:0!important}
+.home-focus-row .native-stat{display:flex;flex-direction:column;justify-content:center;min-height:0!important;padding:10px 12px!important;background:rgba(255,255,255,.66)!important;border-radius:16px!important}
+#opsHomeScreen .native-section-head{margin-top:22px}
+#opsHomeScreen .native-section-head button{font-size:10px;color:#007aff;background:transparent;border:0;font-weight:650}
+@media(max-width:880px){.home-focus-row{grid-template-columns:1fr}.home-focus-row .native-glance-compact{grid-template-columns:repeat(4,minmax(0,1fr))!important}}
+@media(max-width:560px){.home-focus-row{gap:7px}.home-focus-row .native-glance-compact{grid-template-columns:1fr 1fr!important}.home-focus-row .native-stat{padding:9px 10px!important}}

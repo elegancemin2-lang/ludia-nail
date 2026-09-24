@@ -17,6 +17,7 @@ function staleState(row){
   if(age>10*60*1000)return {state:'stale',freshness:'stale'};
   return {state:'connected',freshness:age<90*1000?'live':'recent'};
 }
+function safeBooking(row){return {status:String(row.status||'unknown').slice(0,24),bookingDate:row.booking_date||null,bookingTime:row.booking_time||null,customerLabel:row.phone?('고객 · '+String(row.phone).replace(/\D/g,'').slice(-4)): '네이버 고객'};}
 function safeEvent(row){
   return {type:row.event_type==='created'?'created':'updated',status:String(row.status||'unknown').slice(0,24),bookingDate:row.booking_date||null,bookingTime:row.booking_time||null,receivedAt:row.received_at||null};
 }
@@ -32,13 +33,14 @@ export default async function handler(req,res){
   try{
     const connection=(await readJson(`${cfg.url}/rest/v1/ludia_integration_connections?salon_id=eq.${encodeURIComponent(sid)}&provider=eq.NAVER&select=state,last_sync_at,last_error,metadata&limit=1`,cfg.headers))[0]||null;
     const today=new Intl.DateTimeFormat('en-CA',{timeZone:'Asia/Seoul',year:'numeric',month:'2-digit',day:'2-digit'}).format(new Date());
-    const [bookings,events,conflicts,reviews]=await Promise.all([
+    const [bookings,upcoming,events,conflicts,reviews]=await Promise.all([
       readJson(`${cfg.url}/rest/v1/ludia_external_bookings?salon_id=eq.${encodeURIComponent(sid)}&source=eq.NAVER&booking_date=eq.${encodeURIComponent(today)}&select=status`,cfg.headers),
+      readJson(`${cfg.url}/rest/v1/ludia_external_bookings?salon_id=eq.${encodeURIComponent(sid)}&source=eq.NAVER&status=eq.requested&booking_date=gte.${encodeURIComponent(today)}&select=status,booking_date,booking_time,phone&order=booking_date.asc,booking_time.asc&limit=5`,cfg.headers),
       readJson(`${cfg.url}/rest/v1/ludia_booking_sync_events?salon_id=eq.${encodeURIComponent(sid)}&source=eq.NAVER&select=event_type,status,booking_date,booking_time,received_at&order=received_at.desc&limit=20`,cfg.headers),
       readJson(`${cfg.url}/rest/v1/ludia_naver_sync_conflicts?salon_id=eq.${encodeURIComponent(sid)}&resolved_at=is.null&select=id,requested_starts_at,requested_ends_at,detected_at&order=detected_at.desc&limit=20`,cfg.headers),
       readJson(`${cfg.url}/rest/v1/ludia_naver_reviews?salon_id=eq.${encodeURIComponent(sid)}&select=id,rating,author_label,review_text,reply_state,detected_at&order=detected_at.desc&limit=30`,cfg.headers)
     ]);
     const health=staleState(connection);
-    return json(res,200,{ok:true,configured:true,...health,lastSyncAt:connection?.last_sync_at||null,lastError:connection?.last_error||null,today:{total:bookings.length,confirmed:bookings.filter(x=>x.status==='confirmed').length,cancelled:bookings.filter(x=>x.status==='cancelled').length,requested:bookings.filter(x=>x.status==='requested').length},recentEvents:events.map(safeEvent),conflicts:conflicts.map(safeConflict),reviews:{pending:reviews.filter(x=>['pending','drafted','manual_review','failed'].includes(x.reply_state)).length,items:reviews.map(safeReview)}});
+    return json(res,200,{ok:true,configured:true,...health,lastSyncAt:connection?.last_sync_at||null,lastError:connection?.last_error||null,today:{total:bookings.length,confirmed:bookings.filter(x=>x.status==='confirmed').length,cancelled:bookings.filter(x=>x.status==='cancelled').length,requested:bookings.filter(x=>x.status==='requested').length},approvalQueue:{count:upcoming.length,items:upcoming.map(safeBooking)},recentEvents:events.map(safeEvent),conflicts:conflicts.map(safeConflict),reviews:{pending:reviews.filter(x=>['pending','drafted','manual_review','failed'].includes(x.reply_state)).length,items:reviews.map(safeReview)}});
   }catch(error){console.error('[LUDIA status]',error);return json(res,502,{ok:false,error:'status_unavailable'});}
 }

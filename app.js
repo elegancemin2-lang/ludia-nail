@@ -310,7 +310,7 @@ function renderArtLiveStage(){
  if(editorPreviewMode==='original')stage.innerHTML='<div class="art-stage-single"><span class="art-stage-label">원본</span>'+original+'</div>';
  else if(editorPreviewMode==='split')stage.innerHTML='<div class="art-stage-split"><div><span class="art-stage-label">원본</span>'+original+'</div><div><span class="art-stage-label">현재</span>'+current+'</div></div>';
  else stage.innerHTML='<div class="art-stage-single"><span class="art-stage-label live">LIVE</span>'+current+'</div>';
- $('#artPreviewTabs [data-preview-mode]').forEach(b=>b.classList.toggle('active',b.dataset.previewMode===editorPreviewMode));
+ $$('#artPreviewTabs [data-preview-mode]').forEach(b=>b.classList.toggle('active',b.dataset.previewMode===editorPreviewMode));
 }
 function setFingerSelectionFromText(text){
  const t=text||'';let picks=[];

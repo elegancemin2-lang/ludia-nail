@@ -86,12 +86,12 @@ function renderOpsToday(){
  ];
  const box=$('#todayStats');if(box)box.replaceChildren(...stats.map(([k,v,s])=>{const a=document.createElement('article');a.className='native-stat';a.innerHTML=`<span>${k}</span><b>${v}</b><small>${s}</small>`;return a}));
  if($('#todayProgress'))$('#todayProgress').textContent=`${done}/${todayAppointments.length} 완료`;
- const timeline=$('#opsTimeline');if(timeline){timeline.innerHTML='';todayAppointments.forEach(a=>{
+ const timeline=$('#opsTimeline');if(timeline){timeline.innerHTML='';const focus=[...todayAppointments].sort((a,b)=>String(a.time).localeCompare(String(b.time))).filter(a=>a.status!=='완료').slice(0,3);const visible=focus.length?focus:[...todayAppointments].sort((a,b)=>String(b.time).localeCompare(String(a.time))).slice(0,3);visible.forEach(a=>{
    const cls=a.status==='완료'?'done ':a.status==='진행중'?'progress ':a.status==='노쇼'?'cancelled ':'waiting ';
    const row=document.createElement('button');row.className='ops-appointment '+cls;
-   row.innerHTML=`<time>${a.time}</time><span class="agenda-dot"></span><div><b>${a.customer}</b><small>${a.service} · ${a.staff}${a.source==='naver'?' · NAVER':''}</small></div><strong>${won(a.amount)}원</strong><i>›</i>`;
+   row.innerHTML=`<time>${a.time}</time><span class="agenda-dot"></span><div><b>${a.customer}</b><small>${a.service} · ${a.staff}${a.source==='naver'?' · NAVER':''}</small></div><i>›</i>`;
    row.onclick=()=>openOpsDetail(a);timeline.appendChild(row);
- })}
+ });if(todayAppointments.length>visible.length){const more=document.createElement('button');more.className='home-agenda-more';more.type='button';more.innerHTML=`전체 일정 ${todayAppointments.length}건 보기 <span>›</span>`;more.onclick=()=>{bookingDayOffset=0;showScreen('booking')};timeline.appendChild(more)}}
  const next=todayAppointments.find(x=>x.status!=='완료'&&x.status!=='노쇼')||todayAppointments[0];
  const n=$('#nextCard');if(n)n.innerHTML=next?`<button class="next-open" id="nextOpenBtn"><span class="next-kicker">다음 예약</span><div class="next-main"><div><time>${next.time}</time><h3>${next.customer}</h3><p>${next.service} · ${next.staff}${next.source==='naver'?' · NAVER':''}</p></div><i>›</i></div><div class="next-meta"><span>${next.note||'메모 없음'}</span><span>${next.membership||'회원권 없음'}</span></div></button>`:'<div class="native-empty-next"><b>오늘 남은 예약이 없어요</b><span>캘린더에서 새 예약을 추가할 수 있어요.</span></div>';
  const nextBtn=$('#nextOpenBtn');if(nextBtn)nextBtn.onclick=()=>openOpsDetail(next);

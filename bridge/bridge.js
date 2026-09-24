@@ -9,6 +9,7 @@ const SMARTPLACE_URL = process.env.LUDIA_SMARTPLACE_URL || 'https://new.smartpla
 const SYNC_URL = process.env.LUDIA_SYNC_URL || '';
 const SYNC_TOKEN = process.env.LUDIA_SYNC_TOKEN || '';
 const POLL_MS = Math.max(30000, Number(process.env.LUDIA_POLL_MS || 60000));
+const REVIEW_URL = process.env.LUDIA_NAVER_REVIEW_URL || '';
 
 const sleep = ms => new Promise(r => setTimeout(r, ms));
 const hash = value => crypto.createHash('sha256').update(JSON.stringify(value)).digest('hex');
@@ -89,7 +90,23 @@ function parseCandidate(row) {
   return { externalId: stableKey, source: 'NAVER', bookingNo, date, time, phone, status, rawText: text };
 }
 
-async function pushEvents(events) {
+async function extractVisibleReviews(page) {
+  return page.locator('body').evaluate(() => {
+    const clean=v=>(v||'').replace(/\s+/g,' ').trim();
+    return [...document.querySelectorAll('article,li,[role="listitem"]')]
+      .map((el,index)=>({index,text:clean(el.innerText)}))
+      .filter(x=>x.text.length>=8 && /(리뷰|방문|별점|답글)/.test(x.text))
+      .slice(0,300);
+  });
+}
+function parseReview(row){
+  const text=normalizeText(row.text);
+  const author=text.match(/([가-힣A-Za-z0-9_*]{2,20})\s*(?:님|고객)?/)?.[1]||null;
+  const rating=Number(text.match(/(?:별점|평점)\s*([0-5](?:\.\d)?)/)?.[1]||0)||null;
+  return {externalId:hash({author,text}).slice(0,24),authorLabel:author,rating,reviewText:text};
+}
+
+async function pushEvents(events, reviews=[]) {
   if (!SYNC_URL) {
     if (events.length) console.log(`[LUDIA] ${events.length} change(s) detected; LUDIA_SYNC_URL is not configured. Changes stay pending and will retry after setup.`);
     return { uploaded: false, reason: 'sync_url_missing' };
@@ -98,7 +115,7 @@ async function pushEvents(events) {
   if (SYNC_TOKEN) headers.authorization = `Bearer ${SYNC_TOKEN}`;
   // Empty event batches are intentional heartbeats. The server records last_sync_at without
   // customer data so the salon dashboard can distinguish a healthy idle bridge from a stopped PC.
-  const response = await fetch(SYNC_URL, { method: 'POST', headers, body: JSON.stringify({ source: 'NAVER', events }) });
+  const response = await fetch(SYNC_URL, { method: 'POST', headers, body: JSON.stringify({ source: 'NAVER', events, reviews }) });
   if (!response.ok) throw new Error(`sync failed: HTTP ${response.status}`);
   const body = await response.json().catch(() => ({ ok: true }));
   return { ...body, uploaded: true, heartbeat: events.length === 0 };
@@ -154,6 +171,16 @@ async function main() {
       } else {
         const visible = await extractVisibleBookings(page);
         const result = await diffAndSync(visible, state);
+        if (REVIEW_URL) {
+          const reviewPage = await context.newPage();
+          try {
+            await reviewPage.goto(REVIEW_URL,{waitUntil:'domcontentloaded',timeout:30000});
+            const reviewRows=await extractVisibleReviews(reviewPage);
+            const reviews=reviewRows.map(parseReview);
+            if(reviews.length) await pushEvents([],reviews);
+            console.log(`[LUDIA] reviews visible ${reviews.length}`);
+          } finally { await reviewPage.close(); }
+        }
         const syncState = result.pending ? `pending ${result.events.length}` : result.heartbeat ? 'heartbeat ok' : `changes ${result.events.length}`;
         console.log(`[LUDIA] ${new Date().toLocaleTimeString('ko-KR')} · visible ${visible.length} · ${syncState}`);
       }

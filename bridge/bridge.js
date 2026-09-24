@@ -90,17 +90,18 @@ function parseCandidate(row) {
 }
 
 async function pushEvents(events) {
-  if (!events.length) return { uploaded: true, skipped: true };
   if (!SYNC_URL) {
-    console.log(`[LUDIA] ${events.length} change(s) detected; LUDIA_SYNC_URL is not configured. Changes stay pending and will retry after setup.`);
+    if (events.length) console.log(`[LUDIA] ${events.length} change(s) detected; LUDIA_SYNC_URL is not configured. Changes stay pending and will retry after setup.`);
     return { uploaded: false, reason: 'sync_url_missing' };
   }
   const headers = { 'content-type': 'application/json' };
   if (SYNC_TOKEN) headers.authorization = `Bearer ${SYNC_TOKEN}`;
+  // Empty event batches are intentional heartbeats. The server records last_sync_at without
+  // customer data so the salon dashboard can distinguish a healthy idle bridge from a stopped PC.
   const response = await fetch(SYNC_URL, { method: 'POST', headers, body: JSON.stringify({ source: 'NAVER', events }) });
   if (!response.ok) throw new Error(`sync failed: HTTP ${response.status}`);
   const body = await response.json().catch(() => ({ ok: true }));
-  return { ...body, uploaded: true };
+  return { ...body, uploaded: true, heartbeat: events.length === 0 };
 }
 
 async function diffAndSync(rows, state) {
@@ -130,7 +131,7 @@ async function diffAndSync(rows, state) {
     state.lastSyncAt = new Date().toISOString();
     await writeState(state);
   }
-  return { events, uploaded: result.uploaded, pending: events.length && !result.uploaded };
+  return { events, uploaded: result.uploaded, pending: events.length && !result.uploaded, heartbeat: result.heartbeat === true };
 }
 
 async function main() {
@@ -153,7 +154,7 @@ async function main() {
       } else {
         const visible = await extractVisibleBookings(page);
         const result = await diffAndSync(visible, state);
-        const syncState = result.pending ? `pending ${result.events.length}` : `changes ${result.events.length}`;
+        const syncState = result.pending ? `pending ${result.events.length}` : result.heartbeat ? 'heartbeat ok' : `changes ${result.events.length}`;
         console.log(`[LUDIA] ${new Date().toLocaleTimeString('ko-KR')} · visible ${visible.length} · ${syncState}`);
       }
     } catch (error) {

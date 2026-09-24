@@ -224,7 +224,7 @@ function setView(v){
  if(v==='customers')renderCustomers();
  window.scrollTo({top:0,behavior:'smooth'});
 }
-$('[data-nav]').forEach(b=>b.onclick=()=>setView(b.dataset.nav));
+$$('[data-nav]').forEach(b=>b.onclick=()=>setView(b.dataset.nav));
 $('#openStudioBtn')?.addEventListener('click',()=>openDirectStudio());$('#newStudioBtn')?.addEventListener('click',()=>{state.active=null;openDirectStudio({fresh:true})});
 $('#themeBtn').onclick=()=>document.body.classList.toggle('focus-mode');
 
@@ -385,7 +385,7 @@ function toggleFingerFromPhoto(f){
 }
 function syncEditChipStates(){
  if(!state.active)return;ensureFingerLooks(state.active);const selected=selectedFingerNames();
- $('#editChips button').forEach(b=>{const m=b.dataset.mod||b.textContent;const on=selected.length&&selected.every(f=>state.active.fingerLooks[f].mods.includes(m));b.classList.toggle('active',on)});
+ $$('#editChips button').forEach(b=>{const m=b.dataset.mod||b.textContent;const on=selected.length&&selected.every(f=>state.active.fingerLooks[f].mods.includes(m));b.classList.toggle('active',on)});
 }
 function renderPrecisionEditor(){
  if(!state.active||!$('#precisionEditor'))return;ensureFingerLooks(state.active);const targets=selectedFingerNames();const looks=targets.map(f=>state.active.fingerLooks[f]);const same=key=>looks.every(x=>x[key]===looks[0][key]);

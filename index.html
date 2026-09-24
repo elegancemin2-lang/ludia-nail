@@ -7,7 +7,7 @@
   <meta name="description" content="LUDIA NAIL - 예약·고객관리와 LUDIA ART STUDIO를 하나로 묶은 모바일 네일샵 운영 웹앱" />
   <title>LUDIA NAIL</title>
   <link rel="manifest" href="manifest.webmanifest" />
-  <link rel="stylesheet" href="styles.css" />
+  <link rel="stylesheet" href="styles.css?v=2.30.0" />
 </head>
 <body>
   <div class="app">
@@ -123,9 +123,9 @@
 
         <div class="native-group-title">샵 운영</div>
         <div class="native-settings-group">
-          <button><span class="settings-glyph glyph-blue">₩</span><span><b>매출</b><small>오늘 62.3만 · 객단가 7.8만</small></span><i>›</i></button>
-          <button><span class="settings-glyph glyph-violet">◇</span><span><b>회원권</b><small>잔액 · 만료 · 사용이력</small></span><i>›</i></button>
-          <button><span class="settings-glyph glyph-indigo">◎</span><span><b>직원</b><small>스케줄 · 매출 · 인센티브</small></span><i>›</i></button>
+          <button data-ludia-action="sales"><span class="settings-glyph glyph-blue">₩</span><span><b>매출</b><small>오늘 62.3만 · 객단가 7.8만</small></span><i>›</i></button>
+          <button data-ludia-action="membership"><span class="settings-glyph glyph-violet">◇</span><span><b>회원권</b><small>잔액 · 만료 · 사용이력</small></span><i>›</i></button>
+          <button data-ludia-action="staff"><span class="settings-glyph glyph-indigo">◎</span><span><b>직원</b><small>스케줄 · 매출 · 인센티브</small></span><i>›</i></button>
           <button data-nav="settings"><span class="settings-glyph glyph-green">▦</span><span><b>재고</b><small>부족 1 · 품절 1</small></span><i>›</i></button>
         </div>
 
@@ -526,6 +526,7 @@
   <div class="toast" id="toast" role="status"></div>
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.116.0/dist/umd/supabase.min.js"></script>
   <script src="salon-cloud.js"></script>
-  <script src="app.js"></script>
+  <script src="app.js?v=2.30.0"></script>
+  <script src="runtime-loader.js?v=2.30.0"></script>
 </body>
 </html>

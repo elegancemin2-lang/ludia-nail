@@ -312,3 +312,14 @@ body{font-family:-apple-system,BlinkMacSystemFont,"SF Pro Text","SF Pro Display"
 #opsHomeScreen .native-row-icon{background:#f2f2f7!important;color:#3a3a3c!important}
 @media(min-width:900px){#opsHomeScreen{padding-bottom:30px}.workspace{padding-top:28px}.topbar{max-width:1040px;margin-bottom:22px}}
 @media(max-width:760px){body{background:#f5f5f7}.workspace{padding-left:16px!important;padding-right:16px!important}.topbar{margin-bottom:14px}.topbar .eyebrow{display:none}.topbar h1{font-size:18px}.save-status{display:none!important}#opsHomeScreen .native-home-head{margin-top:4px;margin-bottom:16px}#opsHomeScreen .native-home-head h2{font-size:32px}.native-head-actions{gap:8px}.native-icon-btn{width:38px!important;height:38px!important}.place-home-dashboard{margin-bottom:18px}}
+
+/* Home vNext — progressive disclosure, less dashboard noise */
+#opsHomeScreen .native-glance-compact{grid-template-columns:repeat(4,minmax(0,1fr));margin-top:10px}
+#opsHomeScreen .native-glance-compact .native-stat{min-height:auto;padding:11px 13px;border-radius:15px;background:transparent;border-color:rgba(60,60,67,.06);box-shadow:none}
+#opsHomeScreen .native-glance-compact .native-stat span{font-size:9px}
+#opsHomeScreen .native-glance-compact .native-stat b{font-size:15px;margin-top:2px}
+#opsHomeScreen .native-glance-compact .native-stat small{font-size:8px;margin-top:2px}
+.home-more-tasks{margin:14px 0 6px;border-top:1px solid rgba(60,60,67,.08)}
+.home-more-tasks>summary{list-style:none;display:grid;grid-template-columns:auto 1fr auto;align-items:center;gap:8px;padding:14px 3px;color:#3a3a3c;cursor:pointer}
+.home-more-tasks>summary::-webkit-details-marker{display:none}.home-more-tasks>summary span{font-size:12px;font-weight:700}.home-more-tasks>summary small{font-size:9px;color:#8e8e93}.home-more-tasks>summary i{font-style:normal;color:#c7c7cc;transition:.18s ease}.home-more-tasks[open]>summary i{transform:rotate(90deg)}.home-more-tasks .native-group-list{margin-top:0!important}
+@media(max-width:760px){#opsHomeScreen .native-glance-compact{grid-template-columns:repeat(2,minmax(0,1fr));gap:6px}#opsHomeScreen .native-glance-compact .native-stat{padding:9px 10px}.home-more-tasks{margin-top:10px}}

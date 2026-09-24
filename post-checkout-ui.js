@@ -1,5 +1,5 @@
 /* LUDIA NAIL · post-checkout continuity sheet
- * Opens only after the checkout sheet closes following a successful completion.
+ * Opens only after the checkout sheet closes and the appointment is confirmed completed.
  * Resolves the customer by the completed appointment id before prefilling a new booking.
  */
 (()=>{
@@ -46,6 +46,9 @@
     return a?{cloudId:a.cloudId,customer:a.customer,service:a.service,staff:a.staff}:null;
   }
 
+  async function verifyCompleted(){
+    if(!snapshot?.cloudId)return false;try{const c=await getClient();const {data,error}=await c.from('ludia_appointments').select('status').eq('id',snapshot.cloudId).single();return !error&&data?.status==='completed'}catch(error){console.warn('[LUDIA post checkout verify]',error);return false}
+  }
   function dispatchChange(el){if(el)el.dispatchEvent(new Event('change',{bubbles:true}))}
   async function resolveCustomer(){
     if(!snapshot?.cloudId)return null;const c=await getClient();
@@ -73,6 +76,6 @@
   document.addEventListener('click',e=>{
     if(!e.target.closest('#checkoutConfirm'))return;const captured=capture();if(!captured)return;snapshot=captured;
     const sheet=$('#checkoutSheet');if(!sheet)return;clearInterval(watcher);let ticks=0;
-    watcher=setInterval(()=>{ticks++;if(!snapshot){clearInterval(watcher);return}if(!sheet.classList.contains('open')){clearInterval(watcher);setTimeout(show,120);return}if(ticks>100){clearInterval(watcher);snapshot=null}},100);
+    watcher=setInterval(()=>{ticks++;if(!snapshot){clearInterval(watcher);return}if(!sheet.classList.contains('open')){clearInterval(watcher);setTimeout(async()=>{if(await verifyCompleted())show();else snapshot=null},120);return}if(ticks>100){clearInterval(watcher);snapshot=null}},100);
   },true);
 })();

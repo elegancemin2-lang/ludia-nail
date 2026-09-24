@@ -1,11 +1,12 @@
 /* LUDIA NAIL · post-checkout continuity sheet
  * Opens only after the checkout sheet closes and the appointment is confirmed completed.
- * Resolves the customer by the completed appointment id before prefilling a new booking.
+ * Resolves the customer by the completed appointment id before follow-up actions.
  */
 (()=>{
   'use strict';
   const $=s=>document.querySelector(s);
   let snapshot=null,watcher=null,client=null;
+  const normPhone=v=>String(v||'').replace(/[^0-9]/g,'');
 
   function ensureSheet(){
     if($('#postCheckoutSheet'))return;
@@ -19,14 +20,16 @@
           <span class="mini-label">SERVICE COMPLETE</span>
           <h2 id="postCheckoutTitle">시술을 마쳤어요</h2>
           <p id="postCheckoutMeta">결제와 매출이 저장되었습니다.</p>
-          <div class="post-checkout-next"><b>다음 방문까지 이어서</b><span>최근 담당자와 시술을 그대로 불러와 시간만 고를 수 있어요.</span></div>
+          <div class="post-checkout-next"><b>마무리까지 한 번에</b><span>고객 기록을 남기거나 최근 담당자·시술 그대로 다음 예약을 잡을 수 있어요.</span></div>
           <button class="post-checkout-primary" id="postCheckoutBook">다음 예약 잡기</button>
+          <button class="post-checkout-secondary" id="postCheckoutNote">고객 메모 남기기</button>
           <button class="post-checkout-secondary" data-post-close>지금은 완료</button>
         </div>
       </div>
     </div>`);
     document.querySelectorAll('[data-post-close]').forEach(x=>x.addEventListener('click',close));
     $('#postCheckoutBook').addEventListener('click',bookAgain);
+    $('#postCheckoutNote').addEventListener('click',noteCustomer);
   }
 
   function close(){const s=$('#postCheckoutSheet');if(!s)return;s.classList.remove('open');s.setAttribute('aria-hidden','true');document.body.style.overflow='';snapshot=null}
@@ -54,6 +57,16 @@
     if(!snapshot?.cloudId)return null;const c=await getClient();
     const {data:a,error}=await c.from('ludia_appointments').select('customer_id').eq('id',snapshot.cloudId).single();if(error||!a?.customer_id)throw error||new Error('customer missing');
     const profile=await window.LudiaSalonCloud?.getCustomer360?.(a.customer_id);return profile?.customer?{id:a.customer_id,...profile.customer}:null;
+  }
+
+  async function noteCustomer(){
+    const btn=$('#postCheckoutNote');if(!btn||btn.disabled)return;btn.disabled=true;btn.textContent='고객 확인 중…';
+    try{
+      const customer=await resolveCustomer();if(!customer)throw new Error('customer unavailable');
+      close();document.querySelector('[data-nav="customers"]')?.click();
+      const started=Date.now(),find=()=>{const payload=window.LudiaSalonCloud?.getLastPayload?.(),cloud=payload?.customers?.find(x=>x.cloudId===customer.id);if(!cloud)return null;const name=String(cloud.name||'').trim(),phone=normPhone(cloud.phone);const cards=[...document.querySelectorAll('#customerGrid .customer-card')].filter(card=>{const n=card.querySelector('.customer-top b')?.textContent?.trim()||'',raw=card.querySelector('.customer-top small')?.textContent?.split('·')[0]?.trim()||'';return n===name&&(!phone||normPhone(raw)===phone)});return cards.length===1?cards[0]:null};
+      const open=()=>{const card=find();if(card){card.scrollIntoView({behavior:'smooth',block:'center'});card.click();const waitEdit=()=>{const sheet=$('#customer360Sheet'),edit=sheet?.classList.contains('open')?sheet.querySelector('[data-c360-edit]'):null;if(edit){edit.click();return}if(Date.now()-started<5000)setTimeout(waitEdit,80);else alert('고객 상세에서 메모 편집을 다시 눌러 주세요.')};setTimeout(waitEdit,80);return}if(Date.now()-started<5000)setTimeout(open,100);else alert('고객을 정확히 식별하지 못했어요. 고객 검색에서 이름·연락처를 확인해 주세요.')};setTimeout(open,100);
+    }catch(error){console.warn('[LUDIA post checkout note]',error);alert('고객 정보를 안전하게 확인하지 못했어요. 고객 화면에서 메모를 남겨 주세요.')}finally{if(btn){btn.disabled=false;btn.textContent='고객 메모 남기기'}}
   }
 
   async function bookAgain(){

@@ -333,3 +333,13 @@ body{font-family:-apple-system,BlinkMacSystemFont,"SF Pro Text","SF Pro Display"
 #opsHomeScreen .native-section-head button{font-size:10px;color:#007aff;background:transparent;border:0;font-weight:650}
 @media(max-width:880px){.home-focus-row{grid-template-columns:1fr}.home-focus-row .native-glance-compact{grid-template-columns:repeat(4,minmax(0,1fr))!important}}
 @media(max-width:560px){.home-focus-row{gap:7px}.home-focus-row .native-glance-compact{grid-template-columns:1fr 1fr!important}.home-focus-row .native-stat{padding:9px 10px!important}}
+
+/* Home micro polish */
+.home-focus-row .native-next,.home-focus-row .native-stat,.home-ops-card,.home-ops-triad .phd-card{transition:transform .18s ease,box-shadow .18s ease,border-color .18s ease}
+@media(hover:hover){.home-focus-row .native-next:hover,.home-ops-card:hover,.home-ops-triad .phd-card:hover{transform:translateY(-1px);border-color:rgba(60,60,67,.12);box-shadow:0 9px 24px rgba(0,0,0,.045)!important}}
+#opsHomeScreen .native-home-head{align-items:flex-end}
+#opsHomeScreen .native-date{letter-spacing:-.015em}
+#opsHomeScreen .native-head-actions button{box-shadow:none}
+#opsHomeScreen .native-head-actions .primary{box-shadow:0 5px 14px rgba(0,122,255,.16)}
+#opsHomeScreen .home-ops-triad{margin-top:1px}
+#opsHomeScreen .home-more-tasks:not([open]){opacity:.86}

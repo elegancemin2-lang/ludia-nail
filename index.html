@@ -60,7 +60,7 @@
         </div>
 
         <article class="native-next" id="nextCard"></article>
-        <div class="native-glance" id="todayStats"></div>
+        <div class="native-glance native-glance-compact" id="todayStats"></div>
 
         <div class="native-section-head">
           <div><h3>오늘 운영</h3><p>시술 · 플레이스 예약 · 리뷰를 한눈에</p></div>
@@ -74,14 +74,14 @@
           <section class="place-home-dashboard" id="placeHomeDashboard" aria-live="polite"></section>
         </section>
 
-        <div class="native-section-head native-section-head-tight">
-          <div><h3>확인할 것</h3></div>
-        </div>
+        <details class="home-more-tasks">
+          <summary><span>추가 확인</span><small>회원권 · 재고 등</small><i>›</i></summary>
         <div class="native-group-list">
           <button data-nav="customers"><span class="native-row-icon">◇</span><span class="native-row-copy"><b>회원권 만료 예정</b><small>오늘 확인하면 좋은 고객</small></span><em>2</em><i>›</i></button>
           <button data-nav="more" data-ludia-review><span class="native-row-icon">☆</span><span class="native-row-copy"><b>리뷰 답글 대기</b><small>네이버 플레이스</small></span><em id="naverReviewHomeCount">0</em><i>›</i></button>
           <button data-nav="settings"><span class="native-row-icon">▦</span><span class="native-row-copy"><b>부족 재료</b><small>대체 가능한 재료 확인</small></span><em>1</em><i>›</i></button>
         </div>
+        </details>
       </section>
 
       <section class="screen" id="bookingScreen">

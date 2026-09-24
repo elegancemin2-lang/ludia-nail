@@ -1,0 +1,11 @@
+/* LUDIA NAIL · staff floor appointment detail */
+(()=>{'use strict';
+const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const fmt=t=>new Intl.DateTimeFormat('ko-KR',{timeZone:'Asia/Seoul',hour:'2-digit',minute:'2-digit',hour12:false}).format(new Date(t));
+const won=n=>new Intl.NumberFormat('ko-KR').format(Number(n)||0)+'원';
+const cleanPhone=p=>String(p||'').replace(/[^0-9+]/g,'');
+function timing(a){const now=Date.now(),start=new Date(a.starts_at).getTime(),end=new Date(a.ends_at).getTime();if(a.status==='in_service'&&end<now)return `예정 종료보다 ${Math.max(1,Math.floor((now-end)/60000))}분 초과`;if(['pending','confirmed'].includes(a.status)&&start<now)return `예약 시간보다 ${Math.max(1,Math.floor((now-start)/60000))}분 지남`;return `${fmt(a.starts_at)}–${fmt(a.ends_at)}`}
+function close(){document.querySelector('.staff-detail-wrap')?.remove()}
+function open(a){close();const phone=cleanPhone(a.customer_phone),wrap=document.createElement('div');wrap.className='staff-detail-wrap';wrap.innerHTML=`<button class="staff-detail-backdrop" aria-label="닫기"></button><section class="staff-detail" role="dialog" aria-modal="true" aria-label="예약 상세"><span class="staff-detail-grab"></span><header><div><small>${esc(a.staff_name||'담당자')} · ${esc(a.source==='naver'?'네이버 예약':'LUDIA 예약')}</small><h3>${esc(a.customer_name||'고객')}</h3></div><em>${esc(timing(a))}</em></header><dl><div><dt>시술</dt><dd>${esc(a.service_name||'미지정')}</dd></div><div><dt>금액</dt><dd>${esc(won(a.price))}</dd></div>${a.memo?`<div class="wide"><dt>예약 메모</dt><dd>${esc(a.memo)}</dd></div>`:''}</dl><div class="staff-detail-actions">${phone?`<a href="tel:${esc(phone)}">전화</a>`:'<span>전화번호 없음</span>'}<button data-detail-close>닫기</button></div></section>`;document.body.appendChild(wrap);wrap.querySelector('.staff-detail-backdrop').onclick=close;wrap.querySelector('[data-detail-close]').onclick=close}
+document.addEventListener('click',e=>{if(e.target.closest('button,a,.staff-confirm-wrap,.staff-detail-wrap'))return;const row=e.target.closest('.staff-day-appt');if(!row)return;const carrier=row.querySelector('[data-appt]');if(!carrier)return;try{open(JSON.parse(decodeURIComponent(carrier.dataset.appt)))}catch(err){console.warn('[LUDIA appointment detail]',err)}});
+})();

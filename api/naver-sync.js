@@ -57,6 +57,20 @@ async function syncAppointment(cfg,sid,row){
   return true;
 }
 
+async function persistReviews(cfg,sid,reviews){
+  if(!reviews.length)return 0;
+  const payload=reviews.slice(0,200).filter(x=>x&&x.externalId).map(x=>({
+    salon_id:sid,external_id:clean(x.externalId).slice(0,120),
+    author_label:x.authorLabel?clean(x.authorLabel).slice(0,80):null,
+    rating:Number.isFinite(Number(x.rating))?Math.max(0,Math.min(5,Number(x.rating))):null,
+    review_text:clean(x.reviewText),updated_at:new Date().toISOString()
+  }));
+  if(!payload.length)return 0;
+  const r=await fetch(`${cfg.url}/rest/v1/ludia_naver_reviews?on_conflict=salon_id,external_id`,{method:'POST',headers:{...cfg.headers,prefer:'resolution=merge-duplicates,return=minimal'},body:JSON.stringify(payload)});
+  if(!r.ok)throw new Error(`reviews ${r.status}: ${await r.text()}`);
+  return payload.length;
+}
+
 async function persist(rows){
   const cfg=supabaseConfig();
   if(!cfg)return {persisted:false,reason:'supabase_not_configured',appointmentSynced:0};
@@ -82,21 +96,23 @@ export default async function handler(req,res){
   if(req.headers.authorization!==`Bearer ${expected}`)return json(res,401,{ok:false,error:'unauthorized'});
   let body;
   try{body=typeof req.body==='string'?JSON.parse(req.body||'{}'):(req.body||{});}catch{return json(res,400,{ok:false,error:'invalid_json'});}
-  if(body.source!=='NAVER'||!Array.isArray(body.events))return json(res,400,{ok:false,error:'invalid_payload'});
+  if(body.source!=='NAVER'||!Array.isArray(body.events)||!(body.reviews===undefined||Array.isArray(body.reviews)))return json(res,400,{ok:false,error:'invalid_payload'});
   if(body.events.length>200)return json(res,413,{ok:false,error:'too_many_events'});
   const rows=body.events.map(normalizeEvent).filter(Boolean);
+  const reviews=Array.isArray(body.reviews)?body.reviews:[];
   const cfg=supabaseConfig();
   const sid=salonId();
-  if(rows.length&&!cfg)return json(res,503,{ok:false,error:'supabase_not_configured',retryable:true});
-  if(rows.length&&!sid)return json(res,503,{ok:false,error:'salon_not_configured',retryable:true});
-  if(!rows.length){
+  if((rows.length||reviews.length)&&!cfg)return json(res,503,{ok:false,error:'supabase_not_configured',retryable:true});
+  if((rows.length||reviews.length)&&!sid)return json(res,503,{ok:false,error:'salon_not_configured',retryable:true});
+  if(!rows.length&&!reviews.length){
     try{if(cfg&&sid)await updateConnection(cfg,{eventCount:0,appointmentCount:0});}catch(error){console.error('[LUDIA sync heartbeat]',error);return json(res,502,{ok:false,error:'heartbeat_persistence_failed'});}
     return json(res,200,{ok:true,accepted:0,persisted:Boolean(cfg&&sid),heartbeat:true});
   }
   try{
     const result=await persist(rows);
     if(!result.persisted)return json(res,503,{ok:false,error:result.reason||'persistence_unavailable',retryable:true});
-    return json(res,200,{ok:true,accepted:rows.length,...result});
+    const reviewsSynced=await persistReviews(cfg,sid,reviews);
+    return json(res,200,{ok:true,accepted:rows.length,reviewsSynced,...result});
   }
   catch(error){console.error('[LUDIA sync]',error);return json(res,502,{ok:false,error:'persistence_failed',retryable:true});}
 }

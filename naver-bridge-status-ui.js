@@ -1,61 +1,18 @@
 (()=>{
-  const STATUS_URL='/api/naver-status';
-  const POLL_MS=60000;
-  let timer=null;
-
-  const labels={
-    connected:['연결됨','네이버 예약을 자동 동기화하고 있어요.'],
-    stale:['PC 브리지 확인','최근 동기화가 10분 넘게 없어요. Windows 브리지를 확인하세요.'],
-    reauth_required:['네이버 로그인 필요','저장된 비밀번호 없이 기존 브라우저 세션을 사용합니다. PC에서 네이버에 다시 로그인하세요.'],
-    error:['동기화 오류','마지막 동기화에서 오류가 발생했어요. PC 브리지 로그를 확인하세요.'],
-    setup_required:['설정 필요','로컬 Windows 브리지와 Supabase 연결 설정이 필요해요.']
-  };
+  const STATUS_URL='/api/naver-status',POLL_MS=60000;
+  let timer=null,lastData=null;
+  const labels={connected:['연결됨','네이버 예약을 자동 동기화하고 있어요.'],stale:['PC 브리지 확인','최근 동기화가 10분 넘게 없어요. Windows 브리지를 확인하세요.'],reauth_required:['네이버 로그인 필요','저장된 비밀번호 없이 기존 브라우저 세션을 사용합니다. PC에서 네이버에 다시 로그인하세요.'],error:['동기화 오류','마지막 동기화에서 오류가 발생했어요. PC 브리지 로그를 확인하세요.'],setup_required:['설정 필요','로컬 Windows 브리지와 Supabase 연결 설정이 필요해요.']};
+  const statusLabel={confirmed:'확정',requested:'신청',cancelled:'취소',completed:'완료',no_show:'노쇼',unknown:'상태 확인'};
   const esc=v=>String(v??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
-  const relative=iso=>{
-    if(!iso)return '동기화 기록 없음';
-    const ms=Date.now()-new Date(iso).getTime();
-    if(!Number.isFinite(ms))return '동기화 시각 확인 필요';
-    const m=Math.max(0,Math.floor(ms/60000));
-    if(m<1)return '방금 동기화';
-    if(m<60)return `${m}분 전 동기화`;
-    const h=Math.floor(m/60); return h<24?`${h}시간 전 동기화`:`${Math.floor(h/24)}일 전 동기화`;
-  };
-  function ensurePanel(){
-    const more=document.querySelector('#moreScreen');
-    if(!more)return null;
-    let panel=document.querySelector('#naverBridgePanel');
-    if(panel)return panel;
-    const systemTitle=[...more.querySelectorAll('.native-group-title')].find(x=>x.textContent.trim()==='시스템');
-    if(!systemTitle)return null;
-    panel=document.createElement('section');
-    panel.id='naverBridgePanel'; panel.className='naver-bridge-panel';
-    panel.setAttribute('aria-live','polite');
-    systemTitle.parentNode.insertBefore(panel,systemTitle);
-    return panel;
-  }
-  function render(data){
-    const panel=ensurePanel(); if(!panel)return;
-    const state=data?.state||'setup_required', copy=labels[state]||labels.setup_required, today=data?.today||{};
-    const attention=state!=='connected';
-    panel.innerHTML=`<div class="nb-head"><div><span>예약 연동</span><h3>네이버 SmartPlace</h3></div><span class="nb-state ${esc(state)}"><i></i>${esc(copy[0])}</span></div>
-      <p class="nb-copy">${esc(copy[1])}</p>
-      <div class="nb-sync"><span>${esc(relative(data?.lastSyncAt))}</span>${data?.freshness==='live'?'<em>LIVE</em>':''}</div>
-      <div class="nb-stats"><div><b>${Number(today.confirmed||0)}</b><span>확정</span></div><div><b>${Number(today.requested||0)}</b><span>신청</span></div><div><b>${Number(today.cancelled||0)}</b><span>취소</span></div></div>
-      ${attention&&data?.lastError?`<div class="nb-error">${esc(data.lastError)}</div>`:''}
-      <div class="nb-privacy">비밀번호 저장 안 함 · CAPTCHA/2단계 인증 우회 안 함 · 로컬 브라우저 세션 사용</div>`;
-  }
-  async function refresh(){
-    try{
-      const r=await fetch(STATUS_URL,{headers:{accept:'application/json'},cache:'no-store'});
-      if(!r.ok)throw new Error(`HTTP ${r.status}`);
-      render(await r.json());
-    }catch(_){render({state:'error',freshness:'attention',today:{},lastError:'연동 상태를 불러오지 못했어요.'});}
-  }
-  function start(){
-    ensurePanel(); refresh();
-    clearInterval(timer); timer=setInterval(()=>{if(!document.hidden)refresh();},POLL_MS);
-  }
+  const relative=iso=>{if(!iso)return '동기화 기록 없음';const ms=Date.now()-new Date(iso).getTime();if(!Number.isFinite(ms))return '동기화 시각 확인 필요';const m=Math.max(0,Math.floor(ms/60000));if(m<1)return '방금';if(m<60)return `${m}분 전`;const h=Math.floor(m/60);return h<24?`${h}시간 전`:`${Math.floor(h/24)}일 전`;};
+  function ensurePanel(){const more=document.querySelector('#moreScreen');if(!more)return null;let panel=document.querySelector('#naverBridgePanel');if(panel)return panel;const systemTitle=[...more.querySelectorAll('.native-group-title')].find(x=>x.textContent.trim()==='시스템');if(!systemTitle)return null;panel=document.createElement('section');panel.id='naverBridgePanel';panel.className='naver-bridge-panel';panel.setAttribute('aria-live','polite');systemTitle.parentNode.insertBefore(panel,systemTitle);return panel;}
+  function render(data){lastData=data;const panel=ensurePanel();if(!panel)return;const state=data?.state||'setup_required',copy=labels[state]||labels.setup_required,today=data?.today||{},attention=state!=='connected',count=Array.isArray(data?.recentEvents)?data.recentEvents.length:0;panel.innerHTML=`<div class="nb-head"><div><span>예약 연동</span><h3>네이버 SmartPlace</h3></div><span class="nb-state ${esc(state)}"><i></i>${esc(copy[0])}</span></div><p class="nb-copy">${esc(copy[1])}</p><div class="nb-sync"><span>${esc(relative(data?.lastSyncAt))} 동기화</span>${data?.freshness==='live'?'<em>LIVE</em>':''}</div><div class="nb-stats"><div><b>${Number(today.confirmed||0)}</b><span>확정</span></div><div><b>${Number(today.requested||0)}</b><span>신청</span></div><div><b>${Number(today.cancelled||0)}</b><span>취소</span></div></div>${attention&&data?.lastError?`<div class="nb-error">${esc(data.lastError)}</div>`:''}<button class="nb-history-btn" type="button" ${count?'':'disabled'}>동기화 기록 <span>${count?`최근 ${count}건`:'기록 없음'}</span></button><div class="nb-privacy">비밀번호 저장 안 함 · CAPTCHA/2단계 인증 우회 안 함 · 로컬 브라우저 세션 사용</div>`;}
+  function closeSheet(){document.querySelector('#naverAuditSheet')?.remove();document.body.classList.remove('nb-sheet-open');}
+  function openSheet(){const events=lastData?.recentEvents||[];if(!events.length)return;closeSheet();const root=document.createElement('div');root.id='naverAuditSheet';root.className='nb-sheet-root';root.innerHTML=`<button class="nb-sheet-backdrop" aria-label="닫기"></button><section class="nb-sheet" role="dialog" aria-modal="true" aria-labelledby="nbAuditTitle"><div class="nb-grabber"></div><header><div><span>네이버 예약</span><h3 id="nbAuditTitle">동기화 기록</h3></div><button class="nb-sheet-close" type="button">완료</button></header><p class="nb-audit-note">고객명·전화번호·예약번호 없이 동기화 결과만 표시합니다.</p><div class="nb-audit-list">${events.map(e=>`<div class="nb-audit-row"><i class="${esc(e.status)}"></i><div><strong>${e.type==='created'?'새 예약':'예약 변경'} · ${esc(statusLabel[e.status]||'변경')}</strong><span>${esc([e.bookingDate,e.bookingTime].filter(Boolean).join(' ')||'예약시간 없음')}</span></div><time>${esc(relative(e.receivedAt))}</time></div>`).join('')}</div></section>`;document.body.appendChild(root);document.body.classList.add('nb-sheet-open');requestAnimationFrame(()=>root.classList.add('open'));}
+  async function refresh(){try{const r=await fetch(STATUS_URL,{headers:{accept:'application/json'},cache:'no-store'});if(!r.ok)throw new Error(`HTTP ${r.status}`);render(await r.json());}catch(_){render({state:'error',freshness:'attention',today:{},recentEvents:[],lastError:'연동 상태를 불러오지 못했어요.'});}}
+  function start(){ensurePanel();refresh();clearInterval(timer);timer=setInterval(()=>{if(!document.hidden)refresh();},POLL_MS);}
   document.addEventListener('visibilitychange',()=>{if(!document.hidden)refresh();});
-  document.addEventListener('click',e=>{if(e.target.closest('[data-nav="more"]'))setTimeout(refresh,60);});
+  document.addEventListener('click',e=>{if(e.target.closest('[data-nav="more"]'))setTimeout(refresh,60);if(e.target.closest('.nb-history-btn'))openSheet();if(e.target.closest('.nb-sheet-backdrop,.nb-sheet-close'))closeSheet();});
+  document.addEventListener('keydown',e=>{if(e.key==='Escape')closeSheet();});
   if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',start,{once:true});else start();
 })();

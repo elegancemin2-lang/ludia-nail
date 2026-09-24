@@ -79,10 +79,10 @@ function renderOpsToday(){
  const completedSales=todayAppointments.filter(x=>x.status==='완료').reduce((s,x)=>s+x.amount,0);
  const waiting=Math.max(0,todayAppointments.length-done);
  const stats=[
-   ['예약',todayAppointments.length+'건','대기 '+waiting],
-   ['예상 매출',won(total)+'원','완료 '+won(completedSales)+'원'],
-   ['동기화',salonCloudMode==='cloud'?'실시간':'이 기기','예약 · 고객'],
-   ['고객',salonCustomers.length+'명',salonCloudMode==='cloud'?'DB 연결':'데모']
+   ['오늘 예약',todayAppointments.length+'건',waiting?'남은 '+waiting+'건':'모두 완료'],
+   ['예상 매출',won(total)+'원',done?'완료 '+won(completedSales)+'원':'정산 전'],
+   ['완료',done+'건',todayAppointments.length?Math.round(done/todayAppointments.length*100)+'% 진행':'일정 없음'],
+   ['데이터',salonCloudMode==='cloud'?'LIVE':'LOCAL',salonCloudMode==='cloud'?'자동 저장':'이 기기 저장']
  ];
  const box=$('#todayStats');if(box)box.replaceChildren(...stats.map(([k,v,s])=>{const a=document.createElement('article');a.className='native-stat';a.innerHTML=`<span>${k}</span><b>${v}</b><small>${s}</small>`;return a}));
  if($('#todayProgress'))$('#todayProgress').textContent=`${done}/${todayAppointments.length} 완료`;

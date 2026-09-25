@@ -547,3 +547,51 @@ html[data-theme="dark"] .nail-canvas-head-actions button{background:#2c2c2e;colo
 .art-editor-actions{position:sticky!important;bottom:0!important;z-index:20!important;margin:14px -2px -2px!important;padding:10px 2px calc(10px + env(safe-area-inset-bottom))!important;background:rgba(247,247,249,.94)!important;backdrop-filter:blur(22px) saturate(180%);-webkit-backdrop-filter:blur(22px) saturate(180%);border-top:1px solid rgba(0,0,0,.05)}.art-editor-actions button{height:48px!important;border-radius:15px!important;box-shadow:none!important}.art-editor-actions .primary-btn{background:#0a84ff!important}
 html[data-theme="dark"] .direct-studio-mode .sheet-card{background:#000}html[data-theme="dark"] .art-live-stage,html[data-theme="dark"] .nail-finger-source,html[data-theme="dark"] .nail-canvas-pro,html[data-theme="dark"] .precision-editor{background:#1c1c1e!important;border-color:#2c2c2e!important}html[data-theme="dark"] .nail-finger-source .finger-photo{background:#2c2c2e!important}html[data-theme="dark"] .nail-finger-source .finger-photo.selected{background:#0b3158!important;border-color:#0a84ff!important}html[data-theme="dark"] .nail-canvas-head{border-color:#2c2c2e}html[data-theme="dark"] .nail-canvas-stage{background:linear-gradient(180deg,#1c1c1e,#101011)}html[data-theme="dark"] .art-editor-actions{background:rgba(0,0,0,.9)!important;border-color:#2c2c2e}
 @media(max-width:760px){.direct-studio-mode .sheet-body{padding-left:12px!important;padding-right:12px!important}.art-live-stage{border-radius:19px!important}.nail-entry-label{margin-top:14px}.nail-entry-label b{font-size:14px}.nail-entry-label small{display:none}.nail-finger-source{padding:10px 8px!important;border-radius:17px!important}.nail-finger-source .hand-editor{grid-template-columns:1fr;gap:7px}.nail-finger-source .editor-hand{display:grid;grid-template-columns:30px 1fr;align-items:center}.nail-finger-source .hand-label{margin:0;font-size:7px}.nail-finger-source .finger-model-wrap{height:42px!important}.nail-canvas-pro{border-radius:20px}.nail-canvas-head{height:52px;padding:0 12px}.nail-canvas-head b{font-size:13px}.nail-canvas-stage{height:42vh;min-height:330px}.nail-big-tip{width:min(48vw,220px);height:min(36vh,330px);border-radius:50% 50% 33% 33% / 29% 29% 11% 11%}.nail-canvas-tray{padding:8px 10px 12px}.nail-tool-tabs{margin-bottom:8px}.nail-pro-swatch,.nail-pro-part{flex-basis:58px}.nail-pro-swatch i{width:43px;height:43px}.nail-pro-part span,.nail-pro-part img{width:46px;height:46px}.art-editor-actions{margin-left:-12px!important;margin-right:-12px!important;padding-left:12px!important;padding-right:12px!important}}
+
+
+/* v2.42 · salon-private design registration */
+.library-head-actions{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+.design-register-sheet{position:fixed;inset:0;z-index:1200;display:none}
+.design-register-sheet.open{display:block}
+.design-register-sheet .sheet-backdrop{position:absolute;inset:0;border:0;background:rgba(0,0,0,.24);backdrop-filter:blur(12px);-webkit-backdrop-filter:blur(12px)}
+.design-register-card{position:absolute;left:50%;bottom:12px;transform:translateX(-50%);width:min(720px,calc(100vw - 24px));max-height:calc(100dvh - 24px);overflow:auto;background:rgba(250,250,252,.96);border:1px solid rgba(255,255,255,.82);box-shadow:0 26px 80px rgba(0,0,0,.18);border-radius:30px;padding:0}
+.design-register-card .sheet-grabber{width:38px;height:5px;border-radius:99px;background:#c7c7cc;margin:10px auto 2px}
+.design-register-head{display:flex;justify-content:space-between;align-items:flex-start;gap:18px;padding:18px 22px 16px;border-bottom:1px solid rgba(60,60,67,.08)}
+.design-register-head h3{margin:4px 0 5px;font-size:27px;letter-spacing:-.045em}
+.design-register-head p{margin:0;color:#8e8e93;font-size:12px;line-height:1.55}
+.design-register-body{display:grid;grid-template-columns:minmax(220px,.8fr) minmax(0,1.2fr);gap:20px;padding:20px 22px 10px}
+.design-photo-drop{min-height:330px;border-radius:24px;background:#f0f0f3;border:1px solid rgba(60,60,67,.08);display:grid;place-items:center;overflow:hidden;position:relative;cursor:pointer}
+.design-photo-drop img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;display:none}
+.design-photo-drop img.visible{display:block}
+.design-photo-drop>span{display:grid;gap:5px;text-align:center}
+.design-photo-drop>span b{font-size:15px}
+.design-photo-drop>span small{font-size:11px;color:#8e8e93}
+.design-register-fields{display:grid;align-content:start;gap:12px}
+.design-register-fields label{display:grid;gap:7px}
+.design-register-fields label>span{font-size:11px;font-weight:800;color:#636366}
+.design-register-fields input,.design-register-fields select,.design-register-fields textarea{width:100%;box-sizing:border-box;border:1px solid rgba(60,60,67,.1);background:#fff;border-radius:14px;padding:13px 14px;font:inherit;font-size:14px;outline:none}
+.design-register-fields input:focus,.design-register-fields select:focus,.design-register-fields textarea:focus{border-color:#007aff;box-shadow:0 0 0 3px rgba(0,122,255,.1)}
+.design-register-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.design-detail-toggle{border:0;background:#fff;border-radius:15px;padding:13px 14px;display:flex;align-items:center;gap:8px;text-align:left;box-shadow:inset 0 0 0 1px rgba(60,60,67,.08);font-weight:800}
+.design-detail-toggle em{margin-left:auto;font-size:10px;color:#8e8e93;font-style:normal;font-weight:700}
+.design-detail-toggle i{font-style:normal;color:#8e8e93;transition:.2s}
+.design-detail-toggle.open i{transform:rotate(180deg)}
+.design-detail-fields{display:grid;gap:12px;padding-top:2px}
+.design-register-actions{position:sticky;bottom:0;display:flex;align-items:center;gap:12px;justify-content:flex-end;padding:14px 22px calc(14px + env(safe-area-inset-bottom));background:rgba(250,250,252,.88);backdrop-filter:blur(20px);-webkit-backdrop-filter:blur(20px);border-top:1px solid rgba(60,60,67,.08)}
+.design-register-actions small{margin-right:auto;color:#8e8e93;font-size:10px}
+.design-register-actions .primary-btn{min-width:150px}
+@media(max-width:700px){
+ .library-head{align-items:flex-start}.library-head-actions{width:100%;margin-top:10px}.library-head-actions>button{flex:1}
+ .design-register-card{bottom:0;width:100%;max-height:96dvh;border-radius:26px 26px 0 0}
+ .design-register-head{padding:16px 18px 14px}.design-register-head h3{font-size:24px}
+ .design-register-body{grid-template-columns:1fr;padding:16px 18px 8px;gap:15px}
+ .design-photo-drop{min-height:235px;border-radius:20px}
+ .design-register-grid{grid-template-columns:1fr 1fr}
+ .design-register-actions{padding-left:18px;padding-right:18px}
+ .design-register-actions small{display:none}.design-register-actions .primary-btn{width:100%}
+}
+html[data-theme="dark"] .design-register-card,.dark-mode .design-register-card{background:rgba(28,28,30,.96);border-color:rgba(255,255,255,.08)}
+html[data-theme="dark"] .design-register-head,.dark-mode .design-register-head,html[data-theme="dark"] .design-register-actions,.dark-mode .design-register-actions{border-color:rgba(255,255,255,.08)}
+html[data-theme="dark"] .design-register-actions,.dark-mode .design-register-actions{background:rgba(28,28,30,.9)}
+html[data-theme="dark"] .design-photo-drop,.dark-mode .design-photo-drop{background:#2c2c2e;border-color:rgba(255,255,255,.08)}
+html[data-theme="dark"] .design-register-fields input,html[data-theme="dark"] .design-register-fields select,html[data-theme="dark"] .design-register-fields textarea,html[data-theme="dark"] .design-detail-toggle,.dark-mode .design-register-fields input,.dark-mode .design-register-fields select,.dark-mode .design-register-fields textarea,.dark-mode .design-detail-toggle{background:#2c2c2e;color:#f5f5f7;border-color:rgba(255,255,255,.08)}

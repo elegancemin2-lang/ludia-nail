@@ -1211,3 +1211,104 @@ html[data-theme="dark"] #bookingScreen .booking-block .booking-state{color:#9f9f
   #bookingScreen .booking-block .booking-customer{font-size:12.5px!important}
   #bookingScreen .booking-block .booking-service{font-size:8.5px!important}
 }
+
+
+/* v2.50 · booking art rail + reliable sheet controls */
+#bookingScreen .booking-block{
+  position:absolute!important;
+  display:block!important;
+  padding:0!important;
+}
+#bookingScreen .booking-block .booking-card-copy{
+  position:relative;
+  z-index:2;
+  width:68%;
+  height:100%;
+  box-sizing:border-box;
+  display:flex;
+  flex-direction:column;
+  align-items:stretch;
+  justify-content:flex-start;
+  padding:12px 12px 12px 14px;
+  overflow:hidden;
+}
+#bookingScreen .booking-block.compact .booking-card-copy{
+  padding-top:9px;
+  padding-bottom:9px;
+}
+#bookingScreen .booking-block .booking-art{
+  position:absolute;
+  z-index:1;
+  right:0;
+  top:0;
+  bottom:0;
+  width:32%;
+  overflow:hidden;
+  border-left:1px solid rgba(60,60,67,.08);
+  background:#eeeef2;
+  pointer-events:none;
+}
+#bookingScreen .booking-block .booking-art::before{
+  content:"";
+  position:absolute;
+  inset:0 auto 0 0;
+  width:18px;
+  z-index:2;
+  background:linear-gradient(90deg,rgba(255,255,255,.9),rgba(255,255,255,0));
+  pointer-events:none;
+}
+#bookingScreen .booking-block .booking-art img{
+  width:100%;
+  height:100%;
+  display:block;
+  object-fit:cover;
+  object-position:center;
+  opacity:.88;
+  filter:saturate(.78) contrast(.98) brightness(1.02);
+  transform:scale(1.015);
+}
+#bookingScreen .booking-block.done .booking-art img{filter:grayscale(.72) saturate(.42);opacity:.54}
+#bookingScreen .booking-block.cancelled .booking-art img{filter:grayscale(.85) saturate(.35);opacity:.42}
+#bookingScreen .booking-block.progress .booking-art{border-left-color:rgba(0,122,255,.12)}
+#bookingScreen .booking-block.progress .booking-art::before{
+  background:linear-gradient(90deg,rgba(232,242,255,.96),rgba(232,242,255,0));
+}
+html[data-theme="dark"] #bookingScreen .booking-block .booking-art{
+  background:#252529;
+  border-left-color:rgba(255,255,255,.07);
+}
+html[data-theme="dark"] #bookingScreen .booking-block .booking-art::before{
+  background:linear-gradient(90deg,rgba(58,58,62,.86),rgba(58,58,62,0));
+}
+html[data-theme="dark"] #bookingScreen .booking-block.progress .booking-art::before{
+  background:linear-gradient(90deg,rgba(39,75,118,.9),rgba(39,75,118,0));
+}
+
+.sheet.open{pointer-events:auto}
+.sheet-backdrop{z-index:0;cursor:pointer;touch-action:manipulation}
+.sheet-card{z-index:1}
+.sheet-close{
+  z-index:10!important;
+  display:grid!important;
+  place-items:center!important;
+  pointer-events:auto!important;
+  touch-action:manipulation;
+  line-height:1!important;
+  font-weight:500!important;
+  -webkit-tap-highlight-color:transparent;
+}
+.sheet-close:hover{transform:scale(1.04)}
+.sheet-close:active{transform:scale(.96)}
+
+@media(max-width:760px){
+  #bookingScreen .booking-block .booking-card-copy{
+    width:72%;
+    padding:9px 8px 9px 9px;
+  }
+  #bookingScreen .booking-block .booking-art{width:28%}
+  #bookingScreen .booking-block .booking-art::before{width:12px}
+}
+@media(max-width:430px){
+  #bookingScreen .booking-block .booking-card-copy{width:74%;padding-left:8px;padding-right:6px}
+  #bookingScreen .booking-block .booking-art{width:26%}
+}

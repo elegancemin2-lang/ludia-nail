@@ -109,16 +109,35 @@ function openOpsDetail(a){
 function closeOpsDetail(){const sheet=$('#opsDetailSheet');if(!sheet)return;sheet.classList.remove('open');sheet.setAttribute('aria-hidden','true');document.body.style.overflow=''}
 function bookingDateFromOffset(offset=0){const d=new Date();d.setHours(12,0,0,0);d.setDate(d.getDate()+offset);return d}
 function bookingDateText(offset=0){const d=bookingDateFromOffset(offset);return `${d.getMonth()+1}월 ${d.getDate()}일 ${['일','월','화','수','목','금','토'][d.getDay()]}요일`}
+function bookingWeekStartOffset(anchor=bookingDayOffset){
+ const d=bookingDateFromOffset(anchor),mondayIndex=(d.getDay()+6)%7;
+ return anchor-mondayIndex
+}
+function bookingWeekOffsets(anchor=bookingDayOffset){
+ const start=bookingWeekStartOffset(anchor);return Array.from({length:7},(_,i)=>start+i)
+}
+function bookingWeekRangeText(anchor=bookingDayOffset){
+ const offsets=bookingWeekOffsets(anchor),a=bookingDateFromOffset(offsets[0]),b=bookingDateFromOffset(offsets[6]);
+ const left=`${a.getMonth()+1}월 ${a.getDate()}일`,right=a.getMonth()===b.getMonth()?`${b.getDate()}일`:`${b.getMonth()+1}월 ${b.getDate()}일`;
+ return `${left} – ${right}`
+}
 function renderBookingWeek(){
  const strip=$('#bookingWeekStrip');if(!strip)return;strip.innerHTML='';
- for(let o=bookingDayOffset-3;o<=bookingDayOffset+3;o++){
-  const d=bookingDateFromOffset(o);const b=document.createElement('button');b.type='button';b.className=o===bookingDayOffset?'active':'';
-  b.innerHTML=`<small>${['일','월','화','수','목','금','토'][d.getDay()]}</small><b>${d.getDate()}</b>${o===0?'<i></i>':''}`;
-  b.onclick=()=>{bookingDayOffset=o;renderBooking()};strip.appendChild(b)
- }
+ bookingWeekOffsets().forEach(o=>{
+   const d=bookingDateFromOffset(o),b=document.createElement('button');b.type='button';b.className=o===bookingDayOffset?'active':'';
+   if(o===0)b.classList.add('today');
+   b.innerHTML=`<small>${['일','월','화','수','목','금','토'][d.getDay()]}</small><b>${d.getDate()}</b>${o===0?'<i></i>':''}`;
+   b.onclick=()=>{bookingDayOffset=o;renderBooking();setTimeout(()=>$('#bookingWeekBoard')?.querySelector('[data-day-offset="'+o+'"]')?.scrollIntoView({behavior:'smooth',block:'nearest',inline:'center'}),30)};
+   strip.appendChild(b)
+ })
 }
-function getVisibleBookingStaff(){return bookingStaff==='전체'?[...salonStaffNames]:[bookingStaff]}
-function bookingDataForDay(){return salonAppointments.filter(a=>(a.dayOffset||0)===bookingDayOffset&&(bookingStaff==='전체'||a.staff===bookingStaff))}
+function bookingDataForWeek(){
+ const offsets=bookingWeekOffsets(),start=offsets[0],end=offsets[6];
+ return salonAppointments.filter(a=>{
+   const day=Number(a.dayOffset||0);
+   return day>=start&&day<=end&&(bookingStaff==='전체'||a.staff===bookingStaff)
+ })
+}
 function bookingArtImage(a,cardIndex=0){
  const direct=a?.artImage||a?.designImage||a?.previewImageUrl||a?.preview_image_url||null;
  if(direct)return direct;
@@ -135,19 +154,44 @@ function bookingArtImage(a,cardIndex=0){
  return match?.img||'assets/nail_5.jpg';
 }
 function renderBooking(){
- const d=bookingDateFromOffset(bookingDayOffset);if($('#bookingMonthLabel'))$('#bookingMonthLabel').textContent=`${d.getFullYear()}년 ${d.getMonth()+1}월`;
+ const offsets=bookingWeekOffsets(),startDate=bookingDateFromOffset(offsets[0]),endDate=bookingDateFromOffset(offsets[6]);
+ const monthLabel=startDate.getMonth()===endDate.getMonth()?`${startDate.getFullYear()}년 ${startDate.getMonth()+1}월`:`${startDate.getFullYear()}년 ${startDate.getMonth()+1}월 · ${endDate.getMonth()+1}월`;
+ if($('#bookingMonthLabel'))$('#bookingMonthLabel').textContent=monthLabel;
+ if($('#bookingWeekRange'))$('#bookingWeekRange').textContent=bookingWeekRangeText();
  renderBookingWeek();
  const staffNames=['전체',...salonStaffNames];
- const tabs=$('#staffTabs');if(tabs){tabs.innerHTML='';staffNames.forEach(s=>{const b=document.createElement('button');b.type='button';b.textContent=s;b.classList.toggle('active',bookingStaff===s);b.onclick=()=>{bookingStaff=s;renderBooking()};tabs.appendChild(b)})}
- const visibleStaff=getVisibleBookingStaff();const data=bookingDataForDay();
- if($('#bookingCountLabel'))$('#bookingCountLabel').textContent=`${bookingDateText(bookingDayOffset)} · 예약 ${data.length}`;
- const header=$('#bookingStaffHeader');if(header){header.style.setProperty('--staff-count',visibleStaff.length);header.innerHTML='';visibleStaff.forEach((name,i)=>{const h=document.createElement('div');h.className='booking-staff-person';h.innerHTML=`<span>${name.slice(0,1)}</span><div><b>${name}</b><small>${data.filter(a=>a.staff===name).length}건</small></div>`;header.appendChild(h)})}
- const hours=$('#bookingHours');if(hours){hours.innerHTML='';for(let h=10;h<=21;h++){const row=document.createElement('div');row.textContent=String(h).padStart(2,'0')+':00';hours.appendChild(row)}}
- const list=$('#bookingList');if(!list)return;list.innerHTML='';list.style.setProperty('--staff-count',visibleStaff.length);
- const startHour=10, pxHour=window.matchMedia('(max-width:760px)').matches?74:80;
- visibleStaff.forEach((staff,staffIndex)=>{for(let h=startHour;h<21;h++){const slot=document.createElement('button');slot.type='button';slot.className='booking-slot';slot.style.top=`${(h-startHour)*pxHour}px`;slot.style.left=`calc(${staffIndex*100/visibleStaff.length}% + 1px)`;slot.style.width=`calc(${100/visibleStaff.length}% - 2px)`;slot.style.height=`${pxHour}px`;slot.setAttribute('aria-label',`${staff} ${h}시 빈 시간 예약`);slot.onclick=()=>openQuickBooking(`${String(h).padStart(2,'0')}:00`,staff);list.appendChild(slot)}})
- data.forEach((a,cardIndex)=>{const col=Math.max(0,visibleStaff.indexOf(a.staff));if(col<0)return;const b=document.createElement('button');b.type='button';b.className='booking-block '+(a.status==='완료'?'done ':a.status==='진행중'?'progress ':a.status==='취소'||a.status==='노쇼'?'cancelled ':'waiting ');const [hh,mm]=a.time.split(':').map(Number);const mins=hh*60+mm-startHour*60;const dur=a.duration||90;b.style.top=`${Math.max(0,mins/60*pxHour)+4}px`;b.style.height=`${Math.max(56,dur/60*pxHour-8)}px`;b.style.left=`calc(${col*100/visibleStaff.length}% + 6px)`;b.style.width=`calc(${100/visibleStaff.length}% - 12px)`;b.classList.toggle('compact',dur<=60);b.innerHTML=`<div class="booking-card-copy"><div class="booking-card-head"><span class="booking-time">${a.time}</span><em class="booking-state">${a.status==='완료'?'완료':a.status==='취소'?'취소':a.status==='노쇼'?'노쇼':won(a.amount)+'원'}</em></div><b class="booking-customer">${a.customer}</b><small class="booking-service">${a.service}</small></div><div class="booking-art" aria-hidden="true"></div>`;const art=b.querySelector('.booking-art');if(art){const artImg=document.createElement('img');artImg.src=bookingArtImage(a,cardIndex);artImg.alt='';artImg.loading='lazy';artImg.decoding='async';art.appendChild(artImg)}b.onclick=e=>{e.stopPropagation();openOpsDetail(a)};list.appendChild(b)});
- if(bookingDayOffset===0){const now=new Date();const mins=now.getHours()*60+now.getMinutes()-startHour*60;if(mins>=0&&mins<=11*60){const line=document.createElement('div');line.className='booking-now-line';line.style.top=`${mins/60*pxHour}px`;line.innerHTML='<i></i>';list.appendChild(line)}}
+ const tabs=$('#staffTabs');
+ if(tabs){
+   tabs.innerHTML='';
+   staffNames.forEach(s=>{
+     const b=document.createElement('button');b.type='button';b.textContent=s;b.classList.toggle('active',bookingStaff===s);
+     b.onclick=()=>{bookingStaff=s;renderBooking()};tabs.appendChild(b)
+   })
+ }
+ const data=bookingDataForWeek();
+ if($('#bookingCountLabel'))$('#bookingCountLabel').textContent=bookingWeekRangeText()+' · '+bookingStaff+' '+data.length+'건';
+ const board=$('#bookingWeekBoard');if(!board)return;board.innerHTML='';
+ offsets.forEach((offset,dayIndex)=>{
+   const d=bookingDateFromOffset(offset),dayData=data.filter(a=>Number(a.dayOffset||0)===offset).sort((a,b)=>String(a.time).localeCompare(String(b.time)));
+   const col=document.createElement('section');col.className='booking-day-column'+(offset===bookingDayOffset?' selected':'')+(offset===0?' today':'');col.dataset.dayOffset=String(offset);
+   const head=document.createElement('header');head.className='booking-day-head';
+   head.innerHTML=`<button type="button" class="booking-day-select" aria-label="${bookingDateText(offset)} 선택"><span>${['일','월','화','수','목','금','토'][d.getDay()]}</span><b>${d.getDate()}</b><small>${dayData.length}건</small></button><button type="button" class="booking-day-add" aria-label="${bookingDateText(offset)} 예약 추가">＋</button>`;
+   head.querySelector('.booking-day-select').onclick=()=>{bookingDayOffset=offset;renderBooking()};
+   head.querySelector('.booking-day-add').onclick=e=>{e.stopPropagation();bookingDayOffset=offset;openQuickBooking('10:00',bookingStaff==='전체'?(salonStaffNames[0]||'루디아'):bookingStaff)};
+   col.appendChild(head);
+   const list=document.createElement('div');list.className='booking-day-list';
+   if(!dayData.length){
+     const empty=document.createElement('button');empty.type='button';empty.className='booking-day-empty';empty.innerHTML='<span>예약 없음</span><small>＋ 눌러 추가</small>';empty.onclick=()=>{bookingDayOffset=offset;openQuickBooking('10:00',bookingStaff==='전체'?(salonStaffNames[0]||'루디아'):bookingStaff)};list.appendChild(empty)
+   }else{
+     dayData.forEach((a,cardIndex)=>{
+       const b=document.createElement('button');b.type='button';b.className='weekly-booking-card '+(a.status==='완료'?'done ':a.status==='진행중'?'progress ':a.status==='취소'||a.status==='노쇼'?'cancelled ':'waiting ');
+       const staffChip=bookingStaff==='전체'?'<span class="weekly-staff">'+(a.staff||'미지정')+'</span>':'';
+       b.innerHTML=`<div class="weekly-booking-copy"><div class="weekly-booking-meta"><time>${a.time}</time>${staffChip}</div><b>${a.customer}</b><small>${a.service}</small><em>${a.status==='완료'?'완료':a.status==='취소'?'취소':a.status==='노쇼'?'노쇼':won(a.amount)+'원'}</em></div><span class="weekly-booking-art" aria-hidden="true"><img src="${bookingArtImage(a,cardIndex+dayIndex)}" alt="" loading="lazy" decoding="async"></span>`;
+       b.onclick=()=>{bookingDayOffset=offset;openOpsDetail(a)};list.appendChild(b)
+     })
+   }
+   col.appendChild(list);board.appendChild(col)
+ })
 }
 let quickBookingDraft={time:'13:00',staff:'루디아'};
 function ensureQuickDuration(minutes){
@@ -651,7 +695,9 @@ $('#customerRefreshBtn')?.addEventListener('click',async()=>{
 $('#quickAddBooking').onclick=()=>openQuickBooking('13:00',bookingStaff==='전체'?(salonStaffNames[0]||'루디아'):bookingStaff);
 const homeQuickAdd=$('#homeQuickAdd');if(homeQuickAdd)homeQuickAdd.onclick=()=>{bookingDayOffset=0;renderBooking();openQuickBooking('13:00',salonStaffNames[0]||'루디아')};
 $('#newCustomerBtn').onclick=()=>toast('고객 등록은 이름·연락처만 먼저 받고 나머지는 시술 후 채우는 방식으로 연결할게요');
-$('#bookingTodayBtn').onclick=()=>{bookingDayOffset=0;renderBooking()};$$('[data-close-quick-booking]').forEach(x=>x.onclick=closeQuickBooking);$('#qbSaveBtn').onclick=saveQuickBooking;
+$('#bookingTodayBtn').onclick=()=>{bookingDayOffset=0;renderBooking()};
+$('#bookingPrevWeek')?.addEventListener('click',()=>{bookingDayOffset-=7;renderBooking()});
+$('#bookingNextWeek')?.addEventListener('click',()=>{bookingDayOffset+=7;renderBooking()});$$('[data-close-quick-booking]').forEach(x=>x.onclick=closeQuickBooking);$('#qbSaveBtn').onclick=saveQuickBooking;
 $$('.more-card:not([data-nav])').forEach(b=>b.onclick=()=>toast(`${b.querySelector('b').textContent} · 필요한 핵심 화면만 단계적으로 연결합니다`));
 
 setInterval(()=>{if(state.view==='create'){const s=Math.floor((Date.now()-state.start)/1000),m=Math.floor(s/60);$('#createTimer').textContent=`${String(m).padStart(2,'0')}:${String(s%60).padStart(2,'0')}`;$('#createTimer').parentElement.classList.toggle('warn',s>300)}},1000);

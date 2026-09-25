@@ -380,7 +380,7 @@ function renderHandEditor(){
  const hands=[['LEFT',FINGERS.slice(0,5)],['RIGHT',FINGERS.slice(5)]];
  hands.forEach(([label,list])=>{const hand=document.createElement('div');hand.className='editor-hand';hand.innerHTML=`<span class="hand-label">${label}</span><div class="editor-fingers"></div>`;const row=hand.querySelector('.editor-fingers');
    list.forEach((f,i)=>{const look=state.active.fingerLooks[f];const b=document.createElement('button');b.type='button';b.className=`finger-photo ${state.fingers.has('전체')||state.fingers.has(f)?'selected':''}`;b.dataset.finger=f;b.innerHTML=`<span class="finger-model-wrap">${nailMarkup(look,'editor-model')}</span><small>${f.replace(/^L|^R/,'')}</small><i>${Object.values(look.levels||{}).reduce((a,b)=>a+b,0)||(look.mods||[]).length||''}</i>`;b.onclick=()=>{state.fingers=new Set([f]);syncEditChipStates();renderPrecisionEditor();window.LudiaNailCanvas?.openFinger(f)};row.appendChild(b)});box.appendChild(hand)});
- const sel=selectedFingerNames();$('#fingerHelper').textContent=state.fingers.has('전체')?'전체 손가락에 수정이 즉시 반영됩니다.':`${sel.join(' · ')}만 수정합니다.`;$('#liveEditState').textContent=state.fingers.has('전체')?'전체 선택':`${sel.length}개 선택`;renderPrecisionEditor();
+ const sel=selectedFingerNames();const helper=$('#fingerHelper'),liveState=$('#liveEditState');if(helper)helper.textContent=state.fingers.has('전체')?'전체 손가락에 수정이 즉시 반영됩니다.':`${sel.join(' · ')}만 수정합니다.`;if(liveState)liveState.textContent=state.fingers.has('전체')?'전체 선택':`${sel.length}개 선택`;renderPrecisionEditor();
 }
 function toggleFingerFromPhoto(f){
  if(state.fingers.has('전체'))state.fingers=new Set([f]);else if(state.fingers.has(f)&&state.fingers.size===1)state.fingers=new Set(['전체']);else if(state.fingers.has(f))state.fingers.delete(f);else state.fingers.add(f);renderHandEditor();syncEditChipStates();
@@ -412,9 +412,14 @@ function applyLiveMod(mod,{record=true,quiet=false}={}){
 }
 function renderEditorMetrics(){const d=state.active;if(!d)return;$('#metricRow').innerHTML=`<div class="metric"><span>난이도</span><b>${d.diff}</b></div><div class="metric"><span>시간</span><b>${d.time}분</b></div><div class="metric"><span>권장가</span><b>${money(d.price)}</b></div><div class="metric"><span>실행성</span><b>${d.fit}%</b></div>`}
 function openSheet(d){
+ const sheet=$('#editSheet');if(!sheet)return toast('편집 화면을 불러오지 못했어요');
  state.active=d;state.fingers=new Set(['전체']);ensureFingerLooks(d);recalcDesign(d);editorOriginal=snapshotFingerLooks(d);editorHistory=[];editorRedo=[];editorPreviewMode='current';
- $('#sheetName').textContent=d.name;$('#sheetDesc').textContent=d.desc;renderEditorMetrics();$('#serviceGuide').innerHTML='<b>실제 시술 가이드</b><span>재료 · '+d.materials.join(' · ')+'</span><span>순서 · '+d.tech+'</span><span>대체 · 품절 파츠가 있으면 미니 스톤/실버 라인/진주 계열로 우선 대체</span>';
- renderHandEditor();renderArtLiveStage();syncEditChipStates();updateHistoryButtons();$('#editPrompt').value='';$('#editSheet').classList.add('open');$('#editSheet').setAttribute('aria-hidden','false');document.body.style.overflow='hidden'
+ sheet.classList.add('open');sheet.setAttribute('aria-hidden','false');document.body.style.overflow='hidden';
+ try{
+  if($('#sheetName'))$('#sheetName').textContent=d.name||'내 네일 디자인';if($('#sheetDesc'))$('#sheetDesc').textContent=d.desc||'';
+  renderEditorMetrics();const guide=$('#serviceGuide');if(guide)guide.innerHTML='<b>실제 시술 가이드</b><span>재료 · '+((d.materials||[]).join(' · ')||'직접 구성')+'</span><span>순서 · '+(d.tech||'직접 편집')+'</span><span>대체 · 품절 파츠가 있으면 미니 스톤/실버 라인/진주 계열로 우선 대체</span>';
+  renderHandEditor();renderArtLiveStage();syncEditChipStates();updateHistoryButtons();if($('#editPrompt'))$('#editPrompt').value='';
+ }catch(error){console.error('[LUDIA editor open]',error);toast('편집기는 열렸어요 · 일부 보조 UI를 확인 중입니다')}
 }
 function closeSheet(){$('#editSheet').classList.remove('open','direct-studio-mode');$('#editSheet').setAttribute('aria-hidden','true');document.body.style.overflow='';renderDirectStudioPreview()}
 $$('[data-close-sheet]').forEach(x=>x.onclick=closeSheet);

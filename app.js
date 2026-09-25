@@ -226,7 +226,9 @@ function setView(v){
 }
 $$('[data-nav]').forEach(b=>b.onclick=()=>setView(b.dataset.nav));
 $('#openStudioBtn')?.addEventListener('click',()=>openDirectStudio());$('#newStudioBtn')?.addEventListener('click',()=>{state.active=null;openDirectStudio({fresh:true})});
-$('#themeBtn').onclick=()=>document.body.classList.toggle('focus-mode');
+const applyTheme=mode=>{const dark=mode==='dark';document.documentElement.dataset.theme=dark?'dark':'light';document.body.classList.toggle('dark-mode',dark);localStorage.setItem('ludiaTheme',dark?'dark':'light');const meta=document.querySelector('meta[name="theme-color"]');if(meta)meta.content=dark?'#000000':'#f5f5f7';const btn=$('#themeBtn');if(btn){btn.textContent=dark?'☀':'◐';btn.setAttribute('aria-label',dark?'화이트 모드':'블랙 모드')}};
+const savedTheme=localStorage.getItem('ludiaTheme');applyTheme(savedTheme==='dark'?'dark':'light');
+$('#themeBtn').onclick=()=>applyTheme(document.documentElement.dataset.theme==='dark'?'light':'dark');
 
 const homeChipTexts=['가을 자석','성수 미니멀','웨딩 여리','강남 글리터','숏네일 심플'];
 homeChipTexts.forEach(t=>{const b=document.createElement('button');b.textContent=t;b.onclick=()=>{$('#homePrompt').value=t+' 느낌으로 6개';startFromHome()};$('#homePromptChips').appendChild(b)});

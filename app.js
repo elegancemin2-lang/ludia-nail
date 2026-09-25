@@ -207,6 +207,8 @@ function currentMonthKey(offset=0){
 function monthKeyLabel(key){
  const [y,m]=String(key||currentMonthKey()).split('-').map(Number);return y+'년 '+m+'월'
 }
+function monthKeyForDate(d){return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')}
+function bookingMonthKey(){return monthKeyForDate(bookingDateFromOffset(bookingDayOffset))}
 function monthlyMenuItems(key=currentMonthKey()){
  return state.library.filter(d=>(d.status==='이달의아트'||d.projectStatus==='monthly')&&String(d.monthKey||currentMonthKey())===String(key))
 }
@@ -226,7 +228,7 @@ function syncQuickBookingOptions(){
 }
 function renderQuickMonthlyArts(){
  const wrap=$('#qbMonthlyArtWrap'),grid=$('#qbMonthlyArtGrid'),month=$('#qbMonthlyArtMonth');if(!wrap||!grid)return;
- const key=currentMonthKey(),items=monthlyMenuItems(key);if(month)month.textContent=monthKeyLabel(key);
+ const key=bookingMonthKey(),items=monthlyMenuItems(key);if(month)month.textContent=monthKeyLabel(key);
  grid.innerHTML='';
  if(!items.length){grid.innerHTML='<div class="qb-art-empty">이번 달 등록 메뉴가 없어요.<br>이달의 아트 메뉴판에서 먼저 추가해 주세요.</div>';return}
  items.forEach(d=>{

@@ -372,8 +372,8 @@
 
         <section class="nail-canvas-pro" id="nailCanvasPro">
           <div class="nail-canvas-head">
-            <div><span class="mini-label">NAIL CANVAS</span><b>한 손톱 상세 편집</b></div>
-            <button type="button" id="nailCanvasDone">완료</button>
+            <div><span class="mini-label">NAIL CANVAS</span><b id="nailCanvasTitle">손톱을 선택하세요</b></div>
+            <div class="nail-canvas-head-actions"><button type="button" id="nailUndoBtn" disabled>↶</button><button type="button" id="nailRedoBtn" disabled>↷</button><button type="button" id="nailCanvasSave">저장</button></div>
           </div>
           <div class="nail-canvas-stage">
             <div class="nail-big-tip" id="nailBigTip"><canvas id="nailDrawCanvas" width="720" height="720" aria-label="손톱 드로잉 캔버스"></canvas><div class="nail-parts-layer" id="nailPartsLayer"></div></div>
@@ -399,7 +399,7 @@
           </div>
         </section>
 
-        <div class="instant-editor compact-picker">
+        <div class="instant-editor compact-picker nail-finger-source">
           <div class="instant-editor-head"><div><b>수정할 손가락</b><small>하나 또는 여러 개 선택</small></div><span id="liveEditState">전체 선택</span></div>
           <div class="hand-editor" id="handEditor" aria-label="손가락별 디자인 편집"></div>
           <div class="edit-live-note" id="fingerHelper">전체 디자인을 수정합니다.</div>

@@ -69,6 +69,7 @@ let salonCustomers=DEMO_CUSTOMERS.map(x=>({...x}));
 let salonStaffNames=['루디아','지안'],salonServices=[],salonCloudMode='demo';
 let bookingStaff='전체', bookingDayOffset=0, activeAppointment=null;
 let customerPage=1;const CUSTOMER_PAGE_SIZE=8;
+let monthlyMenuOffset=0,monthlyEditingId=null,quickSelectedMonthlyArt=null;
 
 function won(v){return Math.round(v/10000*10)/10+'만'}
 function renderOpsToday(){
@@ -141,8 +142,10 @@ function bookingDataForWeek(){
 function bookingArtImage(a,cardIndex=0){
  const direct=a?.artImage||a?.designImage||a?.previewImageUrl||a?.preview_image_url||null;
  if(direct)return direct;
- const service=String(a?.service||'').trim().toLowerCase();
  const library=Array.isArray(state?.library)?state.library:[];
+ const linked=a?.artId?library.find(d=>String(d.id)===String(a.artId)):null;
+ if(linked?.img)return linked.img;
+ const service=String(a?.service||a?.artName||'').trim().toLowerCase();
  const norm=value=>String(value||'').trim().toLowerCase();
  let match=library.find(d=>d?.img&&service&&(norm(d.name).includes(service)||service.includes(norm(d.name))));
  if(!match&&/이달/.test(service))match=library.find(d=>d?.img&&d.status==='이달의아트');
@@ -197,23 +200,76 @@ let quickBookingDraft={time:'13:00',staff:'루디아'};
 function ensureQuickDuration(minutes){
  const select=$('#qbDuration');if(!select||!minutes)return;const value=String(minutes);if(![...select.options].some(o=>o.value===value)){const o=document.createElement('option');o.value=value;o.textContent=value+'분';select.appendChild(o)}select.value=value
 }
+function currentMonthKey(offset=0){
+ const d=new Date();d.setDate(1);d.setMonth(d.getMonth()+offset);
+ return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')
+}
+function monthKeyLabel(key){
+ const [y,m]=String(key||currentMonthKey()).split('-').map(Number);return y+'년 '+m+'월'
+}
+function monthlyMenuItems(key=currentMonthKey()){
+ return state.library.filter(d=>(d.status==='이달의아트'||d.projectStatus==='monthly')&&String(d.monthKey||currentMonthKey())===String(key))
+}
 function syncQuickBookingOptions(){
  const staff=$('#qbStaff'),service=$('#qbService');
  if(staff){const current=staff.value;staff.innerHTML='';(salonStaffNames.length?salonStaffNames:['루디아']).forEach(name=>{const o=document.createElement('option');o.value=name;o.textContent=name;staff.appendChild(o)});if([...staff.options].some(o=>o.value===current))staff.value=current}
- if(service&&salonServices.length){const current=service.value;service.innerHTML='';salonServices.forEach(s=>{const o=document.createElement('option');o.value=s.name;o.textContent=`${s.name} · ${s.duration_minutes}분 · ${won(s.price)}원`;service.appendChild(o)});if([...service.options].some(o=>o.value===current))service.value=current;service.onchange=()=>{const selected=salonServices.find(x=>x.name===service.value);if(selected)ensureQuickDuration(selected.duration_minutes)}}
+ if(service){
+   const current=service.value,base=(salonServices.length?salonServices.map(s=>({name:s.name,label:s.name+' · '+s.duration_minutes+'분 · '+won(s.price)+'원'})):[
+     {name:'젤 원컬러',label:'젤 원컬러'},{name:'젤 아트',label:'젤 아트'},{name:'오마카세 아트',label:'오마카세 아트'},{name:'제거 + 젤 아트',label:'제거 + 젤 아트'}
+   ]);
+   const specials=[{name:'이달의 아트',label:'이달의 아트 · 메뉴에서 선택'},{name:'수제디자인',label:'수제디자인 · 고객 요청'}];
+   const merged=[...base.filter(x=>!specials.some(s=>s.name===x.name)),...specials];
+   service.innerHTML='';merged.forEach(s=>{const o=document.createElement('option');o.value=s.name;o.textContent=s.label;service.appendChild(o)});
+   service.value=[...service.options].some(o=>o.value===current)?current:(merged[0]?.name||'젤 아트');
+   service.onchange=handleQuickServiceChange
+ }
+}
+function renderQuickMonthlyArts(){
+ const wrap=$('#qbMonthlyArtWrap'),grid=$('#qbMonthlyArtGrid'),month=$('#qbMonthlyArtMonth');if(!wrap||!grid)return;
+ const key=currentMonthKey(),items=monthlyMenuItems(key);if(month)month.textContent=monthKeyLabel(key);
+ grid.innerHTML='';
+ if(!items.length){grid.innerHTML='<div class="qb-art-empty">이번 달 등록 메뉴가 없어요.<br>이달의 아트 메뉴판에서 먼저 추가해 주세요.</div>';return}
+ items.forEach(d=>{
+   const b=document.createElement('button');b.type='button';b.className='qb-art-option'+(quickSelectedMonthlyArt&&String(quickSelectedMonthlyArt.id)===String(d.id)?' selected':'');
+   const sale=Number(d.salePrice)||0,list=Number(d.listPrice??d.price)||0;
+   b.innerHTML='<img src="'+(d.img||'assets/nail_5.jpg')+'" alt=""><span><b>'+d.name+'</b><small>'+(sale?'<s>'+money(list)+'</s> '+money(sale):money(list))+(d.time?' · '+d.time+'분':'')+'</small></span>';
+   b.onclick=()=>{quickSelectedMonthlyArt=d;ensureQuickDuration(d.time||90);renderQuickMonthlyArts()};grid.appendChild(b)
+ })
+}
+function handleQuickServiceChange(){
+ const service=$('#qbService')?.value||'';
+ $('#qbMonthlyArtWrap')?.classList.toggle('hidden',service!=='이달의 아트');
+ $('#qbCustomDesignWrap')?.classList.toggle('hidden',service!=='수제디자인');
+ if(service==='이달의 아트'){renderQuickMonthlyArts();if(quickSelectedMonthlyArt)ensureQuickDuration(quickSelectedMonthlyArt.time||90)}
+ else{quickSelectedMonthlyArt=null;const selected=salonServices.find(x=>x.name===service);if(selected)ensureQuickDuration(selected.duration_minutes)}
 }
 function openQuickBooking(time='13:00',staff='루디아'){
- syncQuickBookingOptions();const safeStaff=salonStaffNames.includes(staff)?staff:(salonStaffNames[0]||staff);quickBookingDraft={time,staff:safeStaff};$('#qbTime').value=time;$('#qbStaff').value=safeStaff;$('#qbCustomer').value='';if($('#qbPhone'))$('#qbPhone').value='';$('#qbDuration').value='90';if(!salonServices.length)$('#qbService').value='젤 아트';else if($('#qbService').options.length){$('#qbService').selectedIndex=0;const selected=salonServices.find(x=>x.name===$('#qbService').value);if(selected)ensureQuickDuration(selected.duration_minutes)}$('#quickBookingContext').innerHTML=`<b>${bookingDateText(bookingDayOffset)}</b><span>${time} · ${safeStaff}</span>`;$('#quickBookingSheet').classList.add('open');$('#quickBookingSheet').setAttribute('aria-hidden','false');document.body.style.overflow='hidden';setTimeout(()=>$('#qbCustomer')?.focus(),180)
+ syncQuickBookingOptions();const safeStaff=salonStaffNames.includes(staff)?staff:(salonStaffNames[0]||staff);quickBookingDraft={time,staff:safeStaff};quickSelectedMonthlyArt=null;
+ $('#qbTime').value=time;$('#qbStaff').value=safeStaff;$('#qbCustomer').value='';if($('#qbPhone'))$('#qbPhone').value='';if($('#qbCustomDesignNote'))$('#qbCustomDesignNote').value='';ensureQuickDuration(90);
+ if($('#qbService')?.options.length){const preferred=[...$('#qbService').options].find(o=>o.value==='젤 아트')||$('#qbService').options[0];$('#qbService').value=preferred?.value||'젤 아트'}
+ handleQuickServiceChange();
+ $('#quickBookingContext').innerHTML='<b>'+bookingDateText(bookingDayOffset)+'</b><span>'+time+' · '+safeStaff+'</span>';$('#quickBookingSheet').classList.add('open');$('#quickBookingSheet').setAttribute('aria-hidden','false');document.body.style.overflow='hidden';setTimeout(()=>$('#qbCustomer')?.focus(),180)
 }
-function closeQuickBooking(){$('#quickBookingSheet').classList.remove('open');$('#quickBookingSheet').setAttribute('aria-hidden','true');document.body.style.overflow=''}
+function closeQuickBooking(){$('#quickBookingSheet')?.classList.remove('open');$('#quickBookingSheet')?.setAttribute('aria-hidden','true');document.body.style.overflow=''}
 async function saveQuickBooking(){
- const customer=$('#qbCustomer').value.trim();if(!customer)return toast('고객 이름을 입력해 주세요');const phone=$('#qbPhone')?.value.trim()||'';const service=$('#qbService').value;const time=$('#qbTime').value||quickBookingDraft.time;const staff=$('#qbStaff').value||quickBookingDraft.staff;const duration=Number($('#qbDuration').value)||salonServices.find(x=>x.name===service)?.duration_minutes||90;const priceMap={'젤 원컬러':45000,'젤 아트':79000,'이달의 아트':79000,'오마카세 아트':99000,'제거 + 젤 아트':89000};const amount=salonServices.find(x=>x.name===service)?.price||priceMap[service]||69000;
+ const customer=$('#qbCustomer')?.value.trim();if(!customer)return toast('고객 이름을 입력해 주세요');
+ const phone=$('#qbPhone')?.value.trim()||'',rawService=$('#qbService')?.value||'젤 아트',time=$('#qbTime')?.value||quickBookingDraft.time,staff=$('#qbStaff')?.value||quickBookingDraft.staff;
+ const selectedArt=rawService==='이달의 아트'?quickSelectedMonthlyArt:null;
+ if(rawService==='이달의 아트'&&!selectedArt)return toast('예약할 이달의 아트를 선택해 주세요');
+ const customNote=rawService==='수제디자인'?($('#qbCustomDesignNote')?.value.trim()||'고객 요청 수제디자인'):'';
+ const service=selectedArt?'이달의 아트 · '+selectedArt.name:rawService;
+ const serviceRecord=salonServices.find(x=>x.name===rawService)||salonServices.find(x=>x.name===service);
+ const duration=Number($('#qbDuration')?.value)||selectedArt?.time||serviceRecord?.duration_minutes||90;
+ const priceMap={'젤 원컬러':45000,'젤 아트':79000,'오마카세 아트':99000,'제거 + 젤 아트':89000,'수제디자인':89000};
+ const amount=selectedArt?(Number(selectedArt.salePrice)||Number(selectedArt.listPrice)||Number(selectedArt.price)||79000):(serviceRecord?.price||priceMap[rawService]||69000);
+ const payload={customer,phone,service,time,staff,duration,amount,date:bookingDateFromOffset(bookingDayOffset),note:customNote||'빠른 예약',artId:selectedArt?.id||null,artName:selectedArt?.name||null,designType:selectedArt?'monthly':rawService==='수제디자인'?'custom':null};
  const btn=$('#qbSaveBtn');if(btn)btn.disabled=true;
  try{
    if(salonCloudMode==='cloud'&&window.LudiaSalonCloud?.isConnected()){
-     await window.LudiaSalonCloud.saveAppointment({customer,phone,service,time,staff,duration,amount,date:bookingDateFromOffset(bookingDayOffset),note:'빠른 예약'});closeQuickBooking();toast(`${customer} · ${time} 예약 저장 · 실시간 반영`);return
+     await window.LudiaSalonCloud.saveAppointment(payload);closeQuickBooking();toast(customer+' · '+time+' 예약 저장 · 실시간 반영');return
    }
-   salonAppointments.push({id:Date.now(),dayOffset:bookingDayOffset,time,customer,service,staff,duration,amount,status:'대기',note:'빠른 예약에서 생성',membership:'확인 필요',last:'신규',source:'manual'});salonAppointments.sort((a,b)=>(a.dayOffset||0)-(b.dayOffset||0)||a.time.localeCompare(b.time));closeQuickBooking();renderBooking();if(bookingDayOffset===0)renderOpsToday();toast(`${customer} · ${time} 예약 저장`)
+   salonAppointments.push({id:Date.now(),dayOffset:bookingDayOffset,time,customer,service,staff,duration,amount,status:'대기',note:payload.note,membership:'확인 필요',last:'신규',source:'manual',artId:payload.artId,artName:payload.artName,designType:payload.designType});
+   salonAppointments.sort((a,b)=>(a.dayOffset||0)-(b.dayOffset||0)||a.time.localeCompare(b.time));closeQuickBooking();renderBooking();if(bookingDayOffset===0)renderOpsToday();toast(customer+' · '+time+' 예약 저장')
  }catch(error){console.error(error);toast('예약 저장에 실패했어요 · 연결 상태를 확인해 주세요')}finally{if(btn)btn.disabled=false}
 }
 function renderCustomers(){
@@ -332,6 +388,7 @@ function setView(v){
  if(v==='booking')renderBooking();
  if(v==='customers')renderCustomers();
  if(v==='library')syncCloudArtLibrary();
+ if(v==='collection'){renderMonthlyMenu();syncCloudArtLibrary()}
  window.scrollTo({top:0,behavior:'smooth'});
 }
 $$('[data-nav]').forEach(b=>b.onclick=()=>setView(b.dataset.nav));window.__ludiaNavBound=true;
@@ -601,59 +658,102 @@ async function syncCloudArtLibrary(){
   const cloud=await window.LudiaSalonCloud.loadArtDesigns();
   const local=state.library.filter(x=>!x.cloudArt);
   state.library=[...cloud,...local.filter(x=>!cloud.some(y=>String(y.id)===String(x.id)))];
-  renderLibrary();renderRecent();renderPicker();
+  renderLibrary();renderRecent();renderMonthlyMenu();renderBooking();
  }catch(error){console.warn('[LUDIA art library]',error)}
 }
 let designRegisterFile=null,designRegisterObjectUrl=null;
 function closeDesignRegister(){
- const sheet=$('#designRegisterSheet');if(!sheet)return;sheet.classList.remove('open');sheet.setAttribute('aria-hidden','true');document.body.style.overflow='';
+ const sheet=$('#designRegisterSheet');if(!sheet)return;sheet.classList.remove('open');sheet.setAttribute('aria-hidden','true');document.body.style.overflow='';monthlyEditingId=null
 }
 function resetDesignRegister(){
  designRegisterFile=null;if(designRegisterObjectUrl){URL.revokeObjectURL(designRegisterObjectUrl);designRegisterObjectUrl=null}
- ['designNameInput','designPriceInput','designTimeInput','designCategoryInput','designTagsInput','designMaterialsInput','designTechInput'].forEach(id=>{const el=$('#'+id);if(el)el.value=''});
+ ['designNameInput','designPriceInput','designSalePriceInput','designTimeInput','designCategoryInput','designTagsInput','designMaterialsInput','designTechInput'].forEach(id=>{const el=$('#'+id);if(el)el.value=''});
+ if($('#designMonthInput'))$('#designMonthInput').value=currentMonthKey(monthlyMenuOffset);
  if($('#designDifficultyInput'))$('#designDifficultyInput').value='보통';if($('#designStatusInput'))$('#designStatusInput').value='draft';
- $('#designDetailFields')?.classList.add('hidden');$('#designDetailToggle')?.classList.remove('open');
+ $('#designDetailFields')?.classList.add('hidden');$('#designDetailToggle')?.classList.remove('open');$('#monthlyDesignFields')?.classList.add('hidden');
  const img=$('#designPhotoPreview'),empty=$('#designPhotoEmpty');if(img){img.removeAttribute('src');img.classList.remove('visible')}if(empty)empty.classList.remove('hidden');
+ if($('#designRegisterKicker'))$('#designRegisterKicker').textContent='MY SALON LIBRARY';if($('#designRegisterTitle'))$('#designRegisterTitle').textContent='디자인 등록';if($('#designRegisterDesc'))$('#designRegisterDesc').textContent='사진·이름·가격·시간을 등록하고 보관함에서 관리합니다.'
 }
-function openDesignRegister(){
- resetDesignRegister();const sheet=$('#designRegisterSheet');if(!sheet)return;sheet.classList.add('open');sheet.setAttribute('aria-hidden','false');document.body.style.overflow='hidden';setTimeout(()=>$('#designNameInput')?.focus(),180);
+function openDesignRegister({monthly=false,design=null}={}){
+ resetDesignRegister();monthlyEditingId=design?.id||null;
+ if(monthly){
+   $('#monthlyDesignFields')?.classList.remove('hidden');if($('#designStatusInput'))$('#designStatusInput').value='monthly';
+   if($('#designRegisterKicker'))$('#designRegisterKicker').textContent='MONTHLY ART MENU';if($('#designRegisterTitle'))$('#designRegisterTitle').textContent=design?'이달의 아트 수정':'이달의 아트 메뉴 추가';if($('#designRegisterDesc'))$('#designRegisterDesc').textContent='대표 사진 · 디자인명 · 정가 · 할인가 · 노출 월을 관리합니다.'
+ }
+ if(design){
+   if($('#designNameInput'))$('#designNameInput').value=design.name||'';if($('#designPriceInput'))$('#designPriceInput').value=Number(design.listPrice??design.price)||0;if($('#designSalePriceInput'))$('#designSalePriceInput').value=Number(design.salePrice)||'';if($('#designMonthInput'))$('#designMonthInput').value=design.monthKey||currentMonthKey(monthlyMenuOffset);if($('#designTimeInput'))$('#designTimeInput').value=Number(design.time)||90;
+   if($('#designCategoryInput'))$('#designCategoryInput').value=design.category||'';if($('#designTagsInput'))$('#designTagsInput').value=(design.tags||[]).join(', ');if($('#designMaterialsInput'))$('#designMaterialsInput').value=(design.materials||[]).join(', ');if($('#designTechInput'))$('#designTechInput').value=design.tech||'';if($('#designDifficultyInput'))$('#designDifficultyInput').value=design.diff||'보통';if($('#designStatusInput'))$('#designStatusInput').value=monthly?'monthly':(design.projectStatus||'draft');
+   const img=$('#designPhotoPreview'),empty=$('#designPhotoEmpty');if(img&&design.img){img.src=design.img;img.classList.add('visible')}if(empty&&design.img)empty.classList.add('hidden')
+ }
+ const sheet=$('#designRegisterSheet');if(!sheet)return;sheet.classList.add('open');sheet.setAttribute('aria-hidden','false');document.body.style.overflow='hidden';setTimeout(()=>$('#designNameInput')?.focus(),180)
 }
 function readAsDataURL(file){return new Promise((resolve,reject)=>{const r=new FileReader();r.onload=()=>resolve(r.result);r.onerror=reject;r.readAsDataURL(file)})}
-$('#openDesignRegisterBtn')?.addEventListener('click',openDesignRegister);
+$('#openDesignRegisterBtn')?.addEventListener('click',()=>openDesignRegister());
+$('#addMonthlyArtBtn')?.addEventListener('click',()=>openDesignRegister({monthly:true}));
+$('#monthlyMenuEmptyAdd')?.addEventListener('click',()=>openDesignRegister({monthly:true}));
 $$('[data-close-design-register]').forEach(x=>x.addEventListener('click',closeDesignRegister));
 $('#designDetailToggle')?.addEventListener('click',()=>{$('#designDetailFields')?.classList.toggle('hidden');$('#designDetailToggle')?.classList.toggle('open')});
 $('#designPhotoInput')?.addEventListener('change',e=>{
  const file=e.target.files?.[0];if(!file)return;if(file.size>6*1024*1024){e.target.value='';return toast('사진은 6MB 이하로 등록해 주세요')}
  designRegisterFile=file;if(designRegisterObjectUrl)URL.revokeObjectURL(designRegisterObjectUrl);designRegisterObjectUrl=URL.createObjectURL(file);
- const img=$('#designPhotoPreview');if(img){img.src=designRegisterObjectUrl;img.classList.add('visible')}$('#designPhotoEmpty')?.classList.add('hidden');
+ const img=$('#designPhotoPreview');if(img){img.src=designRegisterObjectUrl;img.classList.add('visible')}$('#designPhotoEmpty')?.classList.add('hidden')
 });
 $('#saveRegisteredDesignBtn')?.addEventListener('click',async()=>{
- const name=$('#designNameInput')?.value.trim();if(!name)return toast('디자인 이름을 입력해 주세요');if(!designRegisterFile)return toast('대표 사진을 추가해 주세요');
- const price=Number($('#designPriceInput')?.value)||0,time=Number($('#designTimeInput')?.value)||0;
- const category=$('#designCategoryInput')?.value.trim()||'',tags=($('#designTagsInput')?.value||'').split(',').map(x=>x.trim()).filter(Boolean);
+ const name=$('#designNameInput')?.value.trim();if(!name)return toast('디자인 이름을 입력해 주세요');
+ const existing=monthlyEditingId?state.library.find(x=>String(x.id)===String(monthlyEditingId)):null;
+ if(!designRegisterFile&&!existing?.img)return toast('대표 사진을 추가해 주세요');
+ const listPrice=Number($('#designPriceInput')?.value)||0,salePrice=Number($('#designSalePriceInput')?.value)||0,time=Number($('#designTimeInput')?.value)||0;
+ const monthKey=$('#designMonthInput')?.value||'',category=$('#designCategoryInput')?.value.trim()||'',tags=($('#designTagsInput')?.value||'').split(',').map(x=>x.trim()).filter(Boolean);
  if(category&&!tags.includes(category))tags.unshift(category);
  const materials=($('#designMaterialsInput')?.value||'').split(',').map(x=>x.trim()).filter(Boolean),difficulty=$('#designDifficultyInput')?.value||'보통',status=$('#designStatusInput')?.value||'draft',tech=$('#designTechInput')?.value.trim()||'';
+ const monthly=status==='monthly';if(monthly&&!monthKey)return toast('노출 월을 선택해 주세요');
  const btn=$('#saveRegisteredDesignBtn');if(btn){btn.disabled=true;btn.textContent='저장 중…'}
  try{
   let saved;
-  if(window.LudiaSalonCloud?.isConnected?.()&&window.LudiaSalonCloud?.saveArtDesign){
-    saved=await window.LudiaSalonCloud.saveArtDesign({name,photoFile:designRegisterFile,price,time,tags,category,materials,difficulty,tech,status});
+  const payload={id:monthlyEditingId,name,photoFile:designRegisterFile,listPrice,price:listPrice,salePrice:monthly?salePrice:0,monthKey:monthly?monthKey:'',time,tags,category,materials,difficulty,tech,status};
+  if(window.LudiaSalonCloud?.isConnected?.()){
+    if(monthlyEditingId&&window.LudiaSalonCloud?.updateArtDesign)saved=await window.LudiaSalonCloud.updateArtDesign(payload);
+    else if(window.LudiaSalonCloud?.saveArtDesign)saved=await window.LudiaSalonCloud.saveArtDesign(payload);
   }else{
-    const dataUrl=await readAsDataURL(designRegisterFile);saved={id:'local-art-'+Date.now(),name,img:dataUrl,price,time,tags,status:status==='monthly'?'이달의아트':status==='favorite'?'즐겨찾기':'후보',diff:difficulty,materials,tech,desc:'',savedAt:new Date().toISOString()};
+    const imgData=designRegisterFile?await readAsDataURL(designRegisterFile):(existing?.img||null);
+    saved={...(existing||{}),id:existing?.id||'local-art-'+Date.now(),name,img:imgData,listPrice,salePrice:monthly?salePrice:0,monthKey:monthly?monthKey:'',price:(monthly&&salePrice)||listPrice,time,tags,status:monthly?'이달의아트':status==='favorite'?'즐겨찾기':'후보',projectStatus:status,diff:difficulty,materials,tech,category,desc:existing?.desc||'',savedAt:new Date().toISOString(),cloudArt:false}
   }
-  state.library=[saved,...state.library.filter(x=>String(x.id)!==String(saved.id))];renderLibrary();renderRecent();renderPicker();schedulePersist();closeDesignRegister();toast(window.LudiaSalonCloud?.isConnected?.()?'현재 샵 보관함에 저장했어요':'이 기기에 디자인을 저장했어요');
+  if(!saved)throw new Error('design save returned empty');
+  state.library=[saved,...state.library.filter(x=>String(x.id)!==String(saved.id))];renderLibrary();renderRecent();renderMonthlyMenu();renderBooking();schedulePersist();closeDesignRegister();toast(monthly?'이달의 아트 메뉴를 저장했어요':(window.LudiaSalonCloud?.isConnected?.()?'현재 샵 보관함에 저장했어요':'이 기기에 디자인을 저장했어요'))
  }catch(error){console.error('[LUDIA design register]',error);toast('디자인 저장에 실패했어요')}
  finally{if(btn){btn.disabled=false;btn.textContent='디자인 저장'}}
 });
 ['전체','즐겨찾기','베스트','이달의아트','실시술완료','자석','시럽','웨딩'].forEach((f,i)=>{const b=document.createElement('button');b.textContent=f;b.classList.toggle('active',i===0);b.onclick=()=>{state.filter=f;$$('#libraryFilters button').forEach(x=>x.classList.remove('active'));b.classList.add('active');renderLibrary()};$('#libraryFilters').appendChild(b)});$('#librarySearch').oninput=renderLibrary;
 
-function renderPicker(){const data=state.library.length?state.library:baseDesigns;$('#pickerGrid').innerHTML='';data.forEach(d=>{const a=document.createElement('article');a.className='picker-card'+(state.collection.has(d.id)?' selected':'');a.innerHTML=`<span class="picker-check">${state.collection.has(d.id)?'✓':'+'}</span>${designPreviewHTML(d,'picker')}<b>${d.name}</b>`;a.onclick=()=>{if(state.collection.has(d.id))state.collection.delete(d.id);else if(state.collection.size<6)state.collection.add(d.id);else return toast('6개까지 선택할 수 있어요');renderPicker();renderCollectionPreview();schedulePersist()};$('#pickerGrid').appendChild(a)});const count=state.collection.size;$('#collectionCount').textContent=`${count} / 6`;$('#collectionProgress').style.width=`${count/6*100}%`}
-function renderCollectionPreview(){const data=state.library.length?state.library:baseDesigns;const chosen=data.filter(d=>state.collection.has(d.id)).slice(0,6);const box=$('#previewGrid');box.innerHTML='';for(let i=0;i<6;i++){const d=chosen[i];const x=document.createElement('div');x.className='preview-item'+(d?'':' empty');x.innerHTML=d?`${designPreviewHTML(d,'collection')}<span class="preview-price">${money(d.price)}</span>`:`<span>${i+1}</span>`;box.appendChild(x)}}
-$('#shuffleCollection').onclick=()=>{state.collection.clear();(state.library.length?state.library:baseDesigns).slice(0,6).forEach(d=>state.collection.add(d.id));renderPicker();renderCollectionPreview();schedulePersist();toast('6개를 자동 구성했어요')};
-$$('#outputMode button').forEach(b=>b.onclick=()=>{$$('#outputMode button').forEach(x=>x.classList.remove('active'));b.classList.add('active');state.outputMode=b.dataset.mode;$('#collectionPreview').className='collection-preview '+b.dataset.mode;schedulePersist()});$('#exportBtn').onclick=()=>toast('출력 미리보기까지 준비됐어요 · 실제 PNG 저장은 다음 연결 단계');
+async function removeMonthlyArt(design){
+ if(!design)return;
+ const payload={id:design.id,name:design.name,photoFile:null,listPrice:Number(design.listPrice??design.price)||0,salePrice:0,monthKey:'',time:Number(design.time)||0,tags:design.tags||[],category:design.category||'',materials:design.materials||[],difficulty:design.diff||'보통',tech:design.tech||'',description:design.desc||'',status:'draft'};
+ try{
+   let saved;
+   if(design.cloudArt&&window.LudiaSalonCloud?.isConnected?.()&&window.LudiaSalonCloud?.updateArtDesign)saved=await window.LudiaSalonCloud.updateArtDesign(payload);
+   else saved={...design,status:'후보',projectStatus:'draft',monthKey:'',salePrice:0,price:Number(design.listPrice??design.price)||0};
+   state.library=[saved,...state.library.filter(x=>String(x.id)!==String(design.id))];renderMonthlyMenu();renderLibrary();renderBooking();schedulePersist();toast('이달의 아트 메뉴에서 내렸어요')
+ }catch(error){console.error('[LUDIA monthly remove]',error);toast('메뉴 변경에 실패했어요')}
+}
+function renderMonthlyMenu(){
+ const grid=$('#monthlyMenuGrid'),empty=$('#monthlyMenuEmpty');if(!grid)return;
+ const key=currentMonthKey(monthlyMenuOffset),items=monthlyMenuItems(key);if($('#monthlyMenuLabel'))$('#monthlyMenuLabel').textContent=monthKeyLabel(key);if($('#monthlyMenuCount'))$('#monthlyMenuCount').textContent=items.length+'개 메뉴';
+ grid.innerHTML='';empty?.classList.toggle('hidden',items.length>0);
+ items.forEach(d=>{
+   const card=document.createElement('article');card.className='monthly-menu-card';
+   const list=Number(d.listPrice??d.price)||0,sale=Number(d.salePrice)||0;
+   card.innerHTML='<div class="monthly-menu-photo"><img src="'+(d.img||'assets/nail_5.jpg')+'" alt="'+d.name+'"></div><div class="monthly-menu-copy"><span>이달의 아트</span><b>'+d.name+'</b><div class="monthly-menu-price">'+(sale?'<s>'+money(list)+'</s><strong>'+money(sale)+'</strong>':'<strong>'+money(list)+'</strong>')+'</div><small>'+(d.time?d.time+'분 · ':'')+monthKeyLabel(key)+'</small><div class="monthly-menu-actions"><button type="button" data-edit>수정</button><button type="button" data-remove>메뉴에서 내리기</button></div></div>';
+   card.querySelector('[data-edit]').onclick=()=>openDesignRegister({monthly:true,design:d});card.querySelector('[data-remove]').onclick=()=>removeMonthlyArt(d);grid.appendChild(card)
+ });
+ if($('#qbService')?.value==='이달의 아트')renderQuickMonthlyArts()
+}
+$('#monthlyMenuPrev')?.addEventListener('click',()=>{monthlyMenuOffset--;renderMonthlyMenu()});
+$('#monthlyMenuNext')?.addEventListener('click',()=>{monthlyMenuOffset++;renderMonthlyMenu()});
 
+function renderPicker(){renderMonthlyMenu()}
+function renderCollectionPreview(){renderMonthlyMenu()}
 function renderSettings(){$('#dnaList').replaceChildren(...DNA.map(d=>{const r=document.createElement('div');r.className='dna-row';r.innerHTML=`<div class="dna-info"><b>${d.name}</b><small>${d.desc}</small></div><span class="dna-score">${d.score}%</span>`;return r}));$('#inventoryList').replaceChildren(...inventory.map(x=>{const r=document.createElement('div');r.className='inventory-row';r.innerHTML=`<div class="inventory-info"><b>${x.name}</b><small>${x.state} · ${x.qty}</small></div><span class="stock-dot ${x.state==='부족'?'low':x.state==='품절'?'out':''}"></span>`;return r}))}
-function hydrateFromState(){if($('#homePrompt'))$('#homePrompt').value=state.draft.homePrompt||'';if($('#conceptInput'))$('#conceptInput').value=state.draft.concept||'';if($('#maxTime'))$('#maxTime').value=String(state.draft.maxTime||'90');if($('#targetPrice'))$('#targetPrice').value=String(state.draft.targetPrice||'69000');if($('#stockFirst'))$('#stockFirst').checked=state.draft.stockFirst!==false;if(state.draft.refDataUrl){$('#refPreviewImg').src=state.draft.refDataUrl;$('#refEmpty').classList.add('hidden');$('#refPreview').classList.remove('hidden')}else{$('#refPreview').classList.add('hidden');$('#refEmpty').classList.remove('hidden')}$$('#outputMode button').forEach(b=>b.classList.toggle('active',b.dataset.mode===state.outputMode));$('#collectionPreview').className='collection-preview '+state.outputMode}
+function hydrateFromState(){if($('#homePrompt'))$('#homePrompt').value=state.draft.homePrompt||'';if($('#conceptInput'))$('#conceptInput').value=state.draft.concept||'';if($('#maxTime'))$('#maxTime').value=String(state.draft.maxTime||'90');if($('#targetPrice'))$('#targetPrice').value=String(state.draft.targetPrice||'69000');if($('#stockFirst'))$('#stockFirst').checked=state.draft.stockFirst!==false;if(state.draft.refDataUrl){$('#refPreviewImg').src=state.draft.refDataUrl;$('#refEmpty').classList.add('hidden');$('#refPreview').classList.remove('hidden')}else{$('#refPreview').classList.add('hidden');$('#refEmpty').classList.remove('hidden')}$('#outputMode button').forEach(b=>b.classList.toggle('active',b.dataset.mode===state.outputMode));if($('#collectionPreview'))$('#collectionPreview').className='collection-preview '+state.outputMode}
 function renderAll(){renderDNAChips();renderConditions();renderNails();renderLibrary();renderRecent();renderPicker();renderCollectionPreview();renderSettings();updateBrief();updateStorageStats();renderDirectStudioPreview()}
 function installCoreNavigation(){
  document.addEventListener('click',event=>{

@@ -370,6 +370,35 @@
 
         <div class="art-live-stage" id="artLiveStage" aria-label="실시간 네일 디자인 미리보기"></div>
 
+        <section class="nail-canvas-pro" id="nailCanvasPro">
+          <div class="nail-canvas-head">
+            <div><span class="mini-label">NAIL CANVAS</span><b>한 손톱 상세 편집</b></div>
+            <button type="button" id="nailCanvasDone">완료</button>
+          </div>
+          <div class="nail-canvas-stage">
+            <canvas id="nailDrawCanvas" width="720" height="720" aria-label="손톱 드로잉 캔버스"></canvas>
+            <div class="nail-canvas-empty"><span>손톱을 하나 선택하세요</span><small>선택한 손톱을 크게 확대해 직접 그릴 수 있어요.</small></div>
+          </div>
+          <div class="nail-canvas-tray">
+            <div class="nail-tool-tabs" id="nailToolTabs">
+              <button class="active" data-nail-tool="color">컬러</button><button data-nail-tool="draw">그리기</button><button data-nail-tool="parts">파츠</button><button data-nail-tool="layers">레이어</button>
+            </div>
+            <div class="nail-tool-panel active" data-nail-panel="color">
+              <div class="nail-subtabs"><button class="active" data-color-group="favorite">♡ 즐겨찾기</button><button data-color-group="all">전체</button><button data-color-group="syrup">시럽</button><button data-color-group="nude">누드</button><button data-color-group="magnet">자석</button><button data-color-group="glitter">글리터</button></div>
+              <div class="nail-swatch-scroll" id="nailProColors"></div>
+            </div>
+            <div class="nail-tool-panel" data-nail-panel="draw">
+              <div class="nail-draw-tools"><button class="active" data-brush="pen">펜</button><button data-brush="line">라인</button><button data-brush="dot">도트</button><button data-brush="air">에어</button><label>굵기 <input id="nailBrushSize" type="range" min="2" max="34" value="9"></label><button id="nailClearDrawing">지우기</button></div>
+            </div>
+            <div class="nail-tool-panel" data-nail-panel="parts">
+              <div class="nail-subtabs"><button class="active" data-parts-group="favorite">♡ 즐겨찾기</button><button data-parts-group="stone">스톤</button><button data-parts-group="pearl">진주</button><button data-parts-group="metal">메탈</button><button data-parts-group="ribbon">리본</button><button data-parts-group="flower">플라워</button><button data-parts-group="mine">내 파츠</button></div>
+              <div class="nail-parts-scroll" id="nailProParts"></div>
+              <label class="nail-part-upload">＋ 내 파츠 등록<input id="nailPartUpload" type="file" accept="image/*" hidden></label>
+            </div>
+            <div class="nail-tool-panel" data-nail-panel="layers"><div class="nail-layer-list"><div><span>◉</span><b>파츠</b><small>위</small></div><div><span>◉</span><b>드로잉</b><small>중간</small></div><div><span>◉</span><b>베이스 컬러</b><small>아래</small></div></div></div>
+          </div>
+        </section>
+
         <div class="instant-editor compact-picker">
           <div class="instant-editor-head"><div><b>수정할 손가락</b><small>하나 또는 여러 개 선택</small></div><span id="liveEditState">전체 선택</span></div>
           <div class="hand-editor" id="handEditor" aria-label="손가락별 디자인 편집"></div>

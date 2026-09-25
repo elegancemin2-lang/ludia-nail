@@ -76,5 +76,47 @@ window.LudiaSalonCloud=(()=>{
   function openAuthSheet(){renderAuthSheet();const sheet=$('#cloudAuthSheet');sheet?.classList.add('open');sheet?.setAttribute('aria-hidden','false');document.body.style.overflow='hidden'}
   function closeAuthSheet(){const sheet=$('#cloudAuthSheet');sheet?.classList.remove('open');sheet?.setAttribute('aria-hidden','true');document.body.style.overflow=''}
   async function getAccessToken(){if(!client)return null;const {data}=await client.auth.getSession();return data?.session?.access_token||null}
-  return{init,refresh,signIn,signOut,saveAppointment,updateAppointmentStatus,getCustomer360,openAuthSheet,getAccessToken,getState:()=>({...state}),getLastPayload:()=>lastPayload,isConnected:()=>state.connected};
+  async function loadArtDesigns(){
+    if(!client||!salonId)return [];
+    const {data:projects,error:pErr}=await client.from('ludia_art_projects').select('id,title,status,tags,created_at,updated_at').eq('salon_id',salonId).order('updated_at',{ascending:false}).limit(300);
+    if(pErr)throw pErr;if(!projects?.length)return [];
+    const ids=projects.map(x=>x.id);
+    const {data:snaps,error:sErr}=await client.from('ludia_art_design_snapshots').select('project_id,design_json,preview_image_url,estimated_price,estimated_duration_min,created_at').in('project_id',ids).order('created_at',{ascending:false});
+    if(sErr)throw sErr;
+    const firstSnap=new Map();(snaps||[]).forEach(x=>{if(!firstSnap.has(x.project_id))firstSnap.set(x.project_id,x)});
+    const out=[];
+    for(const p of projects){
+      const s=firstSnap.get(p.id)||{},meta=s.design_json||{};let img=null;
+      if(s.preview_image_url){
+        const {data}=await client.storage.from('ludia-art').createSignedUrl(s.preview_image_url,3600);
+        img=data?.signedUrl||null;
+      }
+      out.push({id:p.id,name:p.title,status:p.status==='monthly'?'이달의아트':p.status==='favorite'?'즐겨찾기':'후보',tags:p.tags||[],img,price:s.estimated_price||meta.price||0,time:s.estimated_duration_min||meta.time||0,diff:meta.difficulty||'보통',materials:Array.isArray(meta.materials)?meta.materials:[],tech:meta.tech||'',desc:meta.description||'',category:meta.category||'',savedAt:p.updated_at||p.created_at,cloudArt:true});
+    }
+    return out;
+  }
+  async function saveArtDesign({name,photoFile,price,time,tags=[],category='',materials=[],difficulty='보통',tech='',description='',status='draft'}){
+    if(!client||!user||!salonId)throw new Error('salon authentication required');
+    const title=String(name||'').trim();if(!title)throw new Error('design name required');
+    const {data:project,error:pErr}=await client.from('ludia_art_projects').insert({salon_id:salonId,title,purpose:'salon_library',status,tags,created_by:user.id}).select('id,title,status,tags,created_at,updated_at').single();
+    if(pErr)throw pErr;
+    let path=null;
+    try{
+      if(photoFile){
+        const ext=(photoFile.name?.split('.').pop()||'jpg').toLowerCase().replace(/[^a-z0-9]/g,'')||'jpg';
+        path=`${salonId}/designs/${project.id}/cover-${Date.now()}.${ext}`;
+        const {error:uErr}=await client.storage.from('ludia-art').upload(path,photoFile,{cacheControl:'3600',upsert:false,contentType:photoFile.type||'image/jpeg'});
+        if(uErr)throw uErr;
+      }
+      const meta={price:Number(price)||0,time:Number(time)||0,category,materials,difficulty,tech,description};
+      const {error:sErr}=await client.from('ludia_art_design_snapshots').insert({project_id:project.id,source_type:'manual',design_json:meta,preview_image_url:path,render_status:'ready',estimated_price:Number(price)||null,estimated_duration_min:Number(time)||null});
+      if(sErr)throw sErr;
+      const designs=await loadArtDesigns();return designs.find(x=>x.id===project.id)||{...project,name:title,img:null,price:Number(price)||0,time:Number(time)||0,tags,materials,tech,desc:description,cloudArt:true};
+    }catch(error){
+      try{await client.from('ludia_art_projects').delete().eq('id',project.id)}catch(_){}
+      if(path)try{await client.storage.from('ludia-art').remove([path])}catch(_){}
+      throw error;
+    }
+  }
+  return{init,refresh,signIn,signOut,saveAppointment,updateAppointmentStatus,getCustomer360,loadArtDesigns,saveArtDesign,openAuthSheet,getAccessToken,getState:()=>({...state}),getLastPayload:()=>lastPayload,isConnected:()=>state.connected};
 })();

@@ -68,6 +68,7 @@ const DEMO_CUSTOMERS=[
 let salonCustomers=DEMO_CUSTOMERS.map(x=>({...x}));
 let salonStaffNames=['루디아','지안'],salonServices=[],salonCloudMode='demo';
 let bookingStaff='전체', bookingDayOffset=0, activeAppointment=null;
+let customerPage=1;const CUSTOMER_PAGE_SIZE=8;
 
 function won(v){return Math.round(v/10000*10)/10+'만'}
 function renderOpsToday(){
@@ -174,15 +175,24 @@ async function saveQuickBooking(){
 function renderCustomers(){
  const q=($('#customerSearch')?.value||'').trim().toLowerCase();
  const data=salonCustomers.filter(c=>!q||[c.name,c.phone,c.note,...c.tags].join(' ').toLowerCase().includes(q));
- const box=$('#customerGrid');if(!box)return;box.innerHTML='';data.forEach(c=>{const a=document.createElement('article');a.className='customer-card panel';a.innerHTML=`<div class="customer-top"><img src="${c.img}" alt=""><div><b>${c.name}</b><small>${c.phone} · ${c.visit}회 방문</small></div><em>${c.last}</em></div><p>${c.note}</p><div class="customer-tags">${c.tags.map(t=>`<span>${t}</span>`).join('')}</div><div class="customer-foot"><span>회원권</span><b>${c.membership}</b></div>`;a.onclick=()=>toast(`${c.name} 고객카드 · 상세 연결 준비됨`);box.appendChild(a)})}
+ const pages=Math.max(1,Math.ceil(data.length/CUSTOMER_PAGE_SIZE));customerPage=Math.min(Math.max(1,customerPage),pages);
+ const start=(customerPage-1)*CUSTOMER_PAGE_SIZE,pageData=data.slice(start,start+CUSTOMER_PAGE_SIZE);
+ const box=$('#customerGrid');if(!box)return;box.innerHTML='';
+ pageData.forEach(c=>{const a=document.createElement('article');a.className='customer-card panel';a.innerHTML=`<div class="customer-top"><img src="${c.img}" alt=""><div><b>${c.name}</b><small>${c.phone}</small></div><em>${c.visit}회</em></div><p>${c.note||'고객 메모 없음'}</p><div class="customer-tags">${(c.tags||[]).slice(0,3).map(t=>`<span>${t}</span>`).join('')}</div><div class="customer-foot"><span>${c.last||'신규'} 방문</span><b>${c.membership}</b></div>`;a.onclick=()=>toast(`${c.name} 고객카드 · 상세 연결 준비됨`);box.appendChild(a)});
+ const nav=$('#customerPagination'),indicator=$('#customerPageIndicator'),prev=$('#customerPrevPage'),next=$('#customerNextPage');
+ if(nav)nav.classList.toggle('hidden',data.length<=CUSTOMER_PAGE_SIZE);
+ if(indicator){indicator.innerHTML='';for(let p=1;p<=pages;p++){const b=document.createElement('button');b.type='button';b.textContent=String(p);b.className=p===customerPage?'active':'';b.setAttribute('aria-label',`${p}페이지`);b.onclick=()=>{customerPage=p;renderCustomers();window.scrollTo({top:0,behavior:'smooth'})};indicator.appendChild(b)}}
+ if(prev){prev.disabled=customerPage<=1;prev.onclick=()=>{if(customerPage>1){customerPage--;renderCustomers();window.scrollTo({top:0,behavior:'smooth'})}}}
+ if(next){next.disabled=customerPage>=pages;next.onclick=()=>{if(customerPage<pages){customerPage++;renderCustomers();window.scrollTo({top:0,behavior:'smooth'})}}}
+}
 
 function applyCloudSalonData(payload){
- salonCloudMode='cloud';salonAppointments=payload.appointments||[];salonCustomers=payload.customers||[];salonStaffNames=payload.staffNames?.length?payload.staffNames:['미지정'];salonServices=payload.services||[];
+ salonCloudMode='cloud';salonAppointments=payload.appointments||[];salonCustomers=payload.customers||[];customerPage=1;salonStaffNames=payload.staffNames?.length?payload.staffNames:['미지정'];salonServices=payload.services||[];
  if(bookingStaff!=='전체'&&!salonStaffNames.includes(bookingStaff))bookingStaff='전체';
  syncQuickBookingOptions();renderOpsToday();renderBooking();renderCustomers();updateCloudAccountStatus({configured:true,connected:true,salonName:payload.salonName,email:payload.email,realtime:'live'});syncCloudArtLibrary();syncProfilePhoto();
 }
 function resetCloudSalonData(){
- salonCloudMode='demo';salonAppointments=DEMO_APPOINTMENTS.map(x=>({...x}));salonCustomers=DEMO_CUSTOMERS.map(x=>({...x}));salonStaffNames=['루디아','지안'];salonServices=[];bookingStaff='전체';renderOpsToday();renderBooking();renderCustomers();setProfilePhoto(null)
+ salonCloudMode='demo';salonAppointments=DEMO_APPOINTMENTS.map(x=>({...x}));salonCustomers=DEMO_CUSTOMERS.map(x=>({...x}));customerPage=1;salonStaffNames=['루디아','지안'];salonServices=[];bookingStaff='전체';renderOpsToday();renderBooking();renderCustomers();setProfilePhoto(null)
 }
 function updateCloudAccountStatus(status={}){
  const label=$('#cloudAccountStatus'),badge=$('#cloudAccountBadge');if(!label||!badge)return;
@@ -593,7 +603,7 @@ $('#exportBackupBtn').onclick=exportBackup;$('#importBackupBtn').onclick=()=>$('
 $$('[data-close-ops]').forEach(x=>x.onclick=closeOpsDetail);
 $('#opsStatusBtn').onclick=async()=>{if(!activeAppointment||activeAppointment.status==='완료')return;const next=activeAppointment.status==='대기'?'진행중':'완료';const btn=$('#opsStatusBtn');btn.disabled=true;try{if(salonCloudMode==='cloud'&&activeAppointment.cloudId&&window.LudiaSalonCloud?.isConnected()){await window.LudiaSalonCloud.updateAppointmentStatus(activeAppointment.cloudId,next);toast(next==='진행중'?'시술을 시작했어요':'시술 완료로 변경했어요')}else{activeAppointment.status=next;toast(next==='진행중'?'시술을 시작했어요':'시술 완료로 변경했어요');renderOpsToday();renderBooking()}closeOpsDetail()}catch(error){console.error(error);toast('상태 변경에 실패했어요')}finally{btn.disabled=false}};
 $('#opsCustomerBtn').onclick=()=>{if(!activeAppointment)return;closeOpsDetail();setView('customers');const input=$('#customerSearch');input.value=activeAppointment.customer;renderCustomers()};
-$('#customerSearch').oninput=renderCustomers;
+$('#customerSearch').oninput=()=>{customerPage=1;renderCustomers()};
 $('#quickAddBooking').onclick=()=>openQuickBooking('13:00',bookingStaff==='전체'?(salonStaffNames[0]||'루디아'):bookingStaff);
 const homeQuickAdd=$('#homeQuickAdd');if(homeQuickAdd)homeQuickAdd.onclick=()=>{bookingDayOffset=0;renderBooking();openQuickBooking('13:00',salonStaffNames[0]||'루디아')};
 $('#newCustomerBtn').onclick=()=>toast('고객 등록은 이름·연락처만 먼저 받고 나머지는 시술 후 채우는 방식으로 연결할게요');

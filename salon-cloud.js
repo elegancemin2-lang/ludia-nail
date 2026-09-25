@@ -13,6 +13,15 @@ window.LudiaSalonCloud=(()=>{
   const normalizePhone=value=>String(value||'').replace(/\D/g,'');
   const uiStatus=status=>({completed:'완료',in_service:'진행중',arrived:'대기',confirmed:'대기',pending:'대기',cancelled:'취소',no_show:'노쇼'}[status]||'대기');
   const dbStatus=status=>status==='완료'?'completed':status==='진행중'?'in_service':status==='취소'?'cancelled':'confirmed';
+  const APPOINTMENT_META_PREFIX='LUDIA_META:';
+  const encodeAppointmentMemo=payload=>{
+    const meta={note:payload.note||'',artId:payload.artId||null,artName:payload.artName||null,designType:payload.designType||null};
+    return meta.artId||meta.artName||meta.designType?APPOINTMENT_META_PREFIX+JSON.stringify(meta):(payload.note||'')
+  };
+  const decodeAppointmentMemo=memo=>{
+    const raw=String(memo||'');if(!raw.startsWith(APPOINTMENT_META_PREFIX))return{note:raw,artId:null,artName:null,designType:null};
+    try{return{note:'',artId:null,artName:null,designType:null,...JSON.parse(raw.slice(APPOINTMENT_META_PREFIX.length))}}catch(_){return{note:raw,artId:null,artName:null,designType:null}}
+  };
   const membershipText=row=>{if(!row)return'없음';if(row.kind==='amount')return `${row.name_snapshot} ${Math.max(0,row.remaining_amount||0).toLocaleString('ko-KR')}원`;return `${row.name_snapshot} ${Math.max(0,row.remaining_count||0)}회`;};
   function emitStatus(patch={}){Object.assign(state,patch);callbacks.onStatus?.({...state});renderAuthSheet()}
   function fail(message,error){console.error('[LUDIA Salon Cloud]',error||message);emitStatus({loading:false,error:message,realtime:'offline'})}
@@ -44,7 +53,7 @@ window.LudiaSalonCloud=(()=>{
       staffRecords=staffQ.data||[];serviceRecords=serviceQ.data||[];const staffMap=new Map(staffRecords.map(x=>[x.user_id,x.display_name]));const membershipMap=new Map();(membershipQ.data||[]).forEach(x=>{if(!membershipMap.has(x.customer_id))membershipMap.set(x.customer_id,x)});
       const customersRaw=customerQ.data||[],customerMap=new Map(customersRaw.map(x=>[x.id,x])),todayKey=kstDateKey(new Date());const keyDay=key=>Math.round((Date.parse(key+'T00:00:00Z')-Date.parse(todayKey+'T00:00:00Z'))/86400000);
       const customers=customersRaw.map((c,i)=>({cloudId:c.id,name:c.name,phone:c.phone||'연락처 없음',visit:c.visit_count||0,last:shortDate(c.last_visit_at),tags:Array.isArray(c.tags)?c.tags:[],membership:membershipText(membershipMap.get(c.id)),note:c.memo||'',img:`assets/nail_${i%5+1}.jpg`,preferences:c.preferences||{}}));
-      const appointments=(appointmentQ.data||[]).map(a=>{const customer=customerMap.get(a.customer_id),start=new Date(a.starts_at),end=new Date(a.ends_at);return{id:a.id,cloudId:a.id,dayOffset:keyDay(kstDateKey(start)),time:kstTime(start),customer:a.customer_name_snapshot||customer?.name||'고객',service:a.service_name_snapshot||'시술',staff:staffMap.get(a.staff_user_id)||'미지정',staffUserId:a.staff_user_id,serviceId:a.service_id,duration:Math.max(5,Math.round((end-start)/60000)),amount:a.price||0,status:uiStatus(a.status),dbStatus:a.status,source:a.source||'manual',note:a.memo||'',membership:membershipText(membershipMap.get(a.customer_id)),last:shortDate(customer?.last_visit_at)}});
+      const appointments=(appointmentQ.data||[]).map(a=>{const customer=customerMap.get(a.customer_id),start=new Date(a.starts_at),end=new Date(a.ends_at),meta=decodeAppointmentMemo(a.memo);return{id:a.id,cloudId:a.id,dayOffset:keyDay(kstDateKey(start)),time:kstTime(start),customer:a.customer_name_snapshot||customer?.name||'고객',service:a.service_name_snapshot||'시술',staff:staffMap.get(a.staff_user_id)||'미지정',staffUserId:a.staff_user_id,serviceId:a.service_id,duration:Math.max(5,Math.round((end-start)/60000)),amount:a.price||0,status:uiStatus(a.status),dbStatus:a.status,source:a.source||'manual',note:meta.note||'',artId:meta.artId||null,artName:meta.artName||null,designType:meta.designType||null,membership:membershipText(membershipMap.get(a.customer_id)),last:shortDate(customer?.last_visit_at)}});
       const payload={appointments,customers,staffNames:staffRecords.map(x=>x.display_name),staffRecords:[...staffRecords],services:[...serviceRecords],salonName:salonQ.data?.name||'',email:user.email||''};lastPayload=payload;callbacks.applyData?.(payload);emitStatus({loading:false,connected:true,salonName:payload.salonName,email:user.email||'',error:null});subscribeRealtime();
     }catch(error){fail('샵 데이터를 불러오지 못했어요',error)}
   }
@@ -61,7 +70,7 @@ window.LudiaSalonCloud=(()=>{
     if(!customerId&&phone){const {data:found,error}=await client.from('ludia_customers').select('id').eq('salon_id',salonId).eq('phone_normalized',phone).limit(1);if(error)throw error;customerId=found?.[0]?.id||null}else if(!customerId&&!phone){const {data:found,error}=await client.from('ludia_customers').select('id').eq('salon_id',salonId).eq('name',payload.customer).limit(2);if(error)throw error;if(found?.length===1)customerId=found[0].id}
     if(!customerId){const {data:created,error}=await client.from('ludia_customers').insert({salon_id:salonId,name:payload.customer,phone:payload.phone||null,phone_normalized:phone||null}).select('id').single();if(error)throw error;customerId=created.id}
     const staff=staffRecords.find(x=>x.display_name===payload.staff)||null,service=serviceRecords.find(x=>x.name===payload.service)||null,[hour,minute]=payload.time.split(':').map(Number),d=payload.date,startsAt=new Date(Date.UTC(d.getFullYear(),d.getMonth(),d.getDate(),hour-9,minute||0,0)),endsAt=new Date(startsAt.getTime()+payload.duration*60000),price=service?.price??payload.amount??0;
-    const {error}=await client.from('ludia_appointments').insert({salon_id:salonId,customer_id:customerId,staff_user_id:staff?.user_id||null,service_id:service?.id||null,source:'manual',customer_name_snapshot:payload.customer,customer_phone_snapshot:payload.phone||null,service_name_snapshot:payload.service,starts_at:startsAt.toISOString(),ends_at:endsAt.toISOString(),status:'confirmed',price,memo:payload.note||''});if(error)throw error;await loadData();return true;
+    const {error}=await client.from('ludia_appointments').insert({salon_id:salonId,customer_id:customerId,staff_user_id:staff?.user_id||null,service_id:service?.id||null,source:'manual',customer_name_snapshot:payload.customer,customer_phone_snapshot:payload.phone||null,service_name_snapshot:payload.service,starts_at:startsAt.toISOString(),ends_at:endsAt.toISOString(),status:'confirmed',price,memo:encodeAppointmentMemo(payload)});if(error)throw error;await loadData();return true;
   }
   async function updateAppointmentStatus(id,nextStatus){if(!client||!salonId||!id)return false;const {error}=await client.from('ludia_appointments').update({status:dbStatus(nextStatus)}).eq('id',id).eq('salon_id',salonId);if(error)throw error;await loadData();return true}
   async function getCustomer360(customerId){if(!client||!salonId||!customerId)throw new Error('customer context unavailable');const {data,error}=await client.rpc('ludia_customer_360',{p_salon_id:salonId,p_customer_id:customerId});if(error)throw error;return data}
@@ -103,7 +112,7 @@ window.LudiaSalonCloud=(()=>{
   }
   async function loadArtDesigns(){
     if(!client||!salonId)return [];
-    const {data:projects,error:pErr}=await client.from('ludia_art_projects').select('id,title,status,tags,created_at,updated_at').eq('salon_id',salonId).order('updated_at',{ascending:false}).limit(300);
+    const {data:projects,error:pErr}=await client.from('ludia_art_projects').select('id,title,status,tags,created_at,updated_at').eq('salon_id',salonId).neq('status','archived').order('updated_at',{ascending:false}).limit(300);
     if(pErr)throw pErr;if(!projects?.length)return [];
     const ids=projects.map(x=>x.id);
     const {data:snaps,error:sErr}=await client.from('ludia_art_design_snapshots').select('project_id,design_json,preview_image_url,estimated_price,estimated_duration_min,created_at').in('project_id',ids).order('created_at',{ascending:false});
@@ -116,32 +125,56 @@ window.LudiaSalonCloud=(()=>{
         const {data}=await client.storage.from('ludia-art').createSignedUrl(s.preview_image_url,3600);
         img=data?.signedUrl||null;
       }
-      out.push({id:p.id,name:p.title,status:p.status==='monthly'?'이달의아트':p.status==='favorite'?'즐겨찾기':'후보',tags:p.tags||[],img,price:s.estimated_price||meta.price||0,time:s.estimated_duration_min||meta.time||0,diff:meta.difficulty||'보통',materials:Array.isArray(meta.materials)?meta.materials:[],tech:meta.tech||'',desc:meta.description||'',category:meta.category||'',savedAt:p.updated_at||p.created_at,cloudArt:true});
+      const listPrice=Number(meta.listPrice??meta.price??s.estimated_price??0)||0;
+      const salePrice=Number(meta.salePrice||0)||0;
+      out.push({
+        id:p.id,name:p.title,status:p.status==='monthly'?'이달의아트':p.status==='favorite'?'즐겨찾기':'후보',projectStatus:p.status,
+        tags:p.tags||[],img,previewPath:s.preview_image_url||null,
+        price:salePrice||listPrice,listPrice,salePrice,monthKey:meta.monthKey||'',
+        time:s.estimated_duration_min||meta.time||0,diff:meta.difficulty||'보통',
+        materials:Array.isArray(meta.materials)?meta.materials:[],tech:meta.tech||'',desc:meta.description||'',category:meta.category||'',
+        savedAt:p.updated_at||p.created_at,cloudArt:true
+      });
     }
     return out;
   }
-  async function saveArtDesign({name,photoFile,price,time,tags=[],category='',materials=[],difficulty='보통',tech='',description='',status='draft'}){
+  async function uploadArtPhoto(projectId,photoFile){
+    if(!photoFile)return null;
+    const ext=(photoFile.name?.split('.').pop()||'jpg').toLowerCase().replace(/[^a-z0-9]/g,'')||'jpg';
+    const path=`${salonId}/designs/${projectId}/cover-${Date.now()}.${ext}`;
+    const {error}=await client.storage.from('ludia-art').upload(path,photoFile,{cacheControl:'3600',upsert:false,contentType:photoFile.type||'image/jpeg'});
+    if(error)throw error;return path;
+  }
+  async function saveArtDesign({name,photoFile,price,listPrice,salePrice=0,monthKey='',time,tags=[],category='',materials=[],difficulty='보통',tech='',description='',status='draft'}){
     if(!client||!user||!salonId)throw new Error('salon authentication required');
     const title=String(name||'').trim();if(!title)throw new Error('design name required');
+    const normalList=Number(listPrice??price)||0,normalSale=Number(salePrice)||0,effectivePrice=normalSale||normalList;
     const {data:project,error:pErr}=await client.from('ludia_art_projects').insert({salon_id:salonId,title,purpose:'salon_library',status,tags,created_by:user.id}).select('id,title,status,tags,created_at,updated_at').single();
     if(pErr)throw pErr;
     let path=null;
     try{
-      if(photoFile){
-        const ext=(photoFile.name?.split('.').pop()||'jpg').toLowerCase().replace(/[^a-z0-9]/g,'')||'jpg';
-        path=`${salonId}/designs/${project.id}/cover-${Date.now()}.${ext}`;
-        const {error:uErr}=await client.storage.from('ludia-art').upload(path,photoFile,{cacheControl:'3600',upsert:false,contentType:photoFile.type||'image/jpeg'});
-        if(uErr)throw uErr;
-      }
-      const meta={price:Number(price)||0,time:Number(time)||0,category,materials,difficulty,tech,description};
-      const {error:sErr}=await client.from('ludia_art_design_snapshots').insert({project_id:project.id,source_type:'manual',design_json:meta,preview_image_url:path,render_status:'ready',estimated_price:Number(price)||null,estimated_duration_min:Number(time)||null});
+      path=await uploadArtPhoto(project.id,photoFile);
+      const meta={price:effectivePrice,listPrice:normalList,salePrice:normalSale,monthKey:String(monthKey||''),time:Number(time)||0,category,materials,difficulty,tech,description};
+      const {error:sErr}=await client.from('ludia_art_design_snapshots').insert({project_id:project.id,source_type:'manual',design_json:meta,preview_image_url:path,render_status:'ready',estimated_price:effectivePrice||null,estimated_duration_min:Number(time)||null});
       if(sErr)throw sErr;
-      const designs=await loadArtDesigns();return designs.find(x=>x.id===project.id)||{...project,name:title,img:null,price:Number(price)||0,time:Number(time)||0,tags,materials,tech,desc:description,cloudArt:true};
+      const designs=await loadArtDesigns();return designs.find(x=>x.id===project.id)||{...project,name:title,img:null,price:effectivePrice,listPrice:normalList,salePrice:normalSale,monthKey,tags,materials,tech,desc:description,cloudArt:true};
     }catch(error){
       try{await client.from('ludia_art_projects').delete().eq('id',project.id)}catch(_){}
       if(path)try{await client.storage.from('ludia-art').remove([path])}catch(_){}
       throw error;
     }
   }
-  return{init,refresh,signIn,signOut,saveAppointment,updateAppointmentStatus,getCustomer360,loadArtDesigns,saveArtDesign,getProfilePhotoUrl,saveProfilePhoto,openAuthSheet,getAccessToken,getState:()=>({...state}),getLastPayload:()=>lastPayload,isConnected:()=>state.connected};
+  async function updateArtDesign({id,name,photoFile,price,listPrice,salePrice=0,monthKey='',time,tags=[],category='',materials=[],difficulty='보통',tech='',description='',status='draft'}){
+    if(!client||!user||!salonId||!id)throw new Error('salon authentication required');
+    const title=String(name||'').trim();if(!title)throw new Error('design name required');
+    const {data:existing,error:eErr}=await client.from('ludia_art_design_snapshots').select('preview_image_url').eq('project_id',id).order('created_at',{ascending:false}).limit(1);if(eErr)throw eErr;
+    let path=existing?.[0]?.preview_image_url||null;
+    if(photoFile)path=await uploadArtPhoto(id,photoFile);
+    const normalList=Number(listPrice??price)||0,normalSale=Number(salePrice)||0,effectivePrice=normalSale||normalList;
+    const {error:pErr}=await client.from('ludia_art_projects').update({title,status,tags}).eq('id',id).eq('salon_id',salonId);if(pErr)throw pErr;
+    const meta={price:effectivePrice,listPrice:normalList,salePrice:normalSale,monthKey:String(monthKey||''),time:Number(time)||0,category,materials,difficulty,tech,description};
+    const {error:sErr}=await client.from('ludia_art_design_snapshots').insert({project_id:id,source_type:'manual',design_json:meta,preview_image_url:path,render_status:'ready',estimated_price:effectivePrice||null,estimated_duration_min:Number(time)||null});if(sErr)throw sErr;
+    const designs=await loadArtDesigns();return designs.find(x=>String(x.id)===String(id))||null;
+  }
+  return{init,refresh,signIn,signOut,saveAppointment,updateAppointmentStatus,getCustomer360,loadArtDesigns,saveArtDesign,updateArtDesign,getProfilePhotoUrl,saveProfilePhoto,openAuthSheet,getAccessToken,getState:()=>({...state}),getLastPayload:()=>lastPayload,isConnected:()=>state.connected};
 })();

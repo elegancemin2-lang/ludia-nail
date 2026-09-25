@@ -380,3 +380,54 @@ body{font-family:-apple-system,BlinkMacSystemFont,"SF Pro Text","SF Pro Display"
  #opsHomeScreen .native-home-head h2{font-size:31px}
  .native-icon-btn{width:36px!important;height:36px!important}
 }
+
+/* v2.32 · LUDIA restrained Apple-like visual system */
+:root{--ludia-blue:#0a84ff;--ludia-text:#1c1c1e;--ludia-secondary:#8e8e93;--ludia-bg:#f5f5f7;--ludia-card:#fff;--ludia-separator:rgba(60,60,67,.12)}
+body{background:var(--ludia-bg);color:var(--ludia-text)}
+#opsHomeScreen{max-width:1040px}
+#opsHomeScreen .native-home-head{margin-bottom:14px}
+#opsHomeScreen .native-date{font-size:11px;font-weight:560;color:var(--ludia-secondary)}
+#opsHomeScreen .native-home-head h2{font-size:36px;font-weight:760;letter-spacing:-.055em}
+#opsHomeScreen .native-head-actions{gap:7px}
+#opsHomeScreen .native-icon-btn{background:#e9e9ee;color:var(--ludia-blue);border:0;box-shadow:none}
+#opsHomeScreen .native-icon-btn.primary{background:var(--ludia-blue);color:#fff;box-shadow:none}
+.home-focus-row{gap:8px}
+.home-focus-row .native-next,.home-focus-row .native-stat,.home-ops-card,.home-ops-triad .phd-card{background:var(--ludia-card)!important;border:1px solid rgba(0,0,0,.045)!important;box-shadow:none!important}
+.native-next{border-radius:20px}.next-open{padding:17px 18px 15px}.next-kicker{font-size:9px;font-weight:680}.next-main time{font-size:31px;font-weight:700}.next-main h3{font-size:18px;font-weight:700}.next-meta{border-top-color:#ededf0}
+.home-focus-row .native-glance-compact{gap:5px!important}
+.home-focus-row .native-stat{border-radius:15px!important;padding:10px 11px!important}
+#opsHomeScreen .native-stat span{font-size:8px;font-weight:600;color:var(--ludia-secondary)}
+#opsHomeScreen .native-stat b{font-size:16px;font-weight:700;letter-spacing:-.025em}
+#opsHomeScreen .native-stat small{font-size:8px;color:#aeaeb2}
+#opsHomeScreen .native-section-head{margin-top:20px;margin-bottom:9px}
+#opsHomeScreen .native-section-head h3{font-size:17px;font-weight:720;letter-spacing:-.03em}
+#opsHomeScreen .native-section-head p{font-size:9px;color:var(--ludia-secondary)}
+.home-ops-triad{gap:8px}
+.home-ops-card,.home-ops-triad .phd-card{border-radius:18px!important}
+.home-ops-card>header,.home-ops-triad .phd-card header{padding:14px 14px 10px;min-height:57px}
+.home-ops-card>header span,.home-ops-triad .phd-card header span{font-size:9px;color:var(--ludia-secondary)}
+.home-ops-card>header strong,.home-ops-triad .phd-card header strong{font-size:15px}
+.home-ops-triad .ops-appointment{min-height:52px!important;padding:7px 12px!important;border-color:#f0f0f2!important}
+.home-ops-triad .ops-appointment:hover{background:#f7f7f9}
+.home-agenda-more{height:39px;color:var(--ludia-blue);border-top-color:#f0f0f2}
+.home-more-tasks{border-top-color:var(--ludia-separator)}
+.home-more-tasks>summary{padding:13px 2px}.home-more-tasks>summary span{font-size:11px}.home-more-tasks>summary small{font-size:8px}
+@media(hover:hover){.home-focus-row .native-next:hover,.home-ops-card:hover,.home-ops-triad .phd-card:hover{transform:none!important;box-shadow:none!important;border-color:rgba(0,0,0,.08)!important}}
+@media(max-width:760px){
+ body{background:#f5f5f7}
+ #opsHomeScreen .native-home-head{margin:5px 1px 13px}
+ #opsHomeScreen .native-home-head h2{font-size:32px}
+ #opsHomeScreen .native-date{font-size:10px}
+ #opsHomeScreen .native-icon-btn{width:36px;height:36px}
+ .home-focus-row{gap:7px}
+ .native-next{border-radius:18px}.next-open{padding:15px 15px 14px}.next-main time{font-size:28px}.next-main h3{font-size:17px}
+ .home-focus-row .native-glance-compact{gap:5px!important}
+ .home-focus-row .native-stat{border-radius:14px!important;padding:9px 10px!important}
+ #opsHomeScreen .native-section-head{margin-top:18px}
+ #opsHomeScreen .native-section-head h3{font-size:18px}
+ .home-ops-triad{gap:7px}
+ .home-ops-card,.home-ops-triad .phd-card{border-radius:17px!important}
+ .home-ops-card>header,.home-ops-triad .phd-card header{min-height:54px;padding:13px 13px 9px}
+ .mobile-nav{background:rgba(249,249,251,.94);border:1px solid rgba(0,0,0,.07);box-shadow:0 6px 24px rgba(0,0,0,.08);backdrop-filter:blur(24px) saturate(180%);-webkit-backdrop-filter:blur(24px) saturate(180%)}
+ .mobile-nav button.active{color:var(--ludia-blue)}
+}

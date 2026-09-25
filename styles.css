@@ -595,3 +595,35 @@ html[data-theme="dark"] .design-register-head,.dark-mode .design-register-head,h
 html[data-theme="dark"] .design-register-actions,.dark-mode .design-register-actions{background:rgba(28,28,30,.9)}
 html[data-theme="dark"] .design-photo-drop,.dark-mode .design-photo-drop{background:#2c2c2e;border-color:rgba(255,255,255,.08)}
 html[data-theme="dark"] .design-register-fields input,html[data-theme="dark"] .design-register-fields select,html[data-theme="dark"] .design-register-fields textarea,html[data-theme="dark"] .design-detail-toggle,.dark-mode .design-register-fields input,.dark-mode .design-register-fields select,.dark-mode .design-register-fields textarea,.dark-mode .design-detail-toggle{background:#2c2c2e;color:#f5f5f7;border-color:rgba(255,255,255,.08)}
+
+
+/* v2.43 · mobile booking: fit full staff schedule in one screen width */
+@media(max-width:760px){
+  #bookingScreen{overflow-x:hidden}
+  .booking-scroll-shell{overflow-x:hidden;overflow-y:auto;width:100%;margin-left:0;margin-right:0;border-radius:18px}
+  .booking-grid{min-width:0!important;width:100%;grid-template-columns:40px minmax(0,1fr)!important;grid-template-rows:44px auto}
+  .booking-corner{position:static;padding-bottom:8px;font-size:7px}
+  .booking-staff-header{min-width:0;grid-template-columns:repeat(var(--staff-count),minmax(0,1fr))!important}
+  .booking-staff-person{padding:5px 2px;gap:3px;min-width:0}
+  .booking-staff-person>span{display:none}
+  .booking-staff-person b{font-size:9px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;text-align:center}
+  .booking-staff-person small{font-size:7px;text-align:center}
+  .booking-hours{position:static}
+  .booking-hours div{height:64px;padding:5px 4px 0 0;font-size:7px}
+  .booking-list{height:768px;background:repeating-linear-gradient(to bottom,transparent 0,transparent 63px,#efeff2 64px)}
+  .booking-block{border-radius:8px;padding:5px 4px;border-left-width:2px}
+  .booking-block .booking-time{font-size:7px;margin-bottom:1px}
+  .booking-block b{font-size:8px}
+  .booking-block small{font-size:7px;line-height:1.15}
+  .booking-block em{display:none}
+  .booking-filter-row .staff-tabs{max-width:72%;gap:4px}
+  .booking-filter-row .staff-tabs button{padding:7px 9px;font-size:9px}
+  .booking-count{font-size:8px}
+}
+@media(max-width:390px){
+  .booking-grid{grid-template-columns:36px minmax(0,1fr)!important}
+  .booking-staff-person b{font-size:8px}
+  .booking-block{padding:4px 3px}
+  .booking-block b{font-size:7.5px}
+  .booking-block small{font-size:6.5px}
+}

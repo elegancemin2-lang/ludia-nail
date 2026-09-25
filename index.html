@@ -50,6 +50,8 @@
             <h2>오늘</h2>
           </div>
           <div class="native-head-actions">
+            <button class="native-theme-btn" id="homeThemeBtn" type="button" aria-label="화이트/블랙 모드 전환" aria-pressed="false"><span>☀</span><i></i><span>☾</span></button>
+            <button class="native-profile-avatar profile-photo-trigger" id="homeProfileAvatarBtn" type="button" aria-label="프로필 사진 변경"><img class="profile-photo-img" alt="" /><span class="profile-brand-fallback"><b>Ludia</b><em>Nail</em></span></button>
             <button class="native-icon-btn" data-nav="customers" aria-label="고객 검색">
               <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="11" cy="11" r="6.5"></circle><path d="m16 16 4.2 4.2"></path></svg>
             </button>
@@ -122,7 +124,10 @@
       <section class="screen" id="customersScreen">
         <div class="module-head">
           <div><span class="mini-label">CUSTOMERS</span><h2>고객</h2><p>고객을 열면 최근 시술·취향·회원권·주의사항부터 보이게 했어요.</p></div>
-          <button class="soft-btn" id="newCustomerBtn">＋ 고객 등록</button>
+          <div class="customer-head-actions">
+            <button class="soft-btn customer-refresh-btn" id="customerRefreshBtn" type="button" aria-label="고객 목록 새로고침">↻ 새로고침</button>
+            <button class="soft-btn" id="newCustomerBtn" type="button">＋ 고객 등록</button>
+          </div>
         </div>
         <div class="customer-search panel">
           <span>⌕</span><input id="customerSearch" placeholder="이름 · 전화번호 · 취향 검색"/>
@@ -475,8 +480,9 @@
         <div class="sheet-title-row"><div><span class="mini-label">FINAL PREVIEW</span><h2>다각도 최종 확인</h2></div></div>
         <p class="compare-intro">손가락으로 좌우·상하 드래그해서 디자인 밸런스를 확인하세요.</p>
         <div class="viewer-shell" id="viewerShell">
+          <button class="viewer-focus-back hidden" id="viewerFocusBack" type="button">‹ 전체 손 보기</button>
           <div class="viewer-stage" id="viewerStage"></div>
-          <div class="viewer-hint">↔ 드래그 · ↕ 기울이기</div>
+          <div class="viewer-hint" id="viewerHint">손톱을 누르면 단독 확대 · ↔ 드래그 · ↕ 기울이기</div>
         </div>
         <div class="viewer-angle-row">
           <button data-view-angle="front" class="active">정면</button><button data-view-angle="left">좌 30°</button><button data-view-angle="right">우 30°</button><button data-view-angle="top">위 25°</button>

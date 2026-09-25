@@ -481,3 +481,33 @@ $$('.more-card:not([data-nav])').forEach(b=>b.onclick=()=>toast(`${b.querySelect
 setInterval(()=>{if(state.view==='create'){const s=Math.floor((Date.now()-state.start)/1000),m=Math.floor(s/60);$('#createTimer').textContent=`${String(m).padStart(2,'0')}:${String(s%60).padStart(2,'0')}`;$('#createTimer').parentElement.classList.toggle('warn',s>300)}},1000);
 (async function boot(){try{const mode=await loadPersisted();hydrateFromState();renderAll();renderOpsToday();renderBooking();renderCustomers();setView('opsHome');setSaveStatus('saved',mode==='new'?'자동저장 준비':'자동저장됨');if(mode==='restored'||mode==='migrated')toast(mode==='migrated'?'기존 보관함을 새 저장방식으로 옮겼어요':'이전 작업을 복원했어요');if(mode==='new')schedulePersist();initSalonCloud().catch(error=>console.error('[LUDIA cloud init]',error))}catch(error){console.error('[LUDIA boot recovery]',error);renderOpsToday();renderBooking();renderCustomers();setView('opsHome');setSaveStatus('error','일부 기능 복구 모드')}})();
 if('serviceWorker' in navigator)window.addEventListener('load',()=>navigator.serviceWorker.register('sw.js').catch(()=>{}));
+
+/* v2.35 · Nail Canvas Pro */
+(()=>{
+ const canvas=document.getElementById('nailDrawCanvas');if(!canvas)return;
+ const ctx=canvas.getContext('2d');let drawing=false,last=null,brush='pen',brushSize=9,ink='#e9a9b4';
+ const colors=[
+  ['#f3d7d9','밀키 핑크','nude'],['#e9a9b4','로즈 시럽','syrup'],['#d98f9c','뮤트 로즈','syrup'],['#ead7cb','피치 누드','nude'],['#cbaaa1','모카 누드','nude'],['#9b283c','와인','all'],['#6f182c','딥 체리','all'],['#f3eee8','오프화이트','all'],['#b9a8b9','라일락','all'],['#768aa2','블루그레이','all'],['#c9b7dc','오로라','glitter'],['#d9c7a4','샴페인','glitter'],['#b7bec9','실버 자석','magnet'],['#d4a6b9','핑크 자석','magnet'],['#8d6b75','모브 자석','magnet']
+ ];
+ let fav=JSON.parse(localStorage.getItem('ludiaNailFavColors')||'["#f3d7d9","#e9a9b4","#ead7cb"]');
+ let customParts=JSON.parse(localStorage.getItem('ludiaNailParts')||'[]');
+ const baseParts=[['✦','크리스탈','stone'],['◆','다이아','stone'],['●','진주','pearl'],['♡','하트 메탈','metal'],['☆','스타 메탈','metal'],['🎀','리본','ribbon'],['✿','플라워','flower']];
+ function selectedOne(){const a=[...state.fingers].filter(x=>x!=='전체');return a.length===1?a[0]:null}
+ function syncCanvasState(){const one=selectedOne(),root=document.getElementById('nailCanvasPro');root.classList.toggle('ready',!!one);root.querySelector('.nail-canvas-empty span').textContent=one?one+' 상세 편집':'손톱을 하나 선택하세요'}
+ function renderColors(group='favorite'){const box=document.getElementById('nailProColors');box.innerHTML='';colors.filter(x=>group==='favorite'?fav.includes(x[0]):group==='all'||x[2]===group).forEach(x=>{const b=document.createElement('button');b.className='nail-pro-swatch';b.title=x[1]+' · 길게 눌러 즐겨찾기';b.innerHTML='<i style="background:'+x[0]+'"></i><small>'+x[1]+'</small>';let timer;b.onpointerdown=()=>timer=setTimeout(()=>{fav.includes(x[0])?fav=fav.filter(v=>v!==x[0]):fav.push(x[0]);localStorage.setItem('ludiaNailFavColors',JSON.stringify(fav));renderColors(group);toast('컬러 즐겨찾기를 변경했어요')},550);b.onpointerup=()=>{clearTimeout(timer);ink=x[0]};b.onpointerleave=()=>clearTimeout(timer);box.appendChild(b)})}
+ function renderParts(group='favorite'){const box=document.getElementById('nailProParts');box.innerHTML='';let list=group==='mine'?customParts:baseParts.filter(x=>group==='favorite'?['stone','pearl','ribbon'].includes(x[2]):x[2]===group);list.forEach((x,i)=>{const b=document.createElement('button');b.className='nail-pro-part';if(group==='mine'){b.innerHTML='<img src="'+x.data+'" alt=""><small>'+x.name+'</small><em>MY</em>'}else b.innerHTML='<span>'+x[0]+'</span><small>'+x[1]+'</small>';b.onclick=()=>toast((group==='mine'?x.name:x[1])+' 파츠를 선택했어요');box.appendChild(b)})}
+ function pos(e){const r=canvas.getBoundingClientRect();return{x:(e.clientX-r.left)*canvas.width/r.width,y:(e.clientY-r.top)*canvas.height/r.height}}
+ canvas.onpointerdown=e=>{if(!selectedOne())return;drawing=true;last=pos(e);canvas.setPointerCapture(e.pointerId)};
+ canvas.onpointermove=e=>{if(!drawing)return;const p=pos(e);ctx.strokeStyle=ink;ctx.fillStyle=ink;ctx.lineWidth=brushSize;ctx.lineCap='round';ctx.lineJoin='round';if(brush==='dot'){ctx.beginPath();ctx.arc(p.x,p.y,brushSize*.75,0,Math.PI*2);ctx.fill()}else{ctx.beginPath();ctx.moveTo(last.x,last.y);ctx.lineTo(p.x,p.y);ctx.globalAlpha=brush==='air'?.16:1;ctx.stroke();ctx.globalAlpha=1}last=p};
+ canvas.onpointerup=canvas.onpointercancel=()=>{drawing=false;last=null;schedulePersist()};
+ document.getElementById('nailBrushSize').oninput=e=>brushSize=+e.target.value;
+ document.getElementById('nailClearDrawing').onclick=()=>ctx.clearRect(0,0,canvas.width,canvas.height);
+ document.querySelectorAll('[data-brush]').forEach(b=>b.onclick=()=>{brush=b.dataset.brush;document.querySelectorAll('[data-brush]').forEach(x=>x.classList.toggle('active',x===b))});
+ document.querySelectorAll('[data-nail-tool]').forEach(b=>b.onclick=()=>{document.querySelectorAll('[data-nail-tool]').forEach(x=>x.classList.toggle('active',x===b));document.querySelectorAll('[data-nail-panel]').forEach(x=>x.classList.toggle('active',x.dataset.nailPanel===b.dataset.nailTool))});
+ document.querySelectorAll('[data-color-group]').forEach(b=>b.onclick=()=>{document.querySelectorAll('[data-color-group]').forEach(x=>x.classList.toggle('active',x===b));renderColors(b.dataset.colorGroup)});
+ document.querySelectorAll('[data-parts-group]').forEach(b=>b.onclick=()=>{document.querySelectorAll('[data-parts-group]').forEach(x=>x.classList.toggle('active',x===b));renderParts(b.dataset.partsGroup)});
+ document.getElementById('nailPartUpload').onchange=async e=>{const file=e.target.files[0];if(!file)return;try{const data=await optimizeImageFile(file,700,.9);customParts.push({name:file.name.replace(/\.[^.]+$/,'').slice(0,24)||'내 파츠',data});customParts=customParts.slice(-40);localStorage.setItem('ludiaNailParts',JSON.stringify(customParts));renderParts('mine');toast('내 파츠로 등록했어요 · MY 표시')}catch(err){toast('파츠 사진을 확인해 주세요')}};
+ document.getElementById('nailCanvasDone').onclick=()=>document.getElementById('precisionEditor')?.scrollIntoView({behavior:'smooth',block:'start'});
+ const hand=document.getElementById('handEditor');if(hand)new MutationObserver(syncCanvasState).observe(hand,{subtree:true,attributes:true,childList:true});
+ renderColors();renderParts();syncCanvasState();
+})();

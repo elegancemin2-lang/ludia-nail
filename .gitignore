@@ -1,0 +1,18 @@
+# Local secrets
+.env
+.env.*
+!.env.example
+
+# Dependencies / platform state
+node_modules/
+.vercel/
+
+# Naver local browser session — never commit cookies or login state
+.naver-profile/
+bridge/.naver-profile/
+bridge/**/.naver-profile/
+
+# Logs / OS
+*.log
+.DS_Store
+Thumbs.db

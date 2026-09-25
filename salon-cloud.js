@@ -76,6 +76,31 @@ window.LudiaSalonCloud=(()=>{
   function openAuthSheet(){renderAuthSheet();const sheet=$('#cloudAuthSheet');sheet?.classList.add('open');sheet?.setAttribute('aria-hidden','false');document.body.style.overflow='hidden'}
   function closeAuthSheet(){const sheet=$('#cloudAuthSheet');sheet?.classList.remove('open');sheet?.setAttribute('aria-hidden','true');document.body.style.overflow=''}
   async function getAccessToken(){if(!client)return null;const {data}=await client.auth.getSession();return data?.session?.access_token||null}
+  async function getProfilePhotoUrl(){
+    if(!client||!user)return null;
+    const path=user.user_metadata?.ludia_profile_photo_path||null;
+    if(!path)return null;
+    const {data,error}=await client.storage.from('profile-photos').createSignedUrl(path,3600);
+    if(error){console.warn('[LUDIA profile photo]',error);return null}
+    return data?.signedUrl||null;
+  }
+  async function saveProfilePhoto(file){
+    if(!client||!user)throw new Error('authentication required');
+    if(!file||!/^image\/(jpeg|png|webp|avif)$/i.test(file.type||''))throw new Error('invalid image');
+    if(file.size>5*1024*1024)throw new Error('file too large');
+    const oldPath=user.user_metadata?.ludia_profile_photo_path||null;
+    const ext=((file.name||'profile.jpg').split('.').pop()||'jpg').toLowerCase().replace(/[^a-z0-9]/g,'')||'jpg';
+    const path=`${user.id}/ludia/avatar-${Date.now()}.${ext}`;
+    const {error:uploadError}=await client.storage.from('profile-photos').upload(path,file,{cacheControl:'3600',upsert:false,contentType:file.type||'image/jpeg'});
+    if(uploadError)throw uploadError;
+    const {data:updateData,error:updateError}=await client.auth.updateUser({data:{ludia_profile_photo_path:path}});
+    if(updateError){try{await client.storage.from('profile-photos').remove([path])}catch(_){};throw updateError}
+    user=updateData?.user||user;
+    if(oldPath&&oldPath!==path){try{await client.storage.from('profile-photos').remove([oldPath])}catch(error){console.warn('[LUDIA old profile cleanup]',error)}}
+    const {data,error}=await client.storage.from('profile-photos').createSignedUrl(path,3600);
+    if(error)throw error;
+    return data?.signedUrl||null;
+  }
   async function loadArtDesigns(){
     if(!client||!salonId)return [];
     const {data:projects,error:pErr}=await client.from('ludia_art_projects').select('id,title,status,tags,created_at,updated_at').eq('salon_id',salonId).order('updated_at',{ascending:false}).limit(300);
@@ -118,5 +143,5 @@ window.LudiaSalonCloud=(()=>{
       throw error;
     }
   }
-  return{init,refresh,signIn,signOut,saveAppointment,updateAppointmentStatus,getCustomer360,loadArtDesigns,saveArtDesign,openAuthSheet,getAccessToken,getState:()=>({...state}),getLastPayload:()=>lastPayload,isConnected:()=>state.connected};
+  return{init,refresh,signIn,signOut,saveAppointment,updateAppointmentStatus,getCustomer360,loadArtDesigns,saveArtDesign,getProfilePhotoUrl,saveProfilePhoto,openAuthSheet,getAccessToken,getState:()=>({...state}),getLastPayload:()=>lastPayload,isConnected:()=>state.connected};
 })();

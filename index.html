@@ -38,7 +38,7 @@
         <div class="top-actions">
           <button class="save-status" id="saveStatus" type="button" aria-label="로컬 저장 상태"><span class="save-dot"></span><span id="saveStatusText">저장 준비중</span></button>
           <button class="icon-btn global-theme-btn" id="themeBtn" aria-label="화이트/블랙 모드 전환"><span class="theme-sun">☀</span><span class="theme-moon">☾</span></button>
-          <button class="avatar ludia-brand-avatar" aria-label="Ludia Nail 프로필"><span><b>Ludia</b><em>Nail</em></span></button>
+          <button class="avatar ludia-brand-avatar profile-photo-trigger" id="profileAvatarBtn" type="button" aria-label="프로필 사진 변경"><img class="profile-photo-img" alt="" /><span class="profile-brand-fallback"><b>Ludia</b><em>Nail</em></span></button>
         </div>
       </header>
 
@@ -95,7 +95,7 @@
           </div>
           <div class="ios-booking-actions">
             <button class="booking-theme-toggle" id="bookingThemeBtn" type="button" aria-label="화이트/블랙 모드 전환" aria-pressed="false"><span>☀</span><i></i><span>☾</span></button>
-            <span class="booking-brand-avatar" aria-label="Ludia Nail"><b>Ludia</b><em>Nail</em></span>
+            <button class="booking-brand-avatar profile-photo-trigger" id="bookingProfileAvatarBtn" type="button" aria-label="프로필 사진 변경"><img class="profile-photo-img" alt="" /><span class="profile-brand-fallback"><b>Ludia</b><em>Nail</em></span></button>
             <button class="ios-today-btn" id="bookingTodayBtn">오늘</button>
             <button class="ios-circle-add" id="quickAddBooking" aria-label="빠른 예약">＋</button>
           </div>
@@ -606,6 +606,8 @@
       </footer>
     </section>
   </div>
+
+  <input id="profilePhotoInput" type="file" accept="image/jpeg,image/png,image/webp,image/avif" hidden />
 
   <div class="toast" id="toast" role="status"></div>
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.116.0/dist/umd/supabase.min.js"></script>

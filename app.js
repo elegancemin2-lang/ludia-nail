@@ -164,10 +164,10 @@ function renderCustomers(){
 function applyCloudSalonData(payload){
  salonCloudMode='cloud';salonAppointments=payload.appointments||[];salonCustomers=payload.customers||[];salonStaffNames=payload.staffNames?.length?payload.staffNames:['미지정'];salonServices=payload.services||[];
  if(bookingStaff!=='전체'&&!salonStaffNames.includes(bookingStaff))bookingStaff='전체';
- syncQuickBookingOptions();renderOpsToday();renderBooking();renderCustomers();updateCloudAccountStatus({configured:true,connected:true,salonName:payload.salonName,email:payload.email,realtime:'live'});syncCloudArtLibrary();
+ syncQuickBookingOptions();renderOpsToday();renderBooking();renderCustomers();updateCloudAccountStatus({configured:true,connected:true,salonName:payload.salonName,email:payload.email,realtime:'live'});syncCloudArtLibrary();syncProfilePhoto();
 }
 function resetCloudSalonData(){
- salonCloudMode='demo';salonAppointments=DEMO_APPOINTMENTS.map(x=>({...x}));salonCustomers=DEMO_CUSTOMERS.map(x=>({...x}));salonStaffNames=['루디아','지안'];salonServices=[];bookingStaff='전체';renderOpsToday();renderBooking();renderCustomers()
+ salonCloudMode='demo';salonAppointments=DEMO_APPOINTMENTS.map(x=>({...x}));salonCustomers=DEMO_CUSTOMERS.map(x=>({...x}));salonStaffNames=['루디아','지안'];salonServices=[];bookingStaff='전체';renderOpsToday();renderBooking();renderCustomers();setProfilePhoto(null)
 }
 function updateCloudAccountStatus(status={}){
  const label=$('#cloudAccountStatus'),badge=$('#cloudAccountBadge');if(!label||!badge)return;
@@ -181,6 +181,37 @@ async function initSalonCloud(){
  if(!window.LudiaSalonCloud){updateCloudAccountStatus({configured:false});return}
  await window.LudiaSalonCloud.init({applyData:applyCloudSalonData,onSignedOut:resetCloudSalonData,onStatus:updateCloudAccountStatus,toast})
 }
+const PROFILE_PHOTO_LOCAL_KEY='ludiaProfilePhotoLocal';
+function setProfilePhoto(url){
+ $('.profile-photo-trigger').forEach(el=>{
+   const imgEl=el.querySelector('.profile-photo-img'),fallback=el.querySelector('.profile-brand-fallback');
+   if(imgEl){if(url){imgEl.src=url;imgEl.classList.add('visible')}else{imgEl.removeAttribute('src');imgEl.classList.remove('visible')}}
+   if(fallback)fallback.classList.toggle('hidden',Boolean(url));
+   el.classList.toggle('has-photo',Boolean(url));
+ });
+}
+async function syncProfilePhoto(){
+ const local=localStorage.getItem(PROFILE_PHOTO_LOCAL_KEY)||null;
+ if(local)setProfilePhoto(local);else setProfilePhoto(null);
+ if(!window.LudiaSalonCloud?.isConnected?.()||!window.LudiaSalonCloud?.getProfilePhotoUrl)return;
+ try{const url=await window.LudiaSalonCloud.getProfilePhotoUrl();if(url)setProfilePhoto(url)}catch(error){console.warn('[LUDIA profile photo load]',error)}
+}
+function fileToDataUrl(file){return new Promise((resolve,reject)=>{const reader=new FileReader();reader.onload=()=>resolve(reader.result);reader.onerror=reject;reader.readAsDataURL(file)})}
+$('.profile-photo-trigger').forEach(el=>el.addEventListener('click',()=>$('#profilePhotoInput')?.click()));
+$('#profilePhotoInput')?.addEventListener('change',async e=>{
+ const input=e.currentTarget,file=input.files?.[0];if(!file)return;
+ if(!/^image\/(jpeg|png|webp|avif)$/i.test(file.type||'')){input.value='';return toast('JPG · PNG · WEBP · AVIF 사진만 사용할 수 있어요')}
+ if(file.size>5*1024*1024){input.value='';return toast('프로필 사진은 5MB 이하로 선택해 주세요')}
+ try{
+   const preview=await fileToDataUrl(file);setProfilePhoto(preview);
+   if(window.LudiaSalonCloud?.isConnected?.()&&window.LudiaSalonCloud?.saveProfilePhoto){
+     const url=await window.LudiaSalonCloud.saveProfilePhoto(file);localStorage.removeItem(PROFILE_PHOTO_LOCAL_KEY);if(url)setProfilePhoto(url);toast('프로필 사진을 저장했어요')
+   }else{
+     localStorage.setItem(PROFILE_PHOTO_LOCAL_KEY,preview);toast('이 기기의 프로필 사진을 변경했어요')
+   }
+ }catch(error){console.error('[LUDIA profile photo save]',error);toast('프로필 사진 저장에 실패했어요');await syncProfilePhoto()}
+ finally{input.value=''}
+});
 function buildDirectStudioDesign({fresh=false}={}){
  if(!fresh&&state.active){ensureFingerLooks(state.active);return state.active}
  const source=state.draft.homePrompt||state.draft.concept||'';
@@ -229,7 +260,8 @@ $$('[data-nav]').forEach(b=>b.onclick=()=>setView(b.dataset.nav));
 $('#openStudioBtn')?.addEventListener('click',()=>openDirectStudio());$('#newStudioBtn')?.addEventListener('click',()=>{state.active=null;openDirectStudio({fresh:true})});
 const applyTheme=mode=>{const dark=mode==='dark';document.documentElement.dataset.theme=dark?'dark':'light';document.body.classList.toggle('dark-mode',dark);localStorage.setItem('ludiaTheme',dark?'dark':'light');const meta=document.querySelector('meta[name="theme-color"]');if(meta)meta.content=dark?'#111113':'#f6f4ef';const btn=$('#themeBtn');if(btn){btn.classList.toggle('is-dark',dark);btn.setAttribute('aria-label',dark?'화이트 모드로 전환':'블랙 모드로 전환')}const bookingBtn=$('#bookingThemeBtn');if(bookingBtn){bookingBtn.classList.toggle('is-dark',dark);bookingBtn.setAttribute('aria-pressed',dark?'true':'false');bookingBtn.setAttribute('aria-label',dark?'화이트 모드로 전환':'블랙 모드로 전환')}};
 const savedTheme=localStorage.getItem('ludiaTheme');applyTheme(savedTheme==='dark'?'dark':'light');
-$('#themeBtn').onclick=()=>applyTheme(document.documentElement.dataset.theme==='dark'?'light':'dark');$('#bookingThemeBtn')?.addEventListener('click',()=>applyTheme(document.documentElement.dataset.theme==='dark'?'light':'dark'));
+const toggleTheme=()=>applyTheme(document.documentElement.dataset.theme==='dark'?'light':'dark');
+$('#themeBtn')?.addEventListener('click',toggleTheme);$('#bookingThemeBtn')?.addEventListener('click',toggleTheme);
 
 const homeChipTexts=['가을 자석','성수 미니멀','웨딩 여리','강남 글리터','숏네일 심플'];
 homeChipTexts.forEach(t=>{const b=document.createElement('button');b.textContent=t;b.onclick=()=>{$('#homePrompt').value=t+' 느낌으로 6개';startFromHome()};$('#homePromptChips').appendChild(b)});
@@ -536,7 +568,7 @@ $('#bookingTodayBtn').onclick=()=>{bookingDayOffset=0;renderBooking()};$$('[data
 $$('.more-card:not([data-nav])').forEach(b=>b.onclick=()=>toast(`${b.querySelector('b').textContent} · 필요한 핵심 화면만 단계적으로 연결합니다`));
 
 setInterval(()=>{if(state.view==='create'){const s=Math.floor((Date.now()-state.start)/1000),m=Math.floor(s/60);$('#createTimer').textContent=`${String(m).padStart(2,'0')}:${String(s%60).padStart(2,'0')}`;$('#createTimer').parentElement.classList.toggle('warn',s>300)}},1000);
-(async function boot(){try{const mode=await loadPersisted();hydrateFromState();renderAll();renderOpsToday();renderBooking();renderCustomers();setView('opsHome');setSaveStatus('saved',mode==='new'?'자동저장 준비':'자동저장됨');if(mode==='restored'||mode==='migrated')toast(mode==='migrated'?'기존 보관함을 새 저장방식으로 옮겼어요':'이전 작업을 복원했어요');if(mode==='new')schedulePersist();initSalonCloud().catch(error=>console.error('[LUDIA cloud init]',error))}catch(error){console.error('[LUDIA boot recovery]',error);renderOpsToday();renderBooking();renderCustomers();setView('opsHome');setSaveStatus('error','일부 기능 복구 모드')}})();
+(async function boot(){try{const mode=await loadPersisted();hydrateFromState();renderAll();renderOpsToday();renderBooking();renderCustomers();syncProfilePhoto();setView('opsHome');setSaveStatus('saved',mode==='new'?'자동저장 준비':'자동저장됨');if(mode==='restored'||mode==='migrated')toast(mode==='migrated'?'기존 보관함을 새 저장방식으로 옮겼어요':'이전 작업을 복원했어요');if(mode==='new')schedulePersist();initSalonCloud().catch(error=>console.error('[LUDIA cloud init]',error))}catch(error){console.error('[LUDIA boot recovery]',error);renderOpsToday();renderBooking();renderCustomers();setView('opsHome');setSaveStatus('error','일부 기능 복구 모드')}})();
 if('serviceWorker' in navigator)window.addEventListener('load',()=>navigator.serviceWorker.register('sw.js').catch(()=>{}));
 
 /* v2.37 · Nail Canvas Pro — commit-on-save editor */

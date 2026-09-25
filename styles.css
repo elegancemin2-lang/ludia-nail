@@ -431,3 +431,50 @@ body{background:var(--ludia-bg);color:var(--ludia-text)}
  .mobile-nav{background:rgba(249,249,251,.94);border:1px solid rgba(0,0,0,.07);box-shadow:0 6px 24px rgba(0,0,0,.08);backdrop-filter:blur(24px) saturate(180%);-webkit-backdrop-filter:blur(24px) saturate(180%)}
  .mobile-nav button.active{color:var(--ludia-blue)}
 }
+
+/* v2.33 · iPhone Pro salon UI — booking / customers / more */
+#bookingScreen,#customersScreen,#moreScreen{max-width:1040px}
+#bookingScreen .ios-booking-head,#customersScreen .module-head,#moreScreen .native-page-head{margin-bottom:16px}
+#bookingScreen .ios-booking-head h2,#customersScreen .module-head h2,#moreScreen .native-page-head h2{font-size:36px;font-weight:760;letter-spacing:-.055em;color:#1c1c1e}
+#bookingScreen .ios-booking-head>div:first-child>span,#moreScreen .native-page-head span{font-size:11px;font-weight:600;color:#8e8e93}
+#bookingScreen .ios-today-btn{background:#e9e9ee;color:#0a84ff;font-weight:650}
+#bookingScreen .ios-circle-add{background:#0a84ff;box-shadow:none}
+#bookingScreen .booking-week-strip{background:#fff;border:1px solid rgba(0,0,0,.045);box-shadow:none}
+#bookingScreen .booking-filter-row{margin-top:10px}
+#bookingScreen .staff-tabs{background:#e9e9ee;padding:3px;border-radius:12px}
+#bookingScreen .staff-tabs button{border:0;border-radius:9px;font-weight:620}
+#bookingScreen .staff-tabs button.active{background:#fff;color:#1c1c1e;box-shadow:0 1px 3px rgba(0,0,0,.08)}
+#bookingScreen .booking-scroll-shell{border:1px solid rgba(0,0,0,.05);box-shadow:none;background:#fff}
+#bookingScreen .booking-hint{color:#8e8e93;font-size:9px}
+#customersScreen .module-head .mini-label,#customersScreen .module-head p{display:none}
+#customersScreen .module-head{align-items:center}
+#customersScreen .module-head .soft-btn{border:0;background:#e9e9ee;color:#0a84ff;border-radius:18px;font-weight:650}
+#customersScreen .customer-search{background:#e9e9ee;border:0;box-shadow:none;border-radius:13px}
+#customersScreen .customer-search input{font-size:14px}
+#customersScreen .customer-grid{border:1px solid rgba(0,0,0,.045);box-shadow:none;background:#fff}
+#moreScreen .native-group-title{font-size:10px;font-weight:650;color:#8e8e93;margin:22px 12px 7px;text-transform:none;letter-spacing:0}
+#moreScreen .native-settings-group{border:0;background:#fff;border-radius:18px;overflow:hidden;box-shadow:none}
+#moreScreen .native-settings-group button{min-height:58px;border-bottom:1px solid #ededf0;padding:8px 13px}
+#moreScreen .native-settings-group button:last-child{border-bottom:0}
+#moreScreen .native-settings-group button b{font-size:12px;font-weight:650}
+#moreScreen .native-settings-group button small{font-size:9px;color:#8e8e93;margin-top:2px}
+#moreScreen .settings-glyph{width:30px;height:30px;border-radius:8px;font-size:13px}
+#moreScreen .native-art-addon{border:0;border-radius:18px;background:#1c1c1e;color:#fff;box-shadow:none;padding:15px}
+#moreScreen .native-art-addon small{color:#aeaeb2}
+@media(max-width:760px){
+ #bookingScreen,#customersScreen,#moreScreen{padding:0!important}
+ #bookingScreen .ios-booking-head,#customersScreen .module-head,#moreScreen .native-page-head{margin:5px 1px 14px}
+ #bookingScreen .ios-booking-head h2,#customersScreen .module-head h2,#moreScreen .native-page-head h2{font-size:32px}
+ #bookingScreen .ios-booking-head>div:first-child>span,#moreScreen .native-page-head span{font-size:10px}
+ #bookingScreen .ios-today-btn{height:36px;padding:0 13px}
+ #bookingScreen .ios-circle-add{width:36px;height:36px}
+ #bookingScreen .booking-week-strip{border-radius:17px}
+ #bookingScreen .booking-scroll-shell{border-radius:18px}
+ #customersScreen .module-head .soft-btn{font-size:10px;padding:10px 12px}
+ #customersScreen .customer-search{margin:0 0 10px;border-radius:12px}
+ #customersScreen .customer-grid{border-radius:18px}
+ #moreScreen .native-group-title{margin-top:20px}
+ #moreScreen .native-settings-group,#moreScreen .native-art-addon{border-radius:16px}
+ #moreScreen .native-settings-group button{min-height:56px}
+ #moreScreen .settings-glyph{width:29px;height:29px}
+}

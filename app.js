@@ -181,7 +181,16 @@ function renderCustomers(){
  pageData.forEach(c=>{const a=document.createElement('article');a.className='customer-card panel';a.innerHTML=`<div class="customer-top"><img src="${c.img}" alt=""><div><b>${c.name}</b><small>${c.phone}</small></div><em>${c.visit}회</em></div><p>${c.note||'고객 메모 없음'}</p><div class="customer-tags">${(c.tags||[]).slice(0,3).map(t=>`<span>${t}</span>`).join('')}</div><div class="customer-foot"><span>${c.last||'신규'} 방문</span><b>${c.membership}</b></div>`;a.onclick=()=>toast(`${c.name} 고객카드 · 상세 연결 준비됨`);box.appendChild(a)});
  const nav=$('#customerPagination'),indicator=$('#customerPageIndicator'),prev=$('#customerPrevPage'),next=$('#customerNextPage');
  if(nav)nav.classList.toggle('hidden',data.length<=CUSTOMER_PAGE_SIZE);
- if(indicator){indicator.innerHTML='';for(let p=1;p<=pages;p++){const b=document.createElement('button');b.type='button';b.textContent=String(p);b.className=p===customerPage?'active':'';b.setAttribute('aria-label',`${p}페이지`);b.onclick=()=>{customerPage=p;renderCustomers();window.scrollTo({top:0,behavior:'smooth'})};indicator.appendChild(b)}}
+ if(indicator){
+   indicator.innerHTML='';
+   const candidates=new Set([1,pages,customerPage-1,customerPage,customerPage+1]);
+   const visible=[...candidates].filter(p=>p>=1&&p<=pages).sort((a,b)=>a-b);
+   let prevPage=0;
+   visible.forEach(p=>{
+     if(prevPage&&p-prevPage>1){const dots=document.createElement('span');dots.className='customer-page-dots';dots.textContent='…';indicator.appendChild(dots)}
+     const b=document.createElement('button');b.type='button';b.textContent=String(p);b.className=p===customerPage?'active':'';b.setAttribute('aria-label',`${p}페이지`);b.onclick=()=>{customerPage=p;renderCustomers();window.scrollTo({top:0,behavior:'smooth'})};indicator.appendChild(b);prevPage=p
+   })
+ }
  if(prev){prev.disabled=customerPage<=1;prev.onclick=()=>{if(customerPage>1){customerPage--;renderCustomers();window.scrollTo({top:0,behavior:'smooth'})}}}
  if(next){next.disabled=customerPage>=pages;next.onclick=()=>{if(customerPage<pages){customerPage++;renderCustomers();window.scrollTo({top:0,behavior:'smooth'})}}}
 }

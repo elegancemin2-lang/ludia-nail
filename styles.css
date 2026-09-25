@@ -920,3 +920,127 @@ html[data-theme="dark"] #bookingScreen .booking-block.done{
       linear-gradient(180deg,rgba(38,38,41,.55),rgba(28,28,30,.28))!important
   }
 }
+
+
+/* v2.46 · responsive legibility + editable profile */
+.profile-photo-trigger{position:relative;overflow:hidden;cursor:pointer;padding:0}
+.profile-photo-trigger .profile-photo-img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;display:none}
+.profile-photo-trigger .profile-photo-img.visible{display:block}
+.profile-photo-trigger .profile-brand-fallback.hidden{visibility:hidden}
+.profile-photo-trigger.has-photo{background:#e9e9ed;color:transparent}
+.profile-photo-trigger:after{
+  content:"";position:absolute;right:2px;bottom:2px;width:8px;height:8px;border-radius:50%;
+  background:#007aff;border:2px solid #fff;opacity:0;transform:scale(.75);transition:.16s
+}
+.profile-photo-trigger:hover:after,.profile-photo-trigger:focus-visible:after{opacity:1;transform:scale(1)}
+.booking-brand-avatar{border:0;padding:0;cursor:pointer}
+.booking-brand-avatar .profile-brand-fallback{display:grid;place-items:center;width:100%;height:100%}
+
+#bookingScreen{
+  width:min(100%,1160px);
+  margin-left:auto;margin-right:auto;
+}
+.ios-booking-head h2{
+  font-size:clamp(38px,3.2vw,50px);
+  line-height:.98;
+  letter-spacing:-.065em;
+}
+.ios-booking-title>span{
+  font-size:clamp(12px,1vw,15px);
+  line-height:1.2;
+}
+.booking-greeting{
+  font-size:clamp(11px,.95vw,13px);
+  line-height:1.3;
+}
+.booking-week-strip small{font-size:clamp(9px,.8vw,11px)}
+.booking-week-strip b{font-size:clamp(14px,1.25vw,17px)}
+.booking-filter-row .staff-tabs button{font-size:clamp(10px,.9vw,12px)}
+.booking-count{font-size:clamp(9px,.82vw,11px)}
+.booking-staff-person b{font-size:clamp(12px,1vw,14px)}
+.booking-staff-person small{font-size:clamp(8px,.72vw,10px)}
+.booking-hours div{font-size:clamp(9px,.82vw,11px)}
+#bookingScreen .booking-block .booking-time{font-size:clamp(9px,.85vw,11px)}
+#bookingScreen .booking-block b{font-size:clamp(12px,1.15vw,15px)}
+#bookingScreen .booking-block small{font-size:clamp(8.5px,.82vw,10.5px)}
+#bookingScreen .booking-block em{font-size:clamp(7px,.7vw,9px)}
+
+@media(min-width:1100px){
+  body.booking-view .workspace{padding-left:40px;padding-right:40px}
+  #bookingScreen{width:min(100%,1120px)}
+  .booking-week-strip{padding-left:10px;padding-right:10px}
+  .booking-grid{grid-template-columns:62px minmax(0,1fr)}
+  .booking-hours div{padding-right:10px}
+  #bookingScreen .booking-block{padding:10px 11px}
+  #bookingScreen .booking-block b{letter-spacing:-.025em}
+}
+
+@media(min-width:761px) and (max-width:1099px){
+  body.booking-view .workspace{padding-left:24px;padding-right:24px}
+  #bookingScreen{width:100%}
+  .ios-booking-head{gap:18px}
+  .booking-grid{grid-template-columns:56px minmax(0,1fr)}
+}
+
+@media(max-width:760px){
+  body.booking-view .workspace{
+    padding-left:max(12px,env(safe-area-inset-left));
+    padding-right:max(12px,env(safe-area-inset-right));
+    padding-bottom:calc(106px + env(safe-area-inset-bottom));
+  }
+  #bookingScreen{width:100%}
+  .ios-booking-head{gap:10px}
+  .ios-booking-title{flex:1}
+  .ios-booking-head h2{font-size:clamp(39px,11vw,45px)!important}
+  .ios-booking-title>span{font-size:13px!important}
+  .booking-greeting{font-size:11px!important;white-space:nowrap}
+  .ios-booking-actions{flex:0 0 auto}
+  .booking-week-strip{padding:7px 3px!important}
+  .booking-week-strip button{min-width:0}
+  .booking-week-strip small{font-size:10px!important}
+  .booking-week-strip b{font-size:15px!important}
+  .booking-filter-row{align-items:center}
+  .booking-filter-row .staff-tabs{max-width:68%}
+  .booking-filter-row .staff-tabs button{font-size:11px!important}
+  .booking-count{font-size:9.5px!important;max-width:40%}
+  .booking-grid{grid-template-columns:46px minmax(0,1fr)!important}
+  .booking-staff-person b{font-size:12.5px!important}
+  .booking-staff-person small{font-size:8.5px!important}
+  .booking-hours div{font-size:10px!important}
+  #bookingScreen .booking-block .booking-time{font-size:9.5px!important}
+  #bookingScreen .booking-block b{font-size:12.5px!important}
+  #bookingScreen .booking-block small{font-size:9px!important}
+  #bookingScreen .booking-block em{font-size:7px!important}
+  .mobile-nav button em{font-size:10px}
+}
+
+@media(max-width:430px){
+  .ios-booking-head h2{font-size:40px!important}
+  .booking-theme-toggle{width:60px!important;height:34px!important;padding-left:5px!important;padding-right:5px!important}
+  .booking-brand-avatar{width:38px!important;height:38px!important}
+  .ios-today-btn{height:38px!important;padding:0 13px!important;font-size:12px!important}
+  .ios-booking-actions .ios-circle-add{width:38px!important;height:38px!important;min-width:38px!important;font-size:25px!important}
+  .booking-week-strip button{height:58px!important}
+  .booking-week-strip small{font-size:9.5px!important}
+  .booking-week-strip b{width:30px!important;height:30px!important;font-size:14px!important}
+  .booking-filter-row .staff-tabs{max-width:70%}
+  .booking-filter-row .staff-tabs button{padding:8px 10px!important;font-size:10.5px!important}
+  .booking-count{font-size:8.8px!important}
+  .booking-grid{grid-template-columns:43px minmax(0,1fr)!important}
+  .booking-staff-person b{font-size:12px!important}
+  .booking-hours div{font-size:9.5px!important}
+  #bookingScreen .booking-block{padding:7px 6px!important}
+  #bookingScreen .booking-block b{font-size:12px!important}
+  #bookingScreen .booking-block small{font-size:8.5px!important}
+}
+
+@media(max-width:370px){
+  .booking-greeting{display:none}
+  .booking-theme-toggle{width:56px!important}
+  .booking-brand-avatar{width:36px!important;height:36px!important}
+  .booking-filter-row{gap:5px}
+  .booking-count{font-size:8px!important}
+  .booking-staff-person b{font-size:11.5px!important}
+  #bookingScreen .booking-block b{font-size:11.5px!important}
+  #bookingScreen .booking-block small{font-size:8px!important}
+}

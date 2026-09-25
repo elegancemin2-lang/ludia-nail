@@ -25,13 +25,15 @@
     document.body.classList.toggle('dark-mode',dark);
     localStorage.setItem('ludiaTheme',dark?'dark':'light');
     const meta=document.querySelector('meta[name="theme-color"]');if(meta)meta.content=dark?'#111113':'#f6f4ef';
-    const top=$('#themeBtn'),book=$('#bookingThemeBtn');
+    const top=$('#themeBtn'),book=$('#bookingThemeBtn'),home=$('#homeThemeBtn');
     if(top)top.classList.toggle('is-dark',dark);
     if(book){book.classList.toggle('is-dark',dark);book.setAttribute('aria-pressed',dark?'true':'false')}
+    if(home){home.classList.toggle('is-dark',dark);home.setAttribute('aria-pressed',dark?'true':'false')}
   }
   if(!window.__ludiaThemeBound){
     $('#themeBtn')?.addEventListener('click',fallbackTheme);
     $('#bookingThemeBtn')?.addEventListener('click',fallbackTheme);
+    $('#homeThemeBtn')?.addEventListener('click',fallbackTheme);
     window.__ludiaThemeBound='fallback';
   }
   window.addEventListener('error',e=>console.error('[LUDIA runtime]',e.error||e.message));

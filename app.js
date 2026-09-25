@@ -292,10 +292,10 @@ function setView(v){
 }
 $$('[data-nav]').forEach(b=>b.onclick=()=>setView(b.dataset.nav));window.__ludiaNavBound=true;
 $('#openStudioBtn')?.addEventListener('click',()=>openDirectStudio());$('#newStudioBtn')?.addEventListener('click',()=>{state.active=null;openDirectStudio({fresh:true})});
-const applyTheme=mode=>{const dark=mode==='dark';document.documentElement.dataset.theme=dark?'dark':'light';document.body.classList.toggle('dark-mode',dark);localStorage.setItem('ludiaTheme',dark?'dark':'light');const meta=document.querySelector('meta[name="theme-color"]');if(meta)meta.content=dark?'#111113':'#f6f4ef';const btn=$('#themeBtn');if(btn){btn.classList.toggle('is-dark',dark);btn.setAttribute('aria-label',dark?'화이트 모드로 전환':'블랙 모드로 전환')}const bookingBtn=$('#bookingThemeBtn');if(bookingBtn){bookingBtn.classList.toggle('is-dark',dark);bookingBtn.setAttribute('aria-pressed',dark?'true':'false');bookingBtn.setAttribute('aria-label',dark?'화이트 모드로 전환':'블랙 모드로 전환')}};
+const applyTheme=mode=>{const dark=mode==='dark';document.documentElement.dataset.theme=dark?'dark':'light';document.body.classList.toggle('dark-mode',dark);localStorage.setItem('ludiaTheme',dark?'dark':'light');const meta=document.querySelector('meta[name="theme-color"]');if(meta)meta.content=dark?'#111113':'#f6f4ef';const btn=$('#themeBtn');if(btn){btn.classList.toggle('is-dark',dark);btn.setAttribute('aria-label',dark?'화이트 모드로 전환':'블랙 모드로 전환')}const bookingBtn=$('#bookingThemeBtn');if(bookingBtn){bookingBtn.classList.toggle('is-dark',dark);bookingBtn.setAttribute('aria-pressed',dark?'true':'false');bookingBtn.setAttribute('aria-label',dark?'화이트 모드로 전환':'블랙 모드로 전환')}const homeBtn=$('#homeThemeBtn');if(homeBtn){homeBtn.classList.toggle('is-dark',dark);homeBtn.setAttribute('aria-pressed',dark?'true':'false');homeBtn.setAttribute('aria-label',dark?'화이트 모드로 전환':'블랙 모드로 전환')}};
 const savedTheme=localStorage.getItem('ludiaTheme');applyTheme(savedTheme==='dark'?'dark':'light');
 const toggleTheme=()=>applyTheme(document.documentElement.dataset.theme==='dark'?'light':'dark');
-$('#themeBtn')?.addEventListener('click',toggleTheme);$('#bookingThemeBtn')?.addEventListener('click',toggleTheme);window.__ludiaThemeBound=true;
+$('#themeBtn')?.addEventListener('click',toggleTheme);$('#bookingThemeBtn')?.addEventListener('click',toggleTheme);$('#homeThemeBtn')?.addEventListener('click',toggleTheme);window.__ludiaThemeBound=true;
 
 const homeChipTexts=['가을 자석','성수 미니멀','웨딩 여리','강남 글리터','숏네일 심플'];
 homeChipTexts.forEach(t=>{const b=document.createElement('button');b.textContent=t;b.onclick=()=>{$('#homePrompt').value=t+' 느낌으로 6개';startFromHome()};$('#homePromptChips').appendChild(b)});
@@ -350,12 +350,20 @@ function nailVisualState(look){
  if(mods.includes('강남 무드')){magnet=Math.max(magnet,2);gems=Math.max(gems,2)}
  return {base,accent,magnet:Math.min(3,magnet),aurora:Math.min(3,aurora),french:Math.min(3,french),gems:Math.min(3,gems),texture:look.texture||'syrup'}
 }
+function safeAttr(value){return String(value||'').replace(/&/g,'&amp;').replace(/"/g,'&quot;').replace(/</g,'&lt;')}
 function nailMarkup(look,cls=''){
  const v=nailVisualState(look);const gems=Array.from({length:v.gems},(_,i)=>`<i class="model-gem g${i+1}"></i>`).join('');const shape=look.shape||'oval';const length=Math.max(0,Math.min(3,Number.isFinite(look.length)?look.length:2));
- return `<span class="nail-model ${cls} texture-${v.texture} shape-${shape} length-${length}" style="--nail-base:${v.base};--nail-accent:${v.accent};--mag:${v.magnet/3};--aur:${v.aurora/3};--french:${v.french/3}"><span class="model-base"></span><span class="model-wash"></span><span class="model-aurora"></span><span class="model-magnet"></span><span class="model-french"></span>${gems}<span class="model-gloss"></span></span>`
+ const canvas=look.canvas||{},drawing=canvas.drawing?`<img class="model-canvas-drawing" src="${safeAttr(canvas.drawing)}" alt="">`:'';
+ const parts=(canvas.parts||[]).map(p=>{const x=Math.max(0,Math.min(100,Number(p.x)||50)),y=Math.max(0,Math.min(100,Number(p.y)||50)),r=Number(p.r)||0,s=Math.max(.35,Math.min(2.4,Number(p.s)||1));const body=p.data?`<img src="${safeAttr(p.data)}" alt="">`:`<span>${String(p.icon||'✦').replace(/</g,'&lt;')}</span>`;return `<i class="model-canvas-part" style="left:${x}%;top:${y}%;--part-r:${r}deg;--part-s:${s}">${body}</i>`}).join('');
+ return `<span class="nail-model ${cls} texture-${v.texture} shape-${shape} length-${length}" style="--nail-base:${v.base};--nail-accent:${v.accent};--mag:${v.magnet/3};--aur:${v.aurora/3};--french:${v.french/3}"><span class="model-base"></span><span class="model-wash"></span><span class="model-aurora"></span><span class="model-magnet"></span><span class="model-french"></span>${drawing}${gems}${parts}<span class="model-gloss"></span></span>`
 }
 function modelPreviewHTML(d,mode='card'){
- ensureFingerLooks(d);const fingers=FINGERS.slice(5,10);return `<div class="model-preview ${mode}"><div class="model-palm">${fingers.map((f,i)=>`<span class="model-finger mf${i+1}">${nailMarkup(d.fingerLooks[f],'preview-nail')}</span>`).join('')}</div></div>`
+ ensureFingerLooks(d);
+ if(mode==='editor-live'||mode==='direct-studio-preview'){
+   const hand=(fingers,side)=>`<div class="model-palm model-palm-${side}">${fingers.map((f,i)=>`<span class="model-finger mf${i+1}">${nailMarkup(d.fingerLooks[f],'preview-nail')}</span>`).join('')}</div>`;
+   return `<div class="model-preview ${mode} dual-hand-preview"><div class="model-dual-wrap">${hand(FINGERS.slice(0,5),'left')}${hand(FINGERS.slice(5,10),'right')}</div></div>`
+ }
+ const fingers=FINGERS.slice(5,10);return `<div class="model-preview ${mode}"><div class="model-palm">${fingers.map((f,i)=>`<span class="model-finger mf${i+1}">${nailMarkup(d.fingerLooks[f],'preview-nail')}</span>`).join('')}</div></div>`
 }
 function designPreviewHTML(d,mode='card'){return d.model?modelPreviewHTML(d,mode):`<img src="${d.img}" alt="${d.name}">`}
 function saveDesign(d){if(state.library.some(x=>x.id===d.id)){toast('이미 보관함에 있어요');return}const sameName=state.library.filter(x=>x.name===d.name).length;const saved={...d,name:sameName?`${d.name} · V${sameName+1}`:d.name,status:d.status==='즐겨찾기'?'즐겨찾기':'후보',savedAt:new Date().toISOString()};state.library.unshift(saved);renderLibrary();renderRecent();renderPicker();schedulePersist();toast(sameName?'변형 버전으로 보관했어요':'보관함에 자동 저장했어요')}
@@ -446,11 +454,21 @@ function renderHandEditor(){
  if(!state.active)return;ensureFingerLooks(state.active);const box=$('#handEditor');if(!box)return;box.innerHTML='';
  const hands=[['LEFT',FINGERS.slice(0,5)],['RIGHT',FINGERS.slice(5)]];
  hands.forEach(([label,list])=>{const hand=document.createElement('div');hand.className='editor-hand';hand.innerHTML=`<span class="hand-label">${label}</span><div class="editor-fingers"></div>`;const row=hand.querySelector('.editor-fingers');
-   list.forEach((f,i)=>{const look=state.active.fingerLooks[f];const b=document.createElement('button');b.type='button';b.className=`finger-photo ${state.fingers.has('전체')||state.fingers.has(f)?'selected':''}`;b.dataset.finger=f;b.innerHTML=`<span class="finger-model-wrap">${nailMarkup(look,'editor-model')}</span><small>${f.replace(/^L|^R/,'')}</small><i>${Object.values(look.levels||{}).reduce((a,b)=>a+b,0)||(look.mods||[]).length||''}</i>`;b.onclick=()=>{state.fingers=new Set([f]);syncEditChipStates();renderPrecisionEditor();window.LudiaNailCanvas?.openFinger(f)};row.appendChild(b)});box.appendChild(hand)});
+   list.forEach((f,i)=>{const look=state.active.fingerLooks[f];const b=document.createElement('button');b.type='button';b.className=`finger-photo ${state.fingers.has('전체')||state.fingers.has(f)?'selected':''}`;b.dataset.finger=f;b.innerHTML=`<span class="finger-model-wrap">${nailMarkup(look,'editor-model')}</span><small>${f.replace(/^L|^R/,'')}</small><i>${Object.values(look.levels||{}).reduce((a,b)=>a+b,0)||(look.mods||[]).length||''}</i>`;b.onclick=()=>{
+     const wasAll=state.fingers.has('전체'),wasSelected=state.fingers.has(f);
+     if(wasAll){state.fingers=new Set([f]);window.LudiaNailCanvas?.openFinger(f,{preserveSelection:true})}
+     else if(wasSelected){
+       if(state.fingers.size>1){state.fingers.delete(f);if(window.LudiaNailCanvas?.getCurrentFinger?.()===f)window.LudiaNailCanvas?.openFinger(selectedFingerNames()[0],{preserveSelection:true})}
+     }else{
+       state.fingers.add(f);window.LudiaNailCanvas?.applyCurrentToSelection?.()
+     }
+     renderHandEditor();syncEditChipStates();renderPrecisionEditor();renderArtLiveStage();renderDirectStudioPreview();if($('#finalViewSheet')?.classList.contains('open'))render3DStage()
+   };row.appendChild(b)});box.appendChild(hand)});
  const sel=selectedFingerNames();const helper=$('#fingerHelper'),liveState=$('#liveEditState');if(helper)helper.textContent=state.fingers.has('전체')?'전체 손가락에 수정이 즉시 반영됩니다.':`${sel.join(' · ')}만 수정합니다.`;if(liveState)liveState.textContent=state.fingers.has('전체')?'전체 선택':`${sel.length}개 선택`;renderPrecisionEditor();
 }
 function toggleFingerFromPhoto(f){
- if(state.fingers.has('전체'))state.fingers=new Set([f]);else if(state.fingers.has(f)&&state.fingers.size===1)state.fingers=new Set(['전체']);else if(state.fingers.has(f))state.fingers.delete(f);else state.fingers.add(f);renderHandEditor();syncEditChipStates();
+ if(state.fingers.has('전체'))state.fingers=new Set([f]);else if(state.fingers.has(f)&&state.fingers.size>1)state.fingers.delete(f);else if(!state.fingers.has(f))state.fingers.add(f);
+ renderHandEditor();syncEditChipStates();renderPrecisionEditor();renderArtLiveStage();renderDirectStudioPreview()
 }
 function syncEditChipStates(){
  if(!state.active)return;ensureFingerLooks(state.active);const selected=selectedFingerNames();
@@ -508,15 +526,23 @@ $('#applyEditBtn').onclick=()=>{const text=$('#editPrompt').value.trim();if(!sta
 };
 $('#finalSaveFromEditor').onclick=()=>{if(!state.active)return;saveDesign(state.active);toast('현재 시술안을 저장했어요')};
 
-let viewerRotX=-8,viewerRotY=0,viewerDragging=false,viewerPX=0,viewerPY=0;
+let viewerRotX=-8,viewerRotY=0,viewerDragging=false,viewerPX=0,viewerPY=0,viewerFocusFinger=null;
 function render3DStage(){
  const stage=$('#viewerStage');if(!stage||!state.active)return;ensureFingerLooks(state.active);stage.innerHTML='';stage.style.transform=`rotateX(${viewerRotX}deg) rotateY(${viewerRotY}deg)`;
+ const back=$('#viewerFocusBack'),hint=$('#viewerHint');
+ if(viewerFocusFinger){
+   const look=state.active.fingerLooks[viewerFocusFinger];const single=document.createElement('div');single.className='viewer-single-card';single.innerHTML=`<div class="viewer-single-nail">${nailMarkup(look,'viewer-focus-model')}</div><b>${viewerFocusFinger.replace('L','왼손 ').replace('R','오른손 ')}</b><small>드래그해서 각도를 확인하세요</small>`;stage.appendChild(single);
+   back?.classList.remove('hidden');if(hint)hint.textContent='↔ 드래그 · ↕ 기울이기 · 전체 손으로 돌아가기';
+   return
+ }
+ back?.classList.add('hidden');if(hint)hint.textContent='손톱을 누르면 단독 확대 · ↔ 드래그 · ↕ 기울이기';
  const hand=document.createElement('div');hand.className='viewer-hand-card';
- FINGERS.forEach((f,i)=>{const look=state.active.fingerLooks[f];const n=document.createElement('div');n.className=`viewer-nail v${i+1}`;n.innerHTML=`${nailMarkup(look,'viewer-model')}<small>${f}</small>`;hand.appendChild(n)});stage.appendChild(hand)
+ FINGERS.forEach((f,i)=>{const look=state.active.fingerLooks[f];const n=document.createElement('button');n.type='button';n.className=`viewer-nail v${i+1}`;n.setAttribute('aria-label',f+' 단독 확대');n.innerHTML=`${nailMarkup(look,'viewer-model')}<small>${f}</small>`;n.onclick=e=>{e.stopPropagation();viewerFocusFinger=f;viewerRotX=-4;viewerRotY=0;render3DStage()};hand.appendChild(n)});stage.appendChild(hand)
 }
-function openFinalView(){if(!state.active)return;viewerRotX=-8;viewerRotY=0;render3DStage();$('#finalViewSheet').classList.add('open');$('#finalViewSheet').setAttribute('aria-hidden','false');document.body.style.overflow='hidden'}
+function openFinalView(){if(!state.active)return;viewerRotX=-8;viewerRotY=0;viewerFocusFinger=null;render3DStage();$('#finalViewSheet').classList.add('open');$('#finalViewSheet').setAttribute('aria-hidden','false');document.body.style.overflow='hidden'}
 function closeFinalView(){$('#finalViewSheet').classList.remove('open');$('#finalViewSheet').setAttribute('aria-hidden','true');document.body.style.overflow=$('#editSheet').classList.contains('open')?'hidden':''}
-$('#final3dBtn').onclick=openFinalView;$$('[data-close-final]').forEach(x=>x.onclick=closeFinalView);
+$('#final3dBtn').onclick=openFinalView;$('[data-close-final]').forEach(x=>x.onclick=closeFinalView);
+$('#viewerFocusBack')?.addEventListener('click',()=>{viewerFocusFinger=null;viewerRotX=-8;viewerRotY=0;render3DStage()});
 $$('[data-view-angle]').forEach(b=>b.onclick=()=>{const a=b.dataset.viewAngle;$$('[data-view-angle]').forEach(x=>x.classList.remove('active'));b.classList.add('active');if(a==='front'){viewerRotX=-8;viewerRotY=0}if(a==='left'){viewerRotX=-6;viewerRotY=-30}if(a==='right'){viewerRotX=-6;viewerRotY=30}if(a==='top'){viewerRotX=25;viewerRotY=0}render3DStage()});
 const viewerShell=$('#viewerShell');
 viewerShell?.addEventListener('pointerdown',e=>{viewerDragging=true;viewerPX=e.clientX;viewerPY=e.clientY;viewerShell.setPointerCapture?.(e.pointerId)});
@@ -613,6 +639,15 @@ $$('[data-close-ops]').forEach(x=>x.onclick=closeOpsDetail);
 $('#opsStatusBtn').onclick=async()=>{if(!activeAppointment||activeAppointment.status==='완료')return;const next=activeAppointment.status==='대기'?'진행중':'완료';const btn=$('#opsStatusBtn');btn.disabled=true;try{if(salonCloudMode==='cloud'&&activeAppointment.cloudId&&window.LudiaSalonCloud?.isConnected()){await window.LudiaSalonCloud.updateAppointmentStatus(activeAppointment.cloudId,next);toast(next==='진행중'?'시술을 시작했어요':'시술 완료로 변경했어요')}else{activeAppointment.status=next;toast(next==='진행중'?'시술을 시작했어요':'시술 완료로 변경했어요');renderOpsToday();renderBooking()}closeOpsDetail()}catch(error){console.error(error);toast('상태 변경에 실패했어요')}finally{btn.disabled=false}};
 $('#opsCustomerBtn').onclick=()=>{if(!activeAppointment)return;closeOpsDetail();setView('customers');const input=$('#customerSearch');input.value=activeAppointment.customer;renderCustomers()};
 $('#customerSearch').oninput=()=>{customerPage=1;renderCustomers()};
+$('#customerRefreshBtn')?.addEventListener('click',async()=>{
+ const btn=$('#customerRefreshBtn');if(btn){btn.disabled=true;btn.textContent='↻ 동기화 중'}
+ try{
+   customerPage=1;
+   if(window.LudiaSalonCloud?.isConnected?.()&&window.LudiaSalonCloud?.refresh){await window.LudiaSalonCloud.refresh();toast('고객 목록을 최신 상태로 불러왔어요')}
+   else{renderCustomers();toast('고객 목록을 새로 표시했어요')}
+ }catch(error){console.error('[LUDIA customer refresh]',error);toast('고객 목록 새로고침에 실패했어요')}
+ finally{if(btn){btn.disabled=false;btn.textContent='↻ 새로고침'}}
+});
 $('#quickAddBooking').onclick=()=>openQuickBooking('13:00',bookingStaff==='전체'?(salonStaffNames[0]||'루디아'):bookingStaff);
 const homeQuickAdd=$('#homeQuickAdd');if(homeQuickAdd)homeQuickAdd.onclick=()=>{bookingDayOffset=0;renderBooking();openQuickBooking('13:00',salonStaffNames[0]||'루디아')};
 $('#newCustomerBtn').onclick=()=>toast('고객 등록은 이름·연락처만 먼저 받고 나머지는 시술 후 채우는 방식으로 연결할게요');

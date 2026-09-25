@@ -75,5 +75,6 @@ window.LudiaSalonCloud=(()=>{
   }
   function openAuthSheet(){renderAuthSheet();const sheet=$('#cloudAuthSheet');sheet?.classList.add('open');sheet?.setAttribute('aria-hidden','false');document.body.style.overflow='hidden'}
   function closeAuthSheet(){const sheet=$('#cloudAuthSheet');sheet?.classList.remove('open');sheet?.setAttribute('aria-hidden','true');document.body.style.overflow=''}
-  return{init,refresh,signIn,signOut,saveAppointment,updateAppointmentStatus,getCustomer360,openAuthSheet,getState:()=>({...state}),getLastPayload:()=>lastPayload,isConnected:()=>state.connected};
+  async function getAccessToken(){if(!client)return null;const {data}=await client.auth.getSession();return data?.session?.access_token||null}
+  return{init,refresh,signIn,signOut,saveAppointment,updateAppointmentStatus,getCustomer360,openAuthSheet,getAccessToken,getState:()=>({...state}),getLastPayload:()=>lastPayload,isConnected:()=>state.connected};
 })();

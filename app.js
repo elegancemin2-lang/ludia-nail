@@ -240,7 +240,7 @@ function openDirectStudio({fresh=false}={}){
  $('#editSheet')?.classList.add('direct-studio-mode');
 }
 function setView(v){
- state.view=v;document.body.classList.toggle('booking-view',v==='booking');$('.screen').forEach(x=>x.classList.remove('active'));const target=$(`#${v}Screen`);if(!target)return;target.classList.add('active');
+ state.view=v;document.body.classList.toggle('booking-view',v==='booking');$$('.screen').forEach(x=>x.classList.remove('active'));const target=$(`#${v}Screen`);if(!target)return;target.classList.add('active');
  const artViews=new Set(['home','create','library','collection','settings']);
  $$('.rail-nav [data-nav],.mobile-nav [data-nav]').forEach(x=>{
    const nav=x.dataset.nav;
@@ -516,7 +516,7 @@ function openDesignRegister(){
 }
 function readAsDataURL(file){return new Promise((resolve,reject)=>{const r=new FileReader();r.onload=()=>resolve(r.result);r.onerror=reject;r.readAsDataURL(file)})}
 $('#openDesignRegisterBtn')?.addEventListener('click',openDesignRegister);
-$('[data-close-design-register]').forEach(x=>x.addEventListener('click',closeDesignRegister));
+$$('[data-close-design-register]').forEach(x=>x.addEventListener('click',closeDesignRegister));
 $('#designDetailToggle')?.addEventListener('click',()=>{$('#designDetailFields')?.classList.toggle('hidden');$('#designDetailToggle')?.classList.toggle('open')});
 $('#designPhotoInput')?.addEventListener('change',e=>{
  const file=e.target.files?.[0];if(!file)return;if(file.size>6*1024*1024){e.target.value='';return toast('사진은 6MB 이하로 등록해 주세요')}

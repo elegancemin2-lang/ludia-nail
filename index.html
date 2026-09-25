@@ -7,7 +7,7 @@
   <meta name="description" content="LUDIA NAIL - 예약·고객관리와 LUDIA ART STUDIO를 하나로 묶은 모바일 네일샵 운영 웹앱" />
   <title>LUDIA NAIL</title>
   <link rel="manifest" href="manifest.webmanifest" />
-  <link rel="stylesheet" href="styles.css?v=2.30.0" />
+  <link rel="stylesheet" href="styles.css?v=2.38.0" />
 </head>
 <body>
   <div class="app">
@@ -370,6 +370,11 @@
 
         <div class="art-live-stage" id="artLiveStage" aria-label="실시간 네일 디자인 미리보기"></div>
 
+        <div class="nail-entry-label"><b>손톱을 눌러 직접 편집</b><small>원하는 손톱 하나를 터치하면 크게 열립니다.</small></div>
+        <div class="instant-editor compact-picker nail-finger-source">
+          <div class="hand-editor" id="handEditor" aria-label="손가락별 디자인 편집"></div>
+        </div>
+
         <section class="nail-canvas-pro" id="nailCanvasPro">
           <div class="nail-canvas-head">
             <div><span class="mini-label">NAIL CANVAS</span><b id="nailCanvasTitle">손톱을 선택하세요</b></div>
@@ -398,12 +403,6 @@
             <div class="nail-tool-panel" data-nail-panel="layers"><div class="nail-layer-list"><div><span>◉</span><b>파츠</b><small>위</small></div><div><span>◉</span><b>드로잉</b><small>중간</small></div><div><span>◉</span><b>베이스 컬러</b><small>아래</small></div></div></div>
           </div>
         </section>
-
-        <div class="instant-editor compact-picker nail-finger-source">
-          <div class="instant-editor-head"><div><b>수정할 손가락</b><small>하나 또는 여러 개 선택</small></div><span id="liveEditState">전체 선택</span></div>
-          <div class="hand-editor" id="handEditor" aria-label="손가락별 디자인 편집"></div>
-          <div class="edit-live-note" id="fingerHelper">전체 디자인을 수정합니다.</div>
-        </div>
 
         <div class="precision-editor" id="precisionEditor">
           <div class="precision-head"><div><b>디테일 편집</b><small>선택한 손가락만 정밀하게 조절</small></div><span id="precisionTarget">전체 10손가락</span></div>

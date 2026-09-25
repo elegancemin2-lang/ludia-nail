@@ -289,31 +289,24 @@
 
       <section class="screen" id="collectionScreen">
         <div class="art-tabs panel" aria-label="ART STUDIO 메뉴">
-          <div class="art-tabs-brand"><span>✦</span><div><b>ART STUDIO</b><small>5–10 min workflow</small></div></div>
+          <div class="art-tabs-brand"><span>✦</span><div><b>ART STUDIO</b><small>SALON MENU</small></div></div>
           <div class="art-tabs-scroll">
             <button data-nav="home">홈</button><button data-nav="create">디자인</button><button data-nav="library">보관함</button><button data-nav="collection">이달의 아트</button><button data-nav="settings">DNA · 재료</button>
           </div>
         </div>
-        <div class="collection-head">
-          <div><span class="mini-label">COLLECTION</span><h2>이달의 아트 6종 만들기</h2><p>저장된 디자인에서 6개를 골라 피드·스토리·가격표용 보드를 바로 정리합니다.</p></div>
-          <div class="collection-progress"><span id="collectionCount">0 / 6</span><div><i id="collectionProgress" style="width:0%"></i></div></div>
+        <div class="monthly-menu-head">
+          <div><span class="mini-label">MONTHLY ART MENU</span><h2>이달의 아트 메뉴판</h2><p>사진 · 디자인명 · 정가 · 할인가를 월별로 관리하고 예약에 바로 연결합니다.</p></div>
+          <button class="primary-btn" id="addMonthlyArtBtn" type="button">＋ 메뉴 추가</button>
         </div>
-        <div class="collection-layout">
-          <div class="collection-picker panel">
-            <div class="picker-head"><b>디자인 선택</b><small>최대 6개</small></div>
-            <div class="picker-grid" id="pickerGrid"></div>
-          </div>
-          <div class="output-panel panel">
-            <div class="output-toolbar"><div class="segmented" id="outputMode"><button class="active" data-mode="feed">피드</button><button data-mode="story">스토리</button><button data-mode="price">가격표</button></div><button class="tiny-btn" id="shuffleCollection">자동 구성</button></div>
-            <div class="collection-preview feed" id="collectionPreview">
-              <div class="preview-brand">LUDIA NAIL</div>
-              <h3>MONTHLY ART</h3>
-              <p>curated by LUDIA ART STUDIO</p>
-              <div class="preview-grid" id="previewGrid"></div>
-              <div class="preview-footer">OCTOBER COLLECTION</div>
-            </div>
-            <button class="generate-main compact" id="exportBtn"><span>↧</span><b>출력 미리보기</b><small>피드 · 스토리 · 가격표</small></button>
-          </div>
+        <div class="monthly-menu-toolbar panel">
+          <button type="button" id="monthlyMenuPrev" aria-label="이전 달">‹</button>
+          <div><span>노출 월</span><b id="monthlyMenuLabel">이번 달</b><small id="monthlyMenuCount">0개 메뉴</small></div>
+          <button type="button" id="monthlyMenuNext" aria-label="다음 달">›</button>
+        </div>
+        <div class="monthly-menu-grid" id="monthlyMenuGrid"></div>
+        <div class="monthly-menu-empty hidden" id="monthlyMenuEmpty">
+          <span>✦</span><b>등록된 이달의 아트가 없어요</b><p>이번 달 메뉴에 사진과 가격을 추가하면 예약에서 바로 선택할 수 있어요.</p>
+          <button class="soft-btn" id="monthlyMenuEmptyAdd" type="button">＋ 첫 메뉴 등록</button>
         </div>
       </section>
 
@@ -504,7 +497,14 @@
         <div class="quick-booking-form">
           <label><span>고객</span><input id="qbCustomer" autocomplete="off" placeholder="고객 이름" /></label>
           <label><span>연락처 <small>선택 · 기존 고객 자동 연결</small></span><input id="qbPhone" inputmode="tel" autocomplete="tel" placeholder="010-0000-0000" /></label>
-          <label><span>시술</span><select id="qbService"><option>젤 원컬러</option><option>젤 아트</option><option>이달의 아트</option><option>오마카세 아트</option><option>제거 + 젤 아트</option></select></label>
+          <label><span>시술</span><select id="qbService"><option>젤 원컬러</option><option>젤 아트</option><option>이달의 아트</option><option>수제디자인</option><option>오마카세 아트</option><option>제거 + 젤 아트</option></select></label>
+          <div class="qb-monthly-art hidden" id="qbMonthlyArtWrap">
+            <div class="qb-special-head"><b>이달의 아트 선택</b><small id="qbMonthlyArtMonth"></small></div>
+            <div class="qb-monthly-art-grid" id="qbMonthlyArtGrid"></div>
+          </div>
+          <div class="qb-custom-design hidden" id="qbCustomDesignWrap">
+            <label><span>수제디자인 요청 <small>고객 참고사진·원하는 스타일</small></span><input id="qbCustomDesignNote" maxlength="80" placeholder="예: 고객 사진 참고 · 핑크 리본 느낌" /></label>
+          </div>
           <div class="quick-booking-two">
             <label><span>시간</span><input id="qbTime" type="time" step="1800" /></label>
             <label><span>담당</span><select id="qbStaff"><option>루디아</option><option>지안</option></select></label>
@@ -583,7 +583,7 @@
     <section class="sheet-card design-register-card" role="dialog" aria-modal="true" aria-labelledby="designRegisterTitle">
       <div class="sheet-grabber"></div>
       <header class="design-register-head">
-        <div><span class="mini-label">MY SALON LIBRARY</span><h3 id="designRegisterTitle">디자인 등록</h3><p>기본은 사진·이름·가격·시간만. 필요한 경우 상세 정보를 추가하세요.</p></div>
+        <div><span class="mini-label" id="designRegisterKicker">MY SALON LIBRARY</span><h3 id="designRegisterTitle">디자인 등록</h3><p id="designRegisterDesc">기본은 사진·이름·가격·시간만. 필요한 경우 상세 정보를 추가하세요.</p></div>
         <button class="tiny-btn" type="button" data-close-design-register>완료</button>
       </header>
       <div class="design-register-body">
@@ -595,8 +595,12 @@
         <div class="design-register-fields">
           <label><span>디자인 이름</span><input id="designNameInput" maxlength="60" placeholder="예: 밀키핑크 자석젤" /></label>
           <div class="design-register-grid">
-            <label><span>가격</span><input id="designPriceInput" type="number" min="0" step="1000" inputmode="numeric" placeholder="69000" /></label>
+            <label><span>정가 / 기본가</span><input id="designPriceInput" type="number" min="0" step="1000" inputmode="numeric" placeholder="79000" /></label>
             <label><span>시술시간</span><input id="designTimeInput" type="number" min="10" max="480" step="5" inputmode="numeric" placeholder="90" /></label>
+          </div>
+          <div class="monthly-design-fields hidden" id="monthlyDesignFields">
+            <label><span>노출 월</span><input id="designMonthInput" type="month" /></label>
+            <label><span>할인가 <small>없으면 정가 적용</small></span><input id="designSalePriceInput" type="number" min="0" step="1000" inputmode="numeric" placeholder="69000" /></label>
           </div>
           <button class="design-detail-toggle" id="designDetailToggle" type="button"><span>상세 설정</span><em>선택사항</em><i>⌄</i></button>
           <div class="design-detail-fields hidden" id="designDetailFields">

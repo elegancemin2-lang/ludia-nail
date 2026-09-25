@@ -257,8 +257,11 @@
           </div>
         </div>
         <div class="library-head">
-          <div><span class="mini-label">LIBRARY</span><h2>디자인 보관함</h2><p>잘 나간 디자인은 다시 꺼내 변형하고, 실시술 디자인은 LUDIA DNA에 더 강하게 반영합니다.</p></div>
-          <button class="primary-btn" data-nav="create">＋ 새 디자인</button>
+          <div><span class="mini-label">LIBRARY</span><h2>디자인 보관함</h2><p>샵에서 만든 디자인을 사진과 함께 저장하고, 필요할 때 바로 다시 꺼내 쓰세요.</p></div>
+          <div class="library-head-actions">
+            <button class="soft-btn" data-nav="create">직접 만들기</button>
+            <button class="primary-btn" id="openDesignRegisterBtn">＋ 디자인 등록</button>
+          </div>
         </div>
         <div class="library-tools panel">
           <div class="search"><span>⌕</span><input id="librarySearch" placeholder="디자인명, 태그 검색"/></div>
@@ -556,6 +559,46 @@
         </div>
       </div>
     </div>
+  </div>
+
+  <div class="sheet design-register-sheet" id="designRegisterSheet" aria-hidden="true">
+    <button class="sheet-backdrop" data-close-design-register aria-label="닫기"></button>
+    <section class="sheet-card design-register-card" role="dialog" aria-modal="true" aria-labelledby="designRegisterTitle">
+      <div class="sheet-grabber"></div>
+      <header class="design-register-head">
+        <div><span class="mini-label">MY SALON LIBRARY</span><h3 id="designRegisterTitle">디자인 등록</h3><p>기본은 사진·이름·가격·시간만. 필요한 경우 상세 정보를 추가하세요.</p></div>
+        <button class="tiny-btn" type="button" data-close-design-register>완료</button>
+      </header>
+      <div class="design-register-body">
+        <label class="design-photo-drop" id="designPhotoDrop">
+          <input id="designPhotoInput" type="file" accept="image/jpeg,image/png,image/webp,image/avif" hidden />
+          <img id="designPhotoPreview" alt="" />
+          <span id="designPhotoEmpty"><b>사진 추가</b><small>대표 사진 1장 · 최대 6MB</small></span>
+        </label>
+        <div class="design-register-fields">
+          <label><span>디자인 이름</span><input id="designNameInput" maxlength="60" placeholder="예: 밀키핑크 자석젤" /></label>
+          <div class="design-register-grid">
+            <label><span>가격</span><input id="designPriceInput" type="number" min="0" step="1000" inputmode="numeric" placeholder="69000" /></label>
+            <label><span>시술시간</span><input id="designTimeInput" type="number" min="10" max="480" step="5" inputmode="numeric" placeholder="90" /></label>
+          </div>
+          <button class="design-detail-toggle" id="designDetailToggle" type="button"><span>상세 설정</span><em>선택사항</em><i>⌄</i></button>
+          <div class="design-detail-fields hidden" id="designDetailFields">
+            <label><span>카테고리</span><input id="designCategoryInput" maxlength="40" placeholder="자석 · 시럽 · 프렌치 등" /></label>
+            <label><span>태그</span><input id="designTagsInput" maxlength="120" placeholder="웨딩, 여리, 데일리" /></label>
+            <label><span>사용 재료</span><input id="designMaterialsInput" maxlength="240" placeholder="밀키 핑크젤, 캣아이젤, 미니 스톤" /></label>
+            <div class="design-register-grid">
+              <label><span>난이도</span><select id="designDifficultyInput"><option>쉬움</option><option selected>보통</option><option>어려움</option></select></label>
+              <label><span>상태</span><select id="designStatusInput"><option value="draft">일반</option><option value="favorite">즐겨찾기</option><option value="monthly">이달의 아트</option></select></label>
+            </div>
+            <label><span>시술 순서 / 메모</span><textarea id="designTechInput" rows="3" maxlength="500" placeholder="예: 시럽 2코트 → 자석광 → 파츠 → 탑"></textarea></label>
+          </div>
+        </div>
+      </div>
+      <footer class="design-register-actions">
+        <small>로그인 상태에서는 현재 샵에만 저장됩니다.</small>
+        <button class="primary-btn" id="saveRegisteredDesignBtn" type="button">디자인 저장</button>
+      </footer>
+    </section>
   </div>
 
   <div class="toast" id="toast" role="status"></div>

@@ -183,7 +183,7 @@ async function initSalonCloud(){
 }
 const PROFILE_PHOTO_LOCAL_KEY='ludiaProfilePhotoLocal';
 function setProfilePhoto(url){
- $('.profile-photo-trigger').forEach(el=>{
+ $$('.profile-photo-trigger').forEach(el=>{
    const imgEl=el.querySelector('.profile-photo-img'),fallback=el.querySelector('.profile-brand-fallback');
    if(imgEl){if(url){imgEl.src=url;imgEl.classList.add('visible')}else{imgEl.removeAttribute('src');imgEl.classList.remove('visible')}}
    if(fallback)fallback.classList.toggle('hidden',Boolean(url));
@@ -197,7 +197,7 @@ async function syncProfilePhoto(){
  try{const url=await window.LudiaSalonCloud.getProfilePhotoUrl();if(url)setProfilePhoto(url)}catch(error){console.warn('[LUDIA profile photo load]',error)}
 }
 function fileToDataUrl(file){return new Promise((resolve,reject)=>{const reader=new FileReader();reader.onload=()=>resolve(reader.result);reader.onerror=reject;reader.readAsDataURL(file)})}
-$('.profile-photo-trigger').forEach(el=>el.addEventListener('click',()=>$('#profilePhotoInput')?.click()));
+$$('.profile-photo-trigger').forEach(el=>el.addEventListener('click',()=>$('#profilePhotoInput')?.click()));
 $('#profilePhotoInput')?.addEventListener('change',async e=>{
  const input=e.currentTarget,file=input.files?.[0];if(!file)return;
  if(!/^image\/(jpeg|png|webp|avif)$/i.test(file.type||'')){input.value='';return toast('JPG · PNG · WEBP · AVIF 사진만 사용할 수 있어요')}

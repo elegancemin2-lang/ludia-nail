@@ -661,9 +661,9 @@ async function syncCloudArtLibrary(){
   renderLibrary();renderRecent();renderMonthlyMenu();renderBooking();
  }catch(error){console.warn('[LUDIA art library]',error)}
 }
-let designRegisterFile=null,designRegisterObjectUrl=null;
+let designRegisterFile=null,designRegisterObjectUrl=null,designRegisterMonthlyMode=false;
 function closeDesignRegister(){
- const sheet=$('#designRegisterSheet');if(!sheet)return;sheet.classList.remove('open');sheet.setAttribute('aria-hidden','true');document.body.style.overflow='';monthlyEditingId=null
+ const sheet=$('#designRegisterSheet');if(!sheet)return;sheet.classList.remove('open');sheet.setAttribute('aria-hidden','true');document.body.style.overflow='';monthlyEditingId=null;designRegisterMonthlyMode=false
 }
 function resetDesignRegister(){
  designRegisterFile=null;if(designRegisterObjectUrl){URL.revokeObjectURL(designRegisterObjectUrl);designRegisterObjectUrl=null}
@@ -675,7 +675,7 @@ function resetDesignRegister(){
  if($('#designRegisterKicker'))$('#designRegisterKicker').textContent='MY SALON LIBRARY';if($('#designRegisterTitle'))$('#designRegisterTitle').textContent='디자인 등록';if($('#designRegisterDesc'))$('#designRegisterDesc').textContent='사진·이름·가격·시간을 등록하고 보관함에서 관리합니다.'
 }
 function openDesignRegister({monthly=false,design=null}={}){
- resetDesignRegister();monthlyEditingId=design?.id||null;
+ resetDesignRegister();monthlyEditingId=design?.id||null;designRegisterMonthlyMode=monthly;
  if(monthly){
    $('#monthlyDesignFields')?.classList.remove('hidden');if($('#designStatusInput'))$('#designStatusInput').value='monthly';
    if($('#designRegisterKicker'))$('#designRegisterKicker').textContent='MONTHLY ART MENU';if($('#designRegisterTitle'))$('#designRegisterTitle').textContent=design?'이달의 아트 수정':'이달의 아트 메뉴 추가';if($('#designRegisterDesc'))$('#designRegisterDesc').textContent='대표 사진 · 디자인명 · 정가 · 할인가 · 노출 월을 관리합니다.'
@@ -705,7 +705,7 @@ $('#saveRegisteredDesignBtn')?.addEventListener('click',async()=>{
  const listPrice=Number($('#designPriceInput')?.value)||0,salePrice=Number($('#designSalePriceInput')?.value)||0,time=Number($('#designTimeInput')?.value)||0;
  const monthKey=$('#designMonthInput')?.value||'',category=$('#designCategoryInput')?.value.trim()||'',tags=($('#designTagsInput')?.value||'').split(',').map(x=>x.trim()).filter(Boolean);
  if(category&&!tags.includes(category))tags.unshift(category);
- const materials=($('#designMaterialsInput')?.value||'').split(',').map(x=>x.trim()).filter(Boolean),difficulty=$('#designDifficultyInput')?.value||'보통',status=$('#designStatusInput')?.value||'draft',tech=$('#designTechInput')?.value.trim()||'';
+ const materials=($('#designMaterialsInput')?.value||'').split(',').map(x=>x.trim()).filter(Boolean),difficulty=$('#designDifficultyInput')?.value||'보통',status=designRegisterMonthlyMode?'monthly':($('#designStatusInput')?.value||'draft'),tech=$('#designTechInput')?.value.trim()||'';
  const monthly=status==='monthly';if(monthly&&!monthKey)return toast('노출 월을 선택해 주세요');
  const btn=$('#saveRegisteredDesignBtn');if(btn){btn.disabled=true;btn.textContent='저장 중…'}
  try{
@@ -753,7 +753,7 @@ $('#monthlyMenuNext')?.addEventListener('click',()=>{monthlyMenuOffset++;renderM
 function renderPicker(){renderMonthlyMenu()}
 function renderCollectionPreview(){renderMonthlyMenu()}
 function renderSettings(){$('#dnaList').replaceChildren(...DNA.map(d=>{const r=document.createElement('div');r.className='dna-row';r.innerHTML=`<div class="dna-info"><b>${d.name}</b><small>${d.desc}</small></div><span class="dna-score">${d.score}%</span>`;return r}));$('#inventoryList').replaceChildren(...inventory.map(x=>{const r=document.createElement('div');r.className='inventory-row';r.innerHTML=`<div class="inventory-info"><b>${x.name}</b><small>${x.state} · ${x.qty}</small></div><span class="stock-dot ${x.state==='부족'?'low':x.state==='품절'?'out':''}"></span>`;return r}))}
-function hydrateFromState(){if($('#homePrompt'))$('#homePrompt').value=state.draft.homePrompt||'';if($('#conceptInput'))$('#conceptInput').value=state.draft.concept||'';if($('#maxTime'))$('#maxTime').value=String(state.draft.maxTime||'90');if($('#targetPrice'))$('#targetPrice').value=String(state.draft.targetPrice||'69000');if($('#stockFirst'))$('#stockFirst').checked=state.draft.stockFirst!==false;if(state.draft.refDataUrl){$('#refPreviewImg').src=state.draft.refDataUrl;$('#refEmpty').classList.add('hidden');$('#refPreview').classList.remove('hidden')}else{$('#refPreview').classList.add('hidden');$('#refEmpty').classList.remove('hidden')}$('#outputMode button').forEach(b=>b.classList.toggle('active',b.dataset.mode===state.outputMode));if($('#collectionPreview'))$('#collectionPreview').className='collection-preview '+state.outputMode}
+function hydrateFromState(){if($('#homePrompt'))$('#homePrompt').value=state.draft.homePrompt||'';if($('#conceptInput'))$('#conceptInput').value=state.draft.concept||'';if($('#maxTime'))$('#maxTime').value=String(state.draft.maxTime||'90');if($('#targetPrice'))$('#targetPrice').value=String(state.draft.targetPrice||'69000');if($('#stockFirst'))$('#stockFirst').checked=state.draft.stockFirst!==false;if(state.draft.refDataUrl){$('#refPreviewImg').src=state.draft.refDataUrl;$('#refEmpty').classList.add('hidden');$('#refPreview').classList.remove('hidden')}else{$('#refPreview').classList.add('hidden');$('#refEmpty').classList.remove('hidden')}}
 function renderAll(){renderDNAChips();renderConditions();renderNails();renderLibrary();renderRecent();renderPicker();renderCollectionPreview();renderSettings();updateBrief();updateStorageStats();renderDirectStudioPreview()}
 function installCoreNavigation(){
  document.addEventListener('click',event=>{

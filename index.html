@@ -103,22 +103,22 @@
           </div>
         </div>
 
-        <div class="booking-week-strip" id="bookingWeekStrip" aria-label="날짜 선택"></div>
+        <div class="booking-week-nav">
+          <button type="button" id="bookingPrevWeek" aria-label="이전 주">‹</button>
+          <div><span>WEEK</span><b id="bookingWeekRange">이번 주</b></div>
+          <button type="button" id="bookingNextWeek" aria-label="다음 주">›</button>
+        </div>
+        <div class="booking-week-strip" id="bookingWeekStrip" aria-label="주간 날짜 선택"></div>
 
         <div class="booking-filter-row">
           <div class="staff-tabs" id="staffTabs" aria-label="담당자 필터"></div>
-          <span class="booking-count" id="bookingCountLabel">예약 0</span>
+          <span class="booking-count" id="bookingCountLabel">이번 주 예약 0</span>
         </div>
 
-        <div class="booking-scroll-shell" aria-label="직원별 예약 스케줄">
-          <div class="booking-grid" id="bookingGrid">
-            <div class="booking-corner">시간</div>
-            <div class="booking-staff-header" id="bookingStaffHeader"></div>
-            <div class="booking-hours" id="bookingHours"></div>
-            <div class="booking-list" id="bookingList"></div>
-          </div>
+        <div class="booking-week-board-shell" aria-label="주간 예약 현황">
+          <div class="booking-week-board" id="bookingWeekBoard"></div>
         </div>
-        <p class="booking-hint">빈 시간을 누르면 바로 예약 · 예약을 누르면 고객/회원권/결제 흐름을 엽니다.</p>
+        <p class="booking-hint">한 주 예약을 한눈에 확인 · 날짜의 ＋를 눌러 예약 · 예약카드를 누르면 상세를 엽니다.</p>
       </section>
 
       <section class="screen" id="customersScreen">

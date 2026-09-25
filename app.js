@@ -105,7 +105,7 @@ function openOpsDetail(a){
  $('#opsStatusBtn').disabled=a.status==='완료';
  $('#opsDetailSheet').classList.add('open');$('#opsDetailSheet').setAttribute('aria-hidden','false');document.body.style.overflow='hidden';
 }
-function closeOpsDetail(){$('#opsDetailSheet').classList.remove('open');$('#opsDetailSheet').setAttribute('aria-hidden','true');document.body.style.overflow=''}
+function closeOpsDetail(){const sheet=$('#opsDetailSheet');if(!sheet)return;sheet.classList.remove('open');sheet.setAttribute('aria-hidden','true');document.body.style.overflow=''}
 function bookingDateFromOffset(offset=0){const d=new Date();d.setHours(12,0,0,0);d.setDate(d.getDate()+offset);return d}
 function bookingDateText(offset=0){const d=bookingDateFromOffset(offset);return `${d.getMonth()+1}월 ${d.getDate()}일 ${['일','월','화','수','목','금','토'][d.getDay()]}요일`}
 function renderBookingWeek(){
@@ -118,6 +118,21 @@ function renderBookingWeek(){
 }
 function getVisibleBookingStaff(){return bookingStaff==='전체'?[...salonStaffNames]:[bookingStaff]}
 function bookingDataForDay(){return salonAppointments.filter(a=>(a.dayOffset||0)===bookingDayOffset&&(bookingStaff==='전체'||a.staff===bookingStaff))}
+function bookingArtImage(a,cardIndex=0){
+ const direct=a?.artImage||a?.designImage||a?.previewImageUrl||a?.preview_image_url||null;
+ if(direct)return direct;
+ const service=String(a?.service||'').trim().toLowerCase();
+ const library=Array.isArray(state?.library)?state.library:[];
+ const norm=value=>String(value||'').trim().toLowerCase();
+ let match=library.find(d=>d?.img&&service&&(norm(d.name).includes(service)||service.includes(norm(d.name))));
+ if(!match&&/이달/.test(service))match=library.find(d=>d?.img&&d.status==='이달의아트');
+ if(!match){
+   const keywords=['자석','시럽','웨딩','프렌치','오로라','글리터','젤','아트'];
+   const key=keywords.find(k=>service.includes(k));
+   if(key)match=library.find(d=>d?.img&&(norm(d.name).includes(key)||(Array.isArray(d.tags)&&d.tags.some(t=>norm(t).includes(key)))));
+ }
+ return match?.img||'assets/nail_5.jpg';
+}
 function renderBooking(){
  const d=bookingDateFromOffset(bookingDayOffset);if($('#bookingMonthLabel'))$('#bookingMonthLabel').textContent=`${d.getFullYear()}년 ${d.getMonth()+1}월`;
  renderBookingWeek();
@@ -130,7 +145,7 @@ function renderBooking(){
  const list=$('#bookingList');if(!list)return;list.innerHTML='';list.style.setProperty('--staff-count',visibleStaff.length);
  const startHour=10, pxHour=window.matchMedia('(max-width:760px)').matches?74:80;
  visibleStaff.forEach((staff,staffIndex)=>{for(let h=startHour;h<21;h++){const slot=document.createElement('button');slot.type='button';slot.className='booking-slot';slot.style.top=`${(h-startHour)*pxHour}px`;slot.style.left=`calc(${staffIndex*100/visibleStaff.length}% + 1px)`;slot.style.width=`calc(${100/visibleStaff.length}% - 2px)`;slot.style.height=`${pxHour}px`;slot.setAttribute('aria-label',`${staff} ${h}시 빈 시간 예약`);slot.onclick=()=>openQuickBooking(`${String(h).padStart(2,'0')}:00`,staff);list.appendChild(slot)}})
- data.forEach((a,cardIndex)=>{const col=Math.max(0,visibleStaff.indexOf(a.staff));if(col<0)return;const b=document.createElement('button');b.type='button';b.className='booking-block '+(a.status==='완료'?'done ':a.status==='진행중'?'progress ':a.status==='취소'||a.status==='노쇼'?'cancelled ':'waiting ');const [hh,mm]=a.time.split(':').map(Number);const mins=hh*60+mm-startHour*60;const dur=a.duration||90;b.style.top=`${Math.max(0,mins/60*pxHour)+4}px`;b.style.height=`${Math.max(56,dur/60*pxHour-8)}px`;b.style.left=`calc(${col*100/visibleStaff.length}% + 6px)`;b.style.width=`calc(${100/visibleStaff.length}% - 12px)`;b.classList.toggle('compact',dur<=60);b.innerHTML=`<div class="booking-card-head"><span class="booking-time">${a.time}</span><em class="booking-state">${a.status==='완료'?'완료':a.status==='취소'?'취소':a.status==='노쇼'?'노쇼':won(a.amount)+'원'}</em></div><b class="booking-customer">${a.customer}</b><small class="booking-service">${a.service}</small>`;b.onclick=e=>{e.stopPropagation();openOpsDetail(a)};list.appendChild(b)});
+ data.forEach((a,cardIndex)=>{const col=Math.max(0,visibleStaff.indexOf(a.staff));if(col<0)return;const b=document.createElement('button');b.type='button';b.className='booking-block '+(a.status==='완료'?'done ':a.status==='진행중'?'progress ':a.status==='취소'||a.status==='노쇼'?'cancelled ':'waiting ');const [hh,mm]=a.time.split(':').map(Number);const mins=hh*60+mm-startHour*60;const dur=a.duration||90;b.style.top=`${Math.max(0,mins/60*pxHour)+4}px`;b.style.height=`${Math.max(56,dur/60*pxHour-8)}px`;b.style.left=`calc(${col*100/visibleStaff.length}% + 6px)`;b.style.width=`calc(${100/visibleStaff.length}% - 12px)`;b.classList.toggle('compact',dur<=60);b.innerHTML=`<div class="booking-card-copy"><div class="booking-card-head"><span class="booking-time">${a.time}</span><em class="booking-state">${a.status==='완료'?'완료':a.status==='취소'?'취소':a.status==='노쇼'?'노쇼':won(a.amount)+'원'}</em></div><b class="booking-customer">${a.customer}</b><small class="booking-service">${a.service}</small></div><div class="booking-art" aria-hidden="true"></div>`;const art=b.querySelector('.booking-art');if(art){const artImg=document.createElement('img');artImg.src=bookingArtImage(a,cardIndex);artImg.alt='';artImg.loading='lazy';artImg.decoding='async';art.appendChild(artImg)}b.onclick=e=>{e.stopPropagation();openOpsDetail(a)};list.appendChild(b)});
  if(bookingDayOffset===0){const now=new Date();const mins=now.getHours()*60+now.getMinutes()-startHour*60;if(mins>=0&&mins<=11*60){const line=document.createElement('div');line.className='booking-now-line';line.style.top=`${mins/60*pxHour}px`;line.innerHTML='<i></i>';list.appendChild(line)}}
 }
 let quickBookingDraft={time:'13:00',staff:'루디아'};
@@ -551,7 +566,25 @@ $$('#outputMode button').forEach(b=>b.onclick=()=>{$$('#outputMode button').forE
 function renderSettings(){$('#dnaList').replaceChildren(...DNA.map(d=>{const r=document.createElement('div');r.className='dna-row';r.innerHTML=`<div class="dna-info"><b>${d.name}</b><small>${d.desc}</small></div><span class="dna-score">${d.score}%</span>`;return r}));$('#inventoryList').replaceChildren(...inventory.map(x=>{const r=document.createElement('div');r.className='inventory-row';r.innerHTML=`<div class="inventory-info"><b>${x.name}</b><small>${x.state} · ${x.qty}</small></div><span class="stock-dot ${x.state==='부족'?'low':x.state==='품절'?'out':''}"></span>`;return r}))}
 function hydrateFromState(){if($('#homePrompt'))$('#homePrompt').value=state.draft.homePrompt||'';if($('#conceptInput'))$('#conceptInput').value=state.draft.concept||'';if($('#maxTime'))$('#maxTime').value=String(state.draft.maxTime||'90');if($('#targetPrice'))$('#targetPrice').value=String(state.draft.targetPrice||'69000');if($('#stockFirst'))$('#stockFirst').checked=state.draft.stockFirst!==false;if(state.draft.refDataUrl){$('#refPreviewImg').src=state.draft.refDataUrl;$('#refEmpty').classList.add('hidden');$('#refPreview').classList.remove('hidden')}else{$('#refPreview').classList.add('hidden');$('#refEmpty').classList.remove('hidden')}$$('#outputMode button').forEach(b=>b.classList.toggle('active',b.dataset.mode===state.outputMode));$('#collectionPreview').className='collection-preview '+state.outputMode}
 function renderAll(){renderDNAChips();renderConditions();renderNails();renderLibrary();renderRecent();renderPicker();renderCollectionPreview();renderSettings();updateBrief();updateStorageStats();renderDirectStudioPreview()}
-function installCoreNavigation(){document.addEventListener('click',event=>{const nav=event.target.closest('[data-nav]');if(nav){event.preventDefault();setView(nav.dataset.nav);return}const action=event.target.closest('[data-ludia-action]');if(!action)return;window.dispatchEvent(new CustomEvent('ludia:open-'+action.dataset.ludiaAction))})}
+function installCoreNavigation(){
+ document.addEventListener('click',event=>{
+   const closeOps=event.target.closest('[data-close-ops]');if(closeOps){event.preventDefault();event.stopPropagation();closeOpsDetail();return}
+   const closeQuick=event.target.closest('[data-close-quick-booking]');if(closeQuick){event.preventDefault();event.stopPropagation();closeQuickBooking();return}
+   const closeRegister=event.target.closest('[data-close-design-register]');if(closeRegister){event.preventDefault();event.stopPropagation();closeDesignRegister();return}
+   const closeFinal=event.target.closest('[data-close-final]');if(closeFinal){event.preventDefault();event.stopPropagation();closeFinalView();return}
+   const closeEditor=event.target.closest('[data-close-sheet]');if(closeEditor){event.preventDefault();event.stopPropagation();closeSheet();return}
+   const nav=event.target.closest('[data-nav]');if(nav){event.preventDefault();setView(nav.dataset.nav);return}
+   const action=event.target.closest('[data-ludia-action]');if(!action)return;window.dispatchEvent(new CustomEvent('ludia:open-'+action.dataset.ludiaAction))
+ });
+ document.addEventListener('keydown',event=>{
+   if(event.key!=='Escape')return;
+   if($('#opsDetailSheet')?.classList.contains('open'))return closeOpsDetail();
+   if($('#quickBookingSheet')?.classList.contains('open'))return closeQuickBooking();
+   if($('#designRegisterSheet')?.classList.contains('open'))return closeDesignRegister();
+   if($('#finalViewSheet')?.classList.contains('open'))return closeFinalView();
+   if($('#editSheet')?.classList.contains('open'))return closeSheet();
+ });
+}
 installCoreNavigation();
 $('#saveStatus').onclick=()=>{setView('more');toast('저장 상태 · 설정/백업은 더보기에서 관리합니다')};
 $('#exportBackupBtn').onclick=exportBackup;$('#importBackupBtn').onclick=()=>$('#backupFile').click();$('#backupFile').onchange=e=>{const f=e.target.files[0];if(f)importBackupFile(f);e.target.value=''};$('#persistStorageBtn').onclick=requestPersistentStorage;

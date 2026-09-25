@@ -164,7 +164,7 @@ function renderCustomers(){
 function applyCloudSalonData(payload){
  salonCloudMode='cloud';salonAppointments=payload.appointments||[];salonCustomers=payload.customers||[];salonStaffNames=payload.staffNames?.length?payload.staffNames:['미지정'];salonServices=payload.services||[];
  if(bookingStaff!=='전체'&&!salonStaffNames.includes(bookingStaff))bookingStaff='전체';
- syncQuickBookingOptions();renderOpsToday();renderBooking();renderCustomers();updateCloudAccountStatus({configured:true,connected:true,salonName:payload.salonName,email:payload.email,realtime:'live'})
+ syncQuickBookingOptions();renderOpsToday();renderBooking();renderCustomers();updateCloudAccountStatus({configured:true,connected:true,salonName:payload.salonName,email:payload.email,realtime:'live'});syncCloudArtLibrary();
 }
 function resetCloudSalonData(){
  salonCloudMode='demo';salonAppointments=DEMO_APPOINTMENTS.map(x=>({...x}));salonCustomers=DEMO_CUSTOMERS.map(x=>({...x}));salonStaffNames=['루디아','지안'];salonServices=[];bookingStaff='전체';renderOpsToday();renderBooking();renderCustomers()
@@ -222,6 +222,7 @@ function setView(v){
  if(v==='create'){state.start=Date.now();renderDirectStudioPreview();setTimeout(()=>openDirectStudio(),40)}
  if(v==='booking')renderBooking();
  if(v==='customers')renderCustomers();
+ if(v==='library')syncCloudArtLibrary();
  window.scrollTo({top:0,behavior:'smooth'});
 }
 $$('[data-nav]').forEach(b=>b.onclick=()=>setView(b.dataset.nav));
@@ -458,6 +459,56 @@ viewerShell?.addEventListener('pointermove',e=>{if(!viewerDragging)return;viewer
 $('#finalSaveBtn').onclick=()=>{if(state.active){saveDesign(state.active);closeFinalView()}};
 
 function renderLibrary(){const q=($('#librarySearch')?.value||'').trim().toLowerCase();const f=state.filter;const data=state.library.filter(d=>(f==='전체'||d.status===f||d.tags.includes(f))&&(!q||d.name.toLowerCase().includes(q)||d.tags.join(' ').toLowerCase().includes(q)));$('#libraryGrid').innerHTML='';data.forEach(d=>{const a=document.createElement('article');a.className='library-card';a.innerHTML=`<span class="status-badge">${d.status}</span>${designPreviewHTML(d,'library')}<div class="card-copy"><b>${d.name}</b><small>${d.diff} · ${d.time}분 · ${money(d.price)}</small><div class="tagline">${d.tags.slice(0,3).map(t=>`<span>#${t}</span>`).join('')}</div></div>`;a.onclick=()=>openSheet(d);$('#libraryGrid').appendChild(a)});$('#libraryEmpty').classList.toggle('hidden',data.length>0)}
+async function syncCloudArtLibrary(){
+ if(!window.LudiaSalonCloud?.isConnected?.()||!window.LudiaSalonCloud?.loadArtDesigns)return;
+ try{
+  const cloud=await window.LudiaSalonCloud.loadArtDesigns();
+  const local=state.library.filter(x=>!x.cloudArt);
+  state.library=[...cloud,...local.filter(x=>!cloud.some(y=>String(y.id)===String(x.id)))];
+  renderLibrary();renderRecent();renderPicker();
+ }catch(error){console.warn('[LUDIA art library]',error)}
+}
+let designRegisterFile=null,designRegisterObjectUrl=null;
+function closeDesignRegister(){
+ const sheet=$('#designRegisterSheet');if(!sheet)return;sheet.classList.remove('open');sheet.setAttribute('aria-hidden','true');document.body.style.overflow='';
+}
+function resetDesignRegister(){
+ designRegisterFile=null;if(designRegisterObjectUrl){URL.revokeObjectURL(designRegisterObjectUrl);designRegisterObjectUrl=null}
+ ['designNameInput','designPriceInput','designTimeInput','designCategoryInput','designTagsInput','designMaterialsInput','designTechInput'].forEach(id=>{const el=$('#'+id);if(el)el.value=''});
+ if($('#designDifficultyInput'))$('#designDifficultyInput').value='보통';if($('#designStatusInput'))$('#designStatusInput').value='draft';
+ $('#designDetailFields')?.classList.add('hidden');$('#designDetailToggle')?.classList.remove('open');
+ const img=$('#designPhotoPreview'),empty=$('#designPhotoEmpty');if(img){img.removeAttribute('src');img.classList.remove('visible')}if(empty)empty.classList.remove('hidden');
+}
+function openDesignRegister(){
+ resetDesignRegister();const sheet=$('#designRegisterSheet');if(!sheet)return;sheet.classList.add('open');sheet.setAttribute('aria-hidden','false');document.body.style.overflow='hidden';setTimeout(()=>$('#designNameInput')?.focus(),180);
+}
+function readAsDataURL(file){return new Promise((resolve,reject)=>{const r=new FileReader();r.onload=()=>resolve(r.result);r.onerror=reject;r.readAsDataURL(file)})}
+$('#openDesignRegisterBtn')?.addEventListener('click',openDesignRegister);
+$('[data-close-design-register]').forEach(x=>x.addEventListener('click',closeDesignRegister));
+$('#designDetailToggle')?.addEventListener('click',()=>{$('#designDetailFields')?.classList.toggle('hidden');$('#designDetailToggle')?.classList.toggle('open')});
+$('#designPhotoInput')?.addEventListener('change',e=>{
+ const file=e.target.files?.[0];if(!file)return;if(file.size>6*1024*1024){e.target.value='';return toast('사진은 6MB 이하로 등록해 주세요')}
+ designRegisterFile=file;if(designRegisterObjectUrl)URL.revokeObjectURL(designRegisterObjectUrl);designRegisterObjectUrl=URL.createObjectURL(file);
+ const img=$('#designPhotoPreview');if(img){img.src=designRegisterObjectUrl;img.classList.add('visible')}$('#designPhotoEmpty')?.classList.add('hidden');
+});
+$('#saveRegisteredDesignBtn')?.addEventListener('click',async()=>{
+ const name=$('#designNameInput')?.value.trim();if(!name)return toast('디자인 이름을 입력해 주세요');if(!designRegisterFile)return toast('대표 사진을 추가해 주세요');
+ const price=Number($('#designPriceInput')?.value)||0,time=Number($('#designTimeInput')?.value)||0;
+ const category=$('#designCategoryInput')?.value.trim()||'',tags=($('#designTagsInput')?.value||'').split(',').map(x=>x.trim()).filter(Boolean);
+ if(category&&!tags.includes(category))tags.unshift(category);
+ const materials=($('#designMaterialsInput')?.value||'').split(',').map(x=>x.trim()).filter(Boolean),difficulty=$('#designDifficultyInput')?.value||'보통',status=$('#designStatusInput')?.value||'draft',tech=$('#designTechInput')?.value.trim()||'';
+ const btn=$('#saveRegisteredDesignBtn');if(btn){btn.disabled=true;btn.textContent='저장 중…'}
+ try{
+  let saved;
+  if(window.LudiaSalonCloud?.isConnected?.()&&window.LudiaSalonCloud?.saveArtDesign){
+    saved=await window.LudiaSalonCloud.saveArtDesign({name,photoFile:designRegisterFile,price,time,tags,category,materials,difficulty,tech,status});
+  }else{
+    const dataUrl=await readAsDataURL(designRegisterFile);saved={id:'local-art-'+Date.now(),name,img:dataUrl,price,time,tags,status:status==='monthly'?'이달의아트':status==='favorite'?'즐겨찾기':'후보',diff:difficulty,materials,tech,desc:'',savedAt:new Date().toISOString()};
+  }
+  state.library=[saved,...state.library.filter(x=>String(x.id)!==String(saved.id))];renderLibrary();renderRecent();renderPicker();schedulePersist();closeDesignRegister();toast(window.LudiaSalonCloud?.isConnected?.()?'현재 샵 보관함에 저장했어요':'이 기기에 디자인을 저장했어요');
+ }catch(error){console.error('[LUDIA design register]',error);toast('디자인 저장에 실패했어요')}
+ finally{if(btn){btn.disabled=false;btn.textContent='디자인 저장'}}
+});
 ['전체','즐겨찾기','베스트','이달의아트','실시술완료','자석','시럽','웨딩'].forEach((f,i)=>{const b=document.createElement('button');b.textContent=f;b.classList.toggle('active',i===0);b.onclick=()=>{state.filter=f;$$('#libraryFilters button').forEach(x=>x.classList.remove('active'));b.classList.add('active');renderLibrary()};$('#libraryFilters').appendChild(b)});$('#librarySearch').oninput=renderLibrary;
 
 function renderPicker(){const data=state.library.length?state.library:baseDesigns;$('#pickerGrid').innerHTML='';data.forEach(d=>{const a=document.createElement('article');a.className='picker-card'+(state.collection.has(d.id)?' selected':'');a.innerHTML=`<span class="picker-check">${state.collection.has(d.id)?'✓':'+'}</span>${designPreviewHTML(d,'picker')}<b>${d.name}</b>`;a.onclick=()=>{if(state.collection.has(d.id))state.collection.delete(d.id);else if(state.collection.size<6)state.collection.add(d.id);else return toast('6개까지 선택할 수 있어요');renderPicker();renderCollectionPreview();schedulePersist()};$('#pickerGrid').appendChild(a)});const count=state.collection.size;$('#collectionCount').textContent=`${count} / 6`;$('#collectionProgress').style.width=`${count/6*100}%`}

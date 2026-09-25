@@ -585,7 +585,7 @@ function render3DStage(){
 }
 function openFinalView(){if(!state.active)return;viewerRotX=-8;viewerRotY=0;viewerFocusFinger=null;render3DStage();$('#finalViewSheet').classList.add('open');$('#finalViewSheet').setAttribute('aria-hidden','false');document.body.style.overflow='hidden'}
 function closeFinalView(){$('#finalViewSheet').classList.remove('open');$('#finalViewSheet').setAttribute('aria-hidden','true');document.body.style.overflow=$('#editSheet').classList.contains('open')?'hidden':''}
-$('#final3dBtn').onclick=openFinalView;$('[data-close-final]').forEach(x=>x.onclick=closeFinalView);
+$('#final3dBtn').onclick=openFinalView;$$('[data-close-final]').forEach(x=>x.onclick=closeFinalView);
 $('#viewerFocusBack')?.addEventListener('click',()=>{viewerFocusFinger=null;viewerRotX=-8;viewerRotY=0;render3DStage()});
 $$('[data-view-angle]').forEach(b=>b.onclick=()=>{const a=b.dataset.viewAngle;$$('[data-view-angle]').forEach(x=>x.classList.remove('active'));b.classList.add('active');if(a==='front'){viewerRotX=-8;viewerRotY=0}if(a==='left'){viewerRotX=-6;viewerRotY=-30}if(a==='right'){viewerRotX=-6;viewerRotY=30}if(a==='top'){viewerRotX=25;viewerRotY=0}render3DStage()});
 const viewerShell=$('#viewerShell');

@@ -1906,6 +1906,14 @@ html[data-theme="dark"] .nail-pro-part span{background:#45454a;color:#fff}
 html[data-theme="dark"] .nail-pro-swatch small,html[data-theme="dark"] .nail-pro-part small{color:#d1d1d6}
 
 /* Full hands use separate silhouettes, so the ten nail targets never overlap. */
+.nail-finger-source .finger-photo{width:100%;min-height:104px}
+.nail-finger-source .finger-photo small{font-size:12px!important;white-space:nowrap}
+.nail-finger-source .hand-label{font-size:11px}
+.nail-finger-source .finger-model-wrap{height:72px!important;display:flex;align-items:end;justify-content:center}
+.nail-finger-source .finger-model-wrap .nail-model{width:auto;height:100%;max-width:100%;flex:none}
+.nail-canvas-head{height:auto;min-height:64px;gap:12px;padding:12px 17px;flex-wrap:wrap}
+.nail-canvas-head>.nail-canvas-head-actions{display:flex;gap:6px;flex-shrink:0}
+.nail-canvas-head-actions button{min-width:42px;height:40px;font-size:14px}
 .viewer-hands{display:flex;gap:16px;width:100%;height:100%;align-items:center;justify-content:center}
 .viewer-whole-hand{position:relative;width:46%;max-width:240px;aspect-ratio:260/380}
 .viewer-hand-shape{position:relative;width:100%;height:100%;filter:drop-shadow(0 14px 12px #593a2825)}

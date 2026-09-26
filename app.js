@@ -104,8 +104,8 @@ function renderOpsToday(){
 }
 function openOpsDetail(a){
  activeAppointment=a;
- $('#opsDetailName').textContent=`${htmlText(a.time)} · ${htmlText(a.customer)}`;
- $('#opsDetailMeta').textContent=`${htmlText(a.service)} · ${htmlText(a.staff)} · ${won(a.amount)}원`;
+ $('#opsDetailName').textContent=`${a.time} · ${a.customer}`;
+ $('#opsDetailMeta').textContent=`${a.service} · ${a.staff} · ${won(a.amount)}원`;
  $('#opsCustomerSnapshot').innerHTML=`<div><span>최근 시술</span><b>${htmlText(a.last)}</b></div><div><span>회원권</span><b>${htmlText(a.membership)}</b></div><div class="wide"><span>메모</span><b>${htmlText(a.note)}</b></div>`;
  $('#opsStatusBtn').textContent=a.status==='완료'?'완료됨':a.status==='진행중'?'시술 완료':'시술 시작';
  $('#opsStatusBtn').disabled=a.status==='완료';
@@ -255,7 +255,7 @@ function openQuickBooking(time='13:00',staff='루디아'){
  $('#qbTime').value=time;$('#qbStaff').value=safeStaff;$('#qbCustomer').value='';if($('#qbPhone'))$('#qbPhone').value='';if($('#qbCustomDesignNote'))$('#qbCustomDesignNote').value='';ensureQuickDuration(90);
  if($('#qbService')?.options.length){const preferred=[...$('#qbService').options].find(o=>o.value==='젤 아트')||$('#qbService').options[0];$('#qbService').value=preferred?.value||'젤 아트'}
  handleQuickServiceChange();
- $('#quickBookingContext').innerHTML='<b>'+bookingDateText(bookingDayOffset)+'</b><span>'+time+' · '+safeStaff+'</span>';$('#quickBookingSheet').classList.add('open');$('#quickBookingSheet').setAttribute('aria-hidden','false');document.body.style.overflow='hidden';setTimeout(()=>$('#qbCustomer')?.focus(),180)
+ $('#quickBookingContext').innerHTML='<b>'+bookingDateText(bookingDayOffset)+'</b><span>'+htmlText(time)+' · '+htmlText(safeStaff)+'</span>';$('#quickBookingSheet').classList.add('open');$('#quickBookingSheet').setAttribute('aria-hidden','false');document.body.style.overflow='hidden';setTimeout(()=>$('#qbCustomer')?.focus(),180)
 }
 function closeQuickBooking(){$('#quickBookingSheet')?.classList.remove('open');$('#quickBookingSheet')?.setAttribute('aria-hidden','true');document.body.style.overflow=''}
 async function saveQuickBooking(){
@@ -286,7 +286,7 @@ function renderCustomers(){
  const pages=Math.max(1,Math.ceil(data.length/CUSTOMER_PAGE_SIZE));customerPage=Math.min(Math.max(1,customerPage),pages);
  const start=(customerPage-1)*CUSTOMER_PAGE_SIZE,pageData=data.slice(start,start+CUSTOMER_PAGE_SIZE);
  const box=$('#customerGrid');if(!box)return;box.innerHTML='';
- pageData.forEach(c=>{const a=document.createElement('article');a.className='customer-card panel';a.innerHTML=`<div class="customer-top"><img src="${htmlText(c.img)}" alt=""><div><b>${htmlText(c.name)}</b><small>${htmlText(c.phone)}</small></div><em>${c.visit}회</em></div><p>${htmlText(c.note||'고객 메모 없음')}</p><div class="customer-tags">${(c.tags||[]).slice(0,3).map(t=>`<span>${htmlText(t)}</span>`).join('')}</div><div class="customer-foot"><span>${htmlText(c.last||'신규')} 방문</span><b>${htmlText(c.membership)}</b></div>`;a.onclick=()=>toast(`${htmlText(c.name)} 고객카드 · 상세 연결 준비됨`);box.appendChild(a)});
+ pageData.forEach(c=>{const a=document.createElement('article');a.className='customer-card panel';a.innerHTML=`<div class="customer-top"><img src="${htmlText(c.img)}" alt=""><div><b>${htmlText(c.name)}</b><small>${htmlText(c.phone)}</small></div><em>${c.visit}회</em></div><p>${htmlText(c.note||'고객 메모 없음')}</p><div class="customer-tags">${(c.tags||[]).slice(0,3).map(t=>`<span>${htmlText(t)}</span>`).join('')}</div><div class="customer-foot"><span>${htmlText(c.last||'신규')} 방문</span><b>${htmlText(c.membership)}</b></div>`;a.onclick=()=>toast(`${c.name} 고객카드 · 상세 연결 준비됨`);box.appendChild(a)});
  const nav=$('#customerPagination'),indicator=$('#customerPageIndicator'),prev=$('#customerPrevPage'),next=$('#customerNextPage');
  if(nav)nav.classList.toggle('hidden',data.length<=CUSTOMER_PAGE_SIZE);
  if(indicator){
@@ -329,7 +329,7 @@ function updateCloudAccountStatus(status={}){
 }
 async function initSalonCloud(){
  if(!window.LudiaSalonCloud){updateCloudAccountStatus({configured:false});return}
- await window.LudiaSalonCloud.init({applyData:applyCloudSalonData,onSignedOut:resetCloudSalonData,onSessionChanging:prepareCloudSalonData,onStatus:updateCloudAccountStatus,toast})
+ await window.LudiaSalonCloud.init({getBookingDate:()=>bookingDateFromOffset(bookingDayOffset),applyData:applyCloudSalonData,onSignedOut:resetCloudSalonData,onSessionChanging:prepareCloudSalonData,onStatus:updateCloudAccountStatus,toast})
 }
 const PROFILE_PHOTO_LOCAL_KEY='ludiaProfilePhotoLocal';
 function setProfilePhoto(url){
@@ -828,9 +828,10 @@ $('#customerRefreshBtn')?.addEventListener('click',async()=>{
 $('#quickAddBooking').onclick=()=>openQuickBooking('13:00',bookingStaff==='전체'?(salonStaffNames[0]||'루디아'):bookingStaff);
 const homeQuickAdd=$('#homeQuickAdd');if(homeQuickAdd)homeQuickAdd.onclick=()=>{bookingDayOffset=0;renderBooking();openQuickBooking('13:00',salonStaffNames[0]||'루디아')};
 $('#newCustomerBtn').onclick=()=>toast('고객 등록은 이름·연락처만 먼저 받고 나머지는 시술 후 채우는 방식으로 연결할게요');
-$('#bookingTodayBtn').onclick=()=>{bookingDayOffset=0;renderBooking()};
-$('#bookingPrevWeek')?.addEventListener('click',()=>{bookingDayOffset-=7;renderBooking()});
-$('#bookingNextWeek')?.addEventListener('click',()=>{bookingDayOffset+=7;renderBooking()});$$('[data-close-quick-booking]').forEach(x=>x.onclick=closeQuickBooking);$('#qbSaveBtn').onclick=saveQuickBooking;
+function refreshBookingWeek(){renderBooking();if(window.LudiaSalonCloud?.isConnected?.())window.LudiaSalonCloud.refresh().catch(()=>toast('이 주의 예약을 불러오지 못했어요 · 새로고침해 주세요'))}
+$('#bookingTodayBtn').onclick=()=>{bookingDayOffset=0;refreshBookingWeek()};
+$('#bookingPrevWeek')?.addEventListener('click',()=>{bookingDayOffset-=7;refreshBookingWeek()});
+$('#bookingNextWeek')?.addEventListener('click',()=>{bookingDayOffset+=7;refreshBookingWeek()});$$('[data-close-quick-booking]').forEach(x=>x.onclick=closeQuickBooking);$('#qbSaveBtn').onclick=saveQuickBooking;
 $$('.more-card:not([data-nav])').forEach(b=>b.onclick=()=>toast(`${b.querySelector('b').textContent} · 필요한 핵심 화면만 단계적으로 연결합니다`));
 
 setInterval(()=>{if(state.view==='create'){const s=Math.floor((Date.now()-state.start)/1000),m=Math.floor(s/60);$('#createTimer').textContent=`${String(m).padStart(2,'0')}:${String(s%60).padStart(2,'0')}`;$('#createTimer').parentElement.classList.toggle('warn',s>300)}},1000);

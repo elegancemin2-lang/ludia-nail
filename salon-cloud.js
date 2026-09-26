@@ -4,7 +4,7 @@
  */
 window.LudiaSalonCloud=(()=>{
   let client=null,salonId=null,user=null,member=null,channel=null,callbacks={},reloadTimer=null;
-  let sessionGeneration=0;
+  let sessionGeneration=0,dataRequestSequence=0;
   let staffRecords=[],serviceRecords=[],lastPayload=null;
   const state={configured:false,connected:false,loading:false,salonName:'',email:'',realtime:'offline',error:null,salonId:null};
   const $=s=>document.querySelector(s);
@@ -37,26 +37,29 @@ window.LudiaSalonCloud=(()=>{
   }
   async function activateSession(session){if(user?.id!==session.user.id){resetCloudData();callbacks.onSessionChanging?.()}user=session.user;state.email=user.email||'';emitStatus({loading:true,connected:false,error:null});await loadData()}
   async function loadData(){
-    if(!client||!user)return;const generation=sessionGeneration;
+    if(!client||!user)return;const generation=sessionGeneration,request=++dataRequestSequence;
     try{
       const {data:mine,error:mineError}=await client.from('ludia_salon_members').select('salon_id,user_id,display_name,role,is_active').eq('user_id',user.id).eq('is_active',true).limit(1);if(mineError)throw mineError;
-      if(generation!==sessionGeneration)return;member=mine?.[0]||null;if(!member){salonId=null;resetCloudData(false);callbacks.onSessionChanging?.();emitStatus({loading:false,connected:false,salonName:'',realtime:'offline',error:'salon_required'});return}salonId=member.salon_id;
+      if(generation!==sessionGeneration||request!==dataRequestSequence)return;member=mine?.[0]||null;if(!member){salonId=null;resetCloudData(false);callbacks.onSessionChanging?.();emitStatus({loading:false,connected:false,salonName:'',realtime:'offline',error:'salon_required'});return}salonId=member.salon_id;
       const today=new Date(),from=new Date(today),to=new Date(today);from.setDate(from.getDate()-14);to.setDate(to.getDate()+45);
-      const [salonQ,staffQ,serviceQ,customerQ,membershipQ,appointmentQ]=await Promise.all([
+      const selected=callbacks.getBookingDate?.()||today,weekStart=new Date(selected);weekStart.setDate(weekStart.getDate()-((weekStart.getDay()+6)%7));const weekEnd=new Date(weekStart);weekEnd.setDate(weekEnd.getDate()+7);const dateKey=d=>[d.getFullYear(),String(d.getMonth()+1).padStart(2,'0'),String(d.getDate()).padStart(2,'0')].join('-');
+      const [salonQ,staffQ,serviceQ,customerQ,membershipQ,appointmentQ,weekQ]=await Promise.all([
         client.from('ludia_salons').select('id,name,timezone').eq('id',salonId).single(),
         client.from('ludia_salon_members').select('user_id,display_name,role,is_active,color_key').eq('salon_id',salonId).eq('is_active',true).order('created_at'),
         client.from('ludia_services').select('id,name,duration_minutes,price,is_active,sort_order').eq('salon_id',salonId).eq('is_active',true).order('sort_order'),
         client.from('ludia_customers').select('id,name,phone,memo,tags,visit_count,last_visit_at,preferences').eq('salon_id',salonId).order('last_visit_at',{ascending:false,nullsFirst:false}).limit(1000),
         client.from('ludia_customer_memberships').select('id,customer_id,kind,name_snapshot,remaining_amount,remaining_count,status,expires_at').eq('salon_id',salonId).eq('status','active'),
-        client.from('ludia_appointments').select('id,customer_id,staff_user_id,service_id,source,external_source_id,customer_name_snapshot,customer_phone_snapshot,service_name_snapshot,starts_at,ends_at,status,price,memo').eq('salon_id',salonId).gte('starts_at',from.toISOString()).lt('starts_at',to.toISOString()).order('starts_at')
+        client.from('ludia_appointments').select('id,customer_id,staff_user_id,service_id,source,external_source_id,customer_name_snapshot,customer_phone_snapshot,service_name_snapshot,starts_at,ends_at,status,price,memo').eq('salon_id',salonId).gte('starts_at',from.toISOString()).lt('starts_at',to.toISOString()).order('starts_at'),
+        client.from('ludia_appointments').select('id,customer_id,staff_user_id,service_id,source,external_source_id,customer_name_snapshot,customer_phone_snapshot,service_name_snapshot,starts_at,ends_at,status,price,memo').eq('salon_id',salonId).gte('starts_at',dateKey(weekStart)+'T00:00:00+09:00').lt('starts_at',dateKey(weekEnd)+'T00:00:00+09:00').order('starts_at')
       ]);
-      const firstError=[salonQ,staffQ,serviceQ,customerQ,membershipQ,appointmentQ].find(x=>x.error)?.error;if(firstError)throw firstError;
-      if(generation!==sessionGeneration)return;staffRecords=staffQ.data||[];serviceRecords=serviceQ.data||[];const staffMap=new Map(staffRecords.map(x=>[x.user_id,x.display_name]));const membershipMap=new Map();(membershipQ.data||[]).forEach(x=>{if(!membershipMap.has(x.customer_id))membershipMap.set(x.customer_id,x)});
+      const firstError=[salonQ,staffQ,serviceQ,customerQ,membershipQ,appointmentQ,weekQ].find(x=>x.error)?.error;if(firstError)throw firstError;
+      if(generation!==sessionGeneration||request!==dataRequestSequence)return;staffRecords=staffQ.data||[];serviceRecords=serviceQ.data||[];const staffMap=new Map(staffRecords.map(x=>[x.user_id,x.display_name]));const membershipMap=new Map();(membershipQ.data||[]).forEach(x=>{if(!membershipMap.has(x.customer_id))membershipMap.set(x.customer_id,x)});
       const customersRaw=customerQ.data||[],customerMap=new Map(customersRaw.map(x=>[x.id,x])),todayKey=kstDateKey(new Date());const keyDay=key=>Math.round((Date.parse(key+'T00:00:00Z')-Date.parse(todayKey+'T00:00:00Z'))/86400000);
       const customers=customersRaw.map((c,i)=>({cloudId:c.id,name:c.name,phone:c.phone||'연락처 없음',visit:c.visit_count||0,last:shortDate(c.last_visit_at),tags:Array.isArray(c.tags)?c.tags:[],membership:membershipText(membershipMap.get(c.id)),note:c.memo||'',img:`assets/nail_${i%5+1}.jpg`,preferences:c.preferences||{}}));
-      const appointments=(appointmentQ.data||[]).map(a=>{const customer=customerMap.get(a.customer_id),start=new Date(a.starts_at),end=new Date(a.ends_at),meta=decodeAppointmentMemo(a.memo);return{id:a.id,cloudId:a.id,dayOffset:keyDay(kstDateKey(start)),time:kstTime(start),customer:a.customer_name_snapshot||customer?.name||'고객',service:a.service_name_snapshot||'시술',staff:staffMap.get(a.staff_user_id)||'미지정',staffUserId:a.staff_user_id,serviceId:a.service_id,duration:Math.max(5,Math.round((end-start)/60000)),amount:a.price||0,status:uiStatus(a.status),dbStatus:a.status,source:a.source||'manual',note:meta.note||'',artId:meta.artId||null,artName:meta.artName||null,designType:meta.designType||null,membership:membershipText(membershipMap.get(a.customer_id)),last:shortDate(customer?.last_visit_at)}});
+      const appointmentRows=[...new Map([...(appointmentQ.data||[]),...(weekQ.data||[])].map(a=>[a.id,a])).values()];
+      const appointments=appointmentRows.map(a=>{const customer=customerMap.get(a.customer_id),start=new Date(a.starts_at),end=new Date(a.ends_at),meta=decodeAppointmentMemo(a.memo);return{id:a.id,cloudId:a.id,dayOffset:keyDay(kstDateKey(start)),time:kstTime(start),customer:a.customer_name_snapshot||customer?.name||'고객',service:a.service_name_snapshot||'시술',staff:staffMap.get(a.staff_user_id)||'미지정',staffUserId:a.staff_user_id,serviceId:a.service_id,duration:Math.max(5,Math.round((end-start)/60000)),amount:a.price||0,status:uiStatus(a.status),dbStatus:a.status,source:a.source||'manual',note:meta.note||'',artId:meta.artId||null,artName:meta.artName||null,designType:meta.designType||null,membership:membershipText(membershipMap.get(a.customer_id)),last:shortDate(customer?.last_visit_at)}});
       const payload={salonId,appointments,customers,staffNames:staffRecords.map(x=>x.display_name),staffRecords:[...staffRecords],services:[...serviceRecords],salonName:salonQ.data?.name||'',email:user.email||''};lastPayload=payload;emitStatus({loading:false,connected:true,salonId,salonName:payload.salonName,email:user.email||'',error:null});callbacks.applyData?.(payload);subscribeRealtime();
-    }catch(error){if(generation!==sessionGeneration)return;fail('샵 데이터를 불러오지 못했어요',error);throw error}
+    }catch(error){if(generation!==sessionGeneration||request!==dataRequestSequence)return;fail('샵 데이터를 불러오지 못했어요',error);throw error}
   }
   function subscribeRealtime(){if(!client||!salonId)return;if(channel)client.removeChannel(channel).catch(()=>{});channel=client.channel('ludia-salon-'+salonId).on('postgres_changes',{event:'*',schema:'public',table:'ludia_appointments',filter:`salon_id=eq.${salonId}`},queueReload).on('postgres_changes',{event:'*',schema:'public',table:'ludia_customers',filter:`salon_id=eq.${salonId}`},queueReload).on('postgres_changes',{event:'*',schema:'public',table:'ludia_customer_memberships',filter:`salon_id=eq.${salonId}`},queueReload).on('postgres_changes',{event:'*',schema:'public',table:'ludia_payments',filter:`salon_id=eq.${salonId}`},queueReload).subscribe(status=>emitStatus({realtime:status==='SUBSCRIBED'?'live':status==='CHANNEL_ERROR'?'error':'connecting'}))}
   function queueReload(){clearTimeout(reloadTimer);reloadTimer=setTimeout(()=>loadData().catch(()=>{}),220)}

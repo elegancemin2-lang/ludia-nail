@@ -23,6 +23,34 @@ BEGIN
   PERFORM set_config('request.jwt.claims',jsonb_build_object('sub',ua,'role','authenticated')::text,true);
   SET LOCAL ROLE authenticated;
   IF auth.uid() <> ua THEN RAISE EXCEPTION 'test identity not applied'; END IF;
+  -- Reproduce the previous frontend payload against the actual constraints.
+  BEGIN
+    INSERT INTO public.ludia_art_projects(salon_id,title,purpose) VALUES(sa,'QA invalid','salon_library');
+    RAISE EXCEPTION 'expected unsupported project purpose';
+  EXCEPTION WHEN check_violation THEN NULL; END;
+  BEGIN
+    INSERT INTO public.ludia_art_design_snapshots(project_id,version_no,render_status) VALUES(pa,2,'ready');
+    RAISE EXCEPTION 'expected unsupported render status';
+  EXCEPTION WHEN check_violation THEN NULL; END;
+  IF public.ludia_save_art_revision(sa,pa,'QA monthly','monthly','{}',
+      '{"price":60000,"listPrice":70000,"salePrice":60000,"time":75,"monthKey":"2026-09","designState":{"model":"qa"}}',sa::text||'/qa-rollback.png',true)<>2 THEN
+    RAISE EXCEPTION 'art revision not incremented';
+  END IF;
+  IF public.ludia_save_art_revision(sa,pa,'QA removed','draft','{}',
+      '{"price":55000,"time":75,"designState":null}',NULL,false)<>3 THEN
+    RAISE EXCEPTION 'repeat art edit failed';
+  END IF;
+  IF NOT EXISTS(SELECT 1 FROM public.ludia_art_design_snapshots WHERE project_id=pa AND version_no=3
+    AND preview_image_url=sa::text||'/qa-rollback.png' AND estimated_price=55000
+    AND estimated_duration_min=75 AND design_json->>'menuStatus'='draft'
+    AND design_json->'designState'->>'model'='qa')
+    OR NOT EXISTS(SELECT 1 FROM public.ludia_art_projects WHERE id=pa AND status='draft') THEN
+    RAISE EXCEPTION 'art photo/design/price preservation failed';
+  END IF;
+  BEGIN
+    PERFORM public.ludia_save_art_revision(sb,pb,'forbidden','monthly','{}','{}',NULL,false);
+    RAISE EXCEPTION 'cross-salon art RPC was allowed';
+  EXCEPTION WHEN insufficient_privilege THEN NULL; END;
   IF (SELECT count(*) FROM public.ludia_customers WHERE salon_id=sa)<>1
     OR EXISTS(SELECT 1 FROM public.ludia_customers WHERE salon_id=sb)
     OR EXISTS(SELECT 1 FROM public.ludia_appointments WHERE salon_id=sb)
@@ -63,4 +91,4 @@ BEGIN
   RESET ROLE;
 END $qa$;
 ROLLBACK;
-SELECT 'PASS: tenant SELECT/INSERT/UPDATE/DELETE, snapshots and private Storage metadata; fixtures rolled back' AS result;
+SELECT 'PASS: tenant CRUD, private Storage metadata, art revisions/photo/price/design preservation and RPC isolation; fixtures rolled back' AS result;

@@ -1912,7 +1912,7 @@ html[data-theme="dark"] .nail-pro-swatch small,html[data-theme="dark"] .nail-pro
 .viewer-whole-hand.right .viewer-hand-shape{transform:scaleX(-1)}
 .viewer-hand-shape>svg{position:absolute;inset:0;width:100%;height:100%;fill:#e9c8b3;stroke:#bf9178;stroke-width:1}
 .viewer-hand-shape .viewer-palm-line{fill:none;stroke:#c99e87;stroke-width:1.5;opacity:.55}
-.viewer-hand-label{display:block;text-align:center;font-size:13px;color:#61544d;margin-top:2px}
+.viewer-hand-label{position:absolute;left:0;right:0;top:-15px;text-align:center;font-size:13px;color:#61544d;margin:0}
 .viewer-hand-shape .viewer-nail{width:10%;height:12%;min-height:0;transform:translateZ(12px)}
 .viewer-hand-shape .viewer-nail .nail-model{min-height:0;width:100%;max-height:100%;border-radius:45% 45% 32% 32%}
 .viewer-hand-shape .viewer-finger-0{left:7.5%;top:49%;transform:rotate(-34deg) translateZ(12px);width:11%}

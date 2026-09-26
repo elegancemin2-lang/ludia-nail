@@ -1900,3 +1900,12 @@ html[data-theme="dark"] .weekly-booking-card.cancelled{opacity:.8}
  .viewer-hand-card .viewer-nail .nail-model{max-height:90px}
  .sheet input,.sheet select,.sheet textarea{font-size:16px}
 }
+
+/* Final browser QA: readable canvas controls and visible parts in Night mode. */
+.nail-pro-swatch,.nail-pro-part{flex-basis:78px}
+.nail-pro-swatch small,.nail-pro-part small{font-size:12px;line-height:1.4;max-width:76px}
+.nail-tool-tabs button{height:40px;font-size:14px}
+.nail-subtabs button,.nail-draw-tools button,.nail-part-upload{font-size:12px;min-height:36px}
+.nail-draw-tools label{font-size:12px}
+html[data-theme="dark"] .nail-pro-part span{background:#45454a;color:#fff}
+html[data-theme="dark"] .nail-pro-swatch small,html[data-theme="dark"] .nail-pro-part small{color:#d1d1d6}

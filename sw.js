@@ -1,4 +1,4 @@
-const CACHE='ludia-nail-v2.54.1';
+const CACHE='ludia-nail-v2.54.2';
 const ASSETS=['assets/icon-192.png','assets/icon-512.png','assets/nail_1.jpg','assets/nail_2.jpg','assets/nail_3.jpg','assets/nail_4.jpg','assets/nail_5.jpg'];
 self.addEventListener('install',event=>{self.skipWaiting();event.waitUntil(caches.open(CACHE).then(cache=>Promise.allSettled(ASSETS.map(path=>cache.add(path)))))});
 self.addEventListener('activate',event=>event.waitUntil(caches.keys().then(keys=>Promise.all(keys.filter(key=>(key.startsWith('ludia-art-')||key.startsWith('ludia-nail-'))&&key!==CACHE).map(key=>caches.delete(key)))).then(()=>self.clients.claim())));

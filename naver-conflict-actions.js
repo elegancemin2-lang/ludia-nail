@@ -6,7 +6,7 @@ window.LudiaNaverConflicts=(()=>{
     clientPromise=(async()=>{
       const r=await fetch('/api/salon-config',{cache:'no-store'}),cfg=await r.json();
       if(!cfg?.configured||!window.supabase?.createClient)throw new Error('cloud unavailable');
-      return window.supabase.createClient(cfg.url,cfg.anonKey,{auth:{persistSession:true,autoRefreshToken:true,detectSessionInUrl:false,storageKey:'ludia-salon-auth'}});
+      return await window.LudiaSalonCloud.getClient();
     })();
     return clientPromise;
   }
@@ -22,3 +22,4 @@ window.LudiaNaverConflicts=(()=>{
   }
   return{resolve};
 })();
+

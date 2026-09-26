@@ -39,7 +39,7 @@
     if(client)return client;
     const r=await fetch('/api/salon-config',{cache:'no-store'}),cfg=await r.json();
     if(!cfg?.configured||!window.supabase?.createClient)throw new Error('cloud unavailable');
-    client=window.supabase.createClient(cfg.url,cfg.anonKey,{auth:{persistSession:true,autoRefreshToken:true,detectSessionInUrl:false,storageKey:'ludia-salon-auth'}});return client;
+    client=await window.LudiaSalonCloud.getClient();return client;
   }
 
   function capture(){

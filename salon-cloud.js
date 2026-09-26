@@ -180,5 +180,5 @@ window.LudiaSalonCloud=(()=>{
     const {error:sErr}=await client.from('ludia_art_design_snapshots').insert({project_id:id,source_type:'manual',design_json:meta,preview_image_url:path,render_status:'ready',estimated_price:effectivePrice||null,estimated_duration_min:Number(time)||null});if(sErr)throw sErr;
     const designs=await loadArtDesigns();return designs.find(x=>String(x.id)===String(id))||null;
   }
-  return{init,refresh,signIn,signOut,saveAppointment,updateAppointmentStatus,getCustomer360,loadArtDesigns,saveArtDesign,updateArtDesign,getProfilePhotoUrl,saveProfilePhoto,openAuthSheet,getAccessToken,getState:()=>({...state}),getLastPayload:()=>lastPayload,isConnected:()=>state.connected};
+  return{getClient:()=>{if(!client)throw new Error('cloud not ready');return client},init,refresh,signIn,signOut,saveAppointment,updateAppointmentStatus,getCustomer360,loadArtDesigns,saveArtDesign,updateArtDesign,getProfilePhotoUrl,saveProfilePhoto,openAuthSheet,getAccessToken,getState:()=>({...state}),getLastPayload:()=>lastPayload,isConnected:()=>state.connected};
 })();

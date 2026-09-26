@@ -20,7 +20,7 @@
     if(!client){
       const r=await fetch('/api/salon-config',{cache:'no-store'}),cfg=await r.json();
       if(!cfg?.configured)return null;
-      client=window.supabase.createClient(cfg.url,cfg.anonKey,{auth:{persistSession:true,autoRefreshToken:true,detectSessionInUrl:false,storageKey:'ludia-salon-auth'}});
+      client=await window.LudiaSalonCloud.getClient();
     }
     const {data:{session}}=await client.auth.getSession();if(!session?.user)return null;
     const {data:mine}=await client.from('ludia_salon_members').select('salon_id').eq('user_id',session.user.id).eq('is_active',true).limit(1);

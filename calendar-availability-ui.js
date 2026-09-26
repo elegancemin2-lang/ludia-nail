@@ -73,7 +73,7 @@
       if(row.available){slot.classList.add('availability-open');open++;return}
       slot.classList.add('availability-blocked');slot.disabled=true;blocked++;
       const reason=labels[row.reason]||'예약 불가';slot.dataset.availabilityReason=reason;
-      slot.setAttribute('aria-label',`${name} ${m[2]}시 ${reason}`);
+      slot.setAttribute('aria-label',`${window.LudiaEscapeHTML(name)} ${m[2]}시 ${window.LudiaEscapeHTML(reason)}`);
     });
     addHeaderBadge(name,open?`가능 ${open}`:(blocked?'예약 마감':'확인'),'open');
   }
@@ -109,3 +109,4 @@
   }
   if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',bind);else bind();
 })();
+

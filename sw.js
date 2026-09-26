@@ -1,6 +1,15 @@
-const CACHE='ludia-nail-v2.53.0';
-const CORE=['./','index.html','styles.css','salon-cloud.js','app.js','runtime-loader.js','core-shell.js','manifest.webmanifest'];
+const CACHE='ludia-nail-v2.54.0';
 const ASSETS=['assets/icon-192.png','assets/icon-512.png','assets/nail_1.jpg','assets/nail_2.jpg','assets/nail_3.jpg','assets/nail_4.jpg','assets/nail_5.jpg'];
-self.addEventListener('install',e=>{self.skipWaiting();e.waitUntil(caches.open(CACHE).then(c=>Promise.allSettled([...CORE,...ASSETS].map(x=>c.add(x)))))});
-self.addEventListener('activate',e=>e.waitUntil(Promise.all([self.clients.claim(),caches.keys().then(keys=>Promise.all(keys.filter(k=>(k.startsWith('ludia-art-')||k.startsWith('ludia-nail-'))&&k!==CACHE).map(k=>caches.delete(k))))])));
-self.addEventListener('fetch',e=>{if(e.request.method!=='GET')return;const u=new URL(e.request.url);if(e.request.mode==='navigate'){e.respondWith(fetch(e.request,{cache:'no-store'}).then(r=>{const clone=r.clone();caches.open(CACHE).then(c=>c.put('index.html',clone)).catch(()=>{});return r}).catch(()=>caches.match('index.html')));return}if(u.origin===location.origin)e.respondWith(fetch(e.request).then(r=>{if(r.ok){const clone=r.clone();caches.open(CACHE).then(c=>c.put(e.request,clone)).catch(()=>{})}return r}).catch(()=>caches.match(e.request)))})};
+self.addEventListener('install',event=>{self.skipWaiting();event.waitUntil(caches.open(CACHE).then(cache=>Promise.allSettled(ASSETS.map(path=>cache.add(path)))))});
+self.addEventListener('activate',event=>event.waitUntil(caches.keys().then(keys=>Promise.all(keys.filter(key=>(key.startsWith('ludia-art-')||key.startsWith('ludia-nail-'))&&key!==CACHE).map(key=>caches.delete(key)))).then(()=>self.clients.claim())));
+self.addEventListener('fetch',event=>{
+ const request=event.request,url=new URL(request.url);
+ // APIs can contain authenticated salon data; never intercept or store those responses.
+ if(request.method!=='GET'||url.origin!==location.origin||url.pathname.startsWith('/api/')||request.headers.has('authorization'))return;
+ const navigation=request.mode==='navigate',staticAsset=/\.(js|css|webmanifest|png|jpe?g|webp|svg)$/.test(url.pathname);
+ if(!navigation&&!staticAsset)return;
+ event.respondWith(fetch(request,{cache:navigation||/\.(js|css)$/.test(url.pathname)?'no-cache':'default'}).then(response=>{
+  if(response.ok){const copy=response.clone();event.waitUntil(caches.open(CACHE).then(cache=>cache.put(navigation?'index.html':request,copy)))}
+  return response;
+ }).catch(async()=>await caches.match(navigation?'index.html':request)||new Response('인터넷 연결을 확인해 주세요.',{status:503,headers:{'content-type':'text/plain; charset=utf-8'}})));
+});

@@ -51,7 +51,7 @@
         if(row.available)b.onclick=()=>{if($('#qbTime'))$('#qbTime').value=time;markSelected(rows);};strip.appendChild(b)
       });
       $('#qbAvailabilityState').textContent=`가능 ${rows.filter(x=>x.available).length}`;
-      $('#qbAvailabilityMeta').textContent=`${staffName} · ${duration}분 기준`;
+      $('#qbAvailabilityMeta').textContent=`${window.LudiaEscapeHTML(staffName)} · ${duration}분 기준`;
       markSelected(rows);
     }catch(error){console.warn('[LUDIA availability]',error);$('#qbAvailabilityState').textContent='확인 실패';$('#qbSlotStrip').innerHTML='<span class="qb-slot-loading">시간 확인에 실패했어요. 저장 시 서버가 다시 검증합니다.</span>';const save=$('#qbSaveBtn');if(save)save.disabled=false}
   }
@@ -68,3 +68,4 @@
   }
   if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',bind);else bind();
 })();
+

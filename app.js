@@ -1,4 +1,6 @@
 const $=(s)=>document.querySelector(s);const $$=(s)=>[...document.querySelectorAll(s)];
+const htmlText=value=>String(value??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+window.LudiaEscapeHTML=htmlText;
 const img=(n)=>`assets/nail_${n}.jpg`;
 const DNA=[
  {name:'청순 시럽',desc:'맑은 핑크·누드·얇은 포인트',score:88},
@@ -28,11 +30,12 @@ const DB_NAME='ludia-art-studio';const DB_VERSION=1;const DB_STORE='app';const B
 function openDB(){return new Promise((resolve,reject)=>{if(!('indexedDB'in window))return reject(new Error('IndexedDB unavailable'));const req=indexedDB.open(DB_NAME,DB_VERSION);req.onupgradeneeded=()=>{const db=req.result;if(!db.objectStoreNames.contains(DB_STORE))db.createObjectStore(DB_STORE)};req.onsuccess=()=>resolve(req.result);req.onerror=()=>reject(req.error)})}
 async function idbGet(key){const db=await openDB();return new Promise((resolve,reject)=>{const tx=db.transaction(DB_STORE,'readonly');const req=tx.objectStore(DB_STORE).get(key);req.onsuccess=()=>resolve(req.result);req.onerror=()=>reject(req.error)})}
 async function idbSet(key,value){const db=await openDB();return new Promise((resolve,reject)=>{const tx=db.transaction(DB_STORE,'readwrite');tx.objectStore(DB_STORE).put(value,key);tx.oncomplete=()=>resolve();tx.onerror=()=>reject(tx.error)})}
-function snapshot(){return{magic:BACKUP_MAGIC,schema:4,savedAt:new Date().toISOString(),data:{dna:state.dna,conditions:[...state.conditions],designs:state.designs,library:state.library,collection:[...state.collection],monthlyMenuMonth:state.monthlyMenuMonth,draft:state.draft,outputMode:state.outputMode}}}
-function applySnapshot(snap){if(!snap?.data)return false;const d=snap.data;state.dna=d.dna||state.dna;state.conditions=new Set(Array.isArray(d.conditions)?d.conditions:[...state.conditions]);state.designs=Array.isArray(d.designs)&&d.designs.length?d.designs:[...baseDesigns];state.library=Array.isArray(d.library)&&d.library.length?d.library:baseDesigns.slice(0,5);state.collection=new Set(Array.isArray(d.collection)?d.collection:[]);state.monthlyMenuMonth=d.monthlyMenuMonth||'';state.draft={...state.draft,...(d.draft||{})};state.outputMode=d.outputMode||'feed';lastSavedAt=snap.savedAt?new Date(snap.savedAt):null;return true}
+function localDateKey(d=new Date()){return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0')}
+function snapshot(){return{magic:BACKUP_MAGIC,schema:4,savedAt:new Date().toISOString(),data:{salonLocal:salonCloudMode==='demo'?{date:localDateKey(),appointments:salonAppointments,customers:salonCustomers}:null,dna:state.dna,conditions:[...state.conditions],designs:state.designs,library:state.library,collection:[...state.collection],monthlyMenuMonth:state.monthlyMenuMonth,draft:state.draft,outputMode:state.outputMode}}}
+function applySnapshot(snap){if(!snap?.data)return false;const d=snap.data;state.dna=d.dna||state.dna;state.conditions=new Set(Array.isArray(d.conditions)?d.conditions:[...state.conditions]);state.designs=Array.isArray(d.designs)&&d.designs.length?d.designs:[...baseDesigns];state.library=Array.isArray(d.library)?d.library.filter(x=>!x.cloudArt):baseDesigns.slice(0,5);state.collection=new Set(Array.isArray(d.collection)?d.collection:[]);state.monthlyMenuMonth=d.monthlyMenuMonth||'';state.draft={...state.draft,...(d.draft||{})};state.outputMode=d.outputMode||'feed';lastSavedAt=snap.savedAt?new Date(snap.savedAt):null;if(d.salonLocal&&salonCloudMode==='demo'){const old=d.salonLocal,shift=Math.round((Date.parse(old.date+'T12:00:00Z')-Date.parse(localDateKey()+'T12:00:00Z'))/86400000);if(Number.isFinite(shift)&&Array.isArray(old.appointments))salonAppointments=old.appointments.filter(x=>!x.cloudId).map(x=>({...x,dayOffset:Number(x.dayOffset||0)+shift}));if(Array.isArray(old.customers))salonCustomers=old.customers.filter(x=>!x.cloudId)}return true}
 function setSaveStatus(mode,text){const el=$('#saveStatus');if(!el)return;el.classList.remove('saving','saved','error');if(mode)el.classList.add(mode);$('#saveStatusText').textContent=text}
-function schedulePersist(){setSaveStatus('saving','저장 중…');clearTimeout(saveTimer);saveTimer=setTimeout(()=>persistNow(),650)}
-async function persistNow(){const snap=snapshot();try{await idbSet('snapshot',snap);storageMode='IndexedDB';localStorage.removeItem('ludiaLibrary');lastSavedAt=new Date(snap.savedAt);setSaveStatus('saved','자동저장됨')}catch(err){storageMode='localStorage';try{const fallback={...snap,data:{...snap.data,draft:{...snap.data.draft,refDataUrl:null}}};localStorage.setItem('ludiaStudioFallback',JSON.stringify(fallback));lastSavedAt=new Date();setSaveStatus('saved','기기저장됨')}catch(e){setSaveStatus('error','저장 오류')}}updateStorageStats()}
+function schedulePersist(){if(salonCloudMode!=='demo'){setSaveStatus('saved','샵 연결 · 저장 버튼 사용');return}setSaveStatus('saving','저장 중…');clearTimeout(saveTimer);saveTimer=setTimeout(()=>persistNow(),650)}
+async function persistNow(){if(salonCloudMode!=='demo')return;const snap=snapshot();try{await idbSet('snapshot',snap);storageMode='IndexedDB';localStorage.removeItem('ludiaLibrary');lastSavedAt=new Date(snap.savedAt);setSaveStatus('saved','자동저장됨')}catch(err){storageMode='localStorage';try{const fallback={...snap,data:{...snap.data,draft:{...snap.data.draft,refDataUrl:null}}};localStorage.setItem('ludiaStudioFallback',JSON.stringify(fallback));lastSavedAt=new Date();setSaveStatus('saved','기기저장됨')}catch(e){setSaveStatus('error','저장 오류')}}updateStorageStats()}
 async function loadPersisted(){let snap=null;try{snap=await idbGet('snapshot');storageMode='IndexedDB'}catch(err){storageMode='localStorage';try{snap=JSON.parse(localStorage.getItem('ludiaStudioFallback')||'null')}catch(e){}}
  if(!snap){try{const legacy=JSON.parse(localStorage.getItem('ludiaLibrary')||'null');if(Array.isArray(legacy)&&legacy.length){state.library=legacy;await persistNow();return 'migrated'}}catch(e){}return 'new'}
  applySnapshot(snap);return 'restored'}
@@ -67,6 +70,7 @@ const DEMO_CUSTOMERS=[
 ]; 
 let salonCustomers=DEMO_CUSTOMERS.map(x=>({...x}));
 let salonStaffNames=['루디아','지안'],salonServices=[],salonCloudMode='demo';
+let localSalonSession=null,activeSalonId=null,artLoadSequence=0;
 let bookingStaff='전체', bookingDayOffset=0, activeAppointment=null;
 let customerPage=1;const CUSTOMER_PAGE_SIZE=8;
 let monthlyMenuOffset=0,monthlyEditingId=null,quickSelectedMonthlyArt=null;
@@ -91,18 +95,18 @@ function renderOpsToday(){
  const timeline=$('#opsTimeline');if(timeline){timeline.innerHTML='';const focus=[...todayAppointments].sort((a,b)=>String(a.time).localeCompare(String(b.time))).filter(a=>a.status!=='완료').slice(0,3);const visible=focus.length?focus:[...todayAppointments].sort((a,b)=>String(b.time).localeCompare(String(a.time))).slice(0,3);visible.forEach(a=>{
    const cls=a.status==='완료'?'done ':a.status==='진행중'?'progress ':a.status==='노쇼'?'cancelled ':'waiting ';
    const row=document.createElement('button');row.className='ops-appointment '+cls;
-   row.innerHTML=`<time>${a.time}</time><span class="agenda-dot"></span><div><b>${a.customer}</b><small>${a.service} · ${a.staff}${a.source==='naver'?' · NAVER':''}</small></div><i>›</i>`;
+   row.innerHTML=`<time>${htmlText(a.time)}</time><span class="agenda-dot"></span><div><b>${htmlText(a.customer)}</b><small>${htmlText(a.service)} · ${htmlText(a.staff)}${a.source==='naver'?' · NAVER':''}</small></div><i>›</i>`;
    row.onclick=()=>openOpsDetail(a);timeline.appendChild(row);
  });if(todayAppointments.length>visible.length){const more=document.createElement('button');more.className='home-agenda-more';more.type='button';more.innerHTML=`전체 일정 ${todayAppointments.length}건 보기 <span>›</span>`;more.onclick=()=>{bookingDayOffset=0;showScreen('booking')};timeline.appendChild(more)}}
  const next=todayAppointments.find(x=>x.status!=='완료'&&x.status!=='노쇼')||todayAppointments[0];
- const n=$('#nextCard');if(n)n.innerHTML=next?`<button class="next-open" id="nextOpenBtn"><span class="next-kicker">다음 예약</span><div class="next-main"><div><time>${next.time}</time><h3>${next.customer}</h3><p>${next.service} · ${next.staff}${next.source==='naver'?' · NAVER':''}</p></div><i>›</i></div><div class="next-meta"><span>${next.note||'메모 없음'}</span><span>${next.membership||'회원권 없음'}</span></div></button>`:'<div class="native-empty-next"><b>오늘 남은 예약이 없어요</b><span>캘린더에서 새 예약을 추가할 수 있어요.</span></div>';
+ const n=$('#nextCard');if(n)n.innerHTML=next?`<button class="next-open" id="nextOpenBtn"><span class="next-kicker">다음 예약</span><div class="next-main"><div><time>${htmlText(next.time)}</time><h3>${htmlText(next.customer)}</h3><p>${htmlText(next.service)} · ${htmlText(next.staff)}${next.source==='naver'?' · NAVER':''}</p></div><i>›</i></div><div class="next-meta"><span>${htmlText(next.note||'메모 없음')}</span><span>${htmlText(next.membership||'회원권 없음')}</span></div></button>`:'<div class="native-empty-next"><b>오늘 남은 예약이 없어요</b><span>캘린더에서 새 예약을 추가할 수 있어요.</span></div>';
  const nextBtn=$('#nextOpenBtn');if(nextBtn)nextBtn.onclick=()=>openOpsDetail(next);
 }
 function openOpsDetail(a){
  activeAppointment=a;
- $('#opsDetailName').textContent=`${a.time} · ${a.customer}`;
- $('#opsDetailMeta').textContent=`${a.service} · ${a.staff} · ${won(a.amount)}원`;
- $('#opsCustomerSnapshot').innerHTML=`<div><span>최근 시술</span><b>${a.last}</b></div><div><span>회원권</span><b>${a.membership}</b></div><div class="wide"><span>메모</span><b>${a.note}</b></div>`;
+ $('#opsDetailName').textContent=`${htmlText(a.time)} · ${htmlText(a.customer)}`;
+ $('#opsDetailMeta').textContent=`${htmlText(a.service)} · ${htmlText(a.staff)} · ${won(a.amount)}원`;
+ $('#opsCustomerSnapshot').innerHTML=`<div><span>최근 시술</span><b>${htmlText(a.last)}</b></div><div><span>회원권</span><b>${htmlText(a.membership)}</b></div><div class="wide"><span>메모</span><b>${htmlText(a.note)}</b></div>`;
  $('#opsStatusBtn').textContent=a.status==='완료'?'완료됨':a.status==='진행중'?'시술 완료':'시술 시작';
  $('#opsStatusBtn').disabled=a.status==='완료';
  $('#opsDetailSheet').classList.add('open');$('#opsDetailSheet').setAttribute('aria-hidden','false');document.body.style.overflow='hidden';
@@ -188,8 +192,8 @@ function renderBooking(){
    }else{
      dayData.forEach((a,cardIndex)=>{
        const b=document.createElement('button');b.type='button';b.className='weekly-booking-card '+(a.status==='완료'?'done ':a.status==='진행중'?'progress ':a.status==='취소'||a.status==='노쇼'?'cancelled ':'waiting ');
-       const staffChip=bookingStaff==='전체'?'<span class="weekly-staff">'+(a.staff||'미지정')+'</span>':'';
-       b.innerHTML=`<div class="weekly-booking-copy"><div class="weekly-booking-meta"><time>${a.time}</time>${staffChip}</div><b>${a.customer}</b><small>${a.service}</small><em>${a.status==='완료'?'완료':a.status==='취소'?'취소':a.status==='노쇼'?'노쇼':won(a.amount)+'원'}</em></div><span class="weekly-booking-art" aria-hidden="true"><img src="${bookingArtImage(a,cardIndex+dayIndex)}" alt="" loading="lazy" decoding="async"></span>`;
+       const staffChip=bookingStaff==='전체'?'<span class="weekly-staff">'+htmlText(a.staff||'미지정')+'</span>':'';
+       b.innerHTML=`<div class="weekly-booking-copy"><div class="weekly-booking-meta"><time>${htmlText(a.time)}</time>${staffChip}</div><b>${htmlText(a.customer)}</b><small>${htmlText(a.service)}</small><em>${htmlText(a.status)} · ${won(a.amount)}원</em></div><span class="weekly-booking-art" aria-hidden="true"><img src="${htmlText(bookingArtImage(a,cardIndex+dayIndex))}" alt="" loading="lazy" decoding="async"></span>`;
        b.onclick=()=>{bookingDayOffset=offset;openOpsDetail(a)};list.appendChild(b)
      })
    }
@@ -234,7 +238,7 @@ function renderQuickMonthlyArts(){
  items.forEach(d=>{
    const b=document.createElement('button');b.type='button';b.className='qb-art-option'+(quickSelectedMonthlyArt&&String(quickSelectedMonthlyArt.id)===String(d.id)?' selected':'');
    const sale=Number(d.salePrice)||0,list=Number(d.listPrice??d.price)||0;
-   b.innerHTML='<img src="'+(d.img||'assets/nail_5.jpg')+'" alt=""><span><b>'+d.name+'</b><small>'+(sale?'<s>'+money(list)+'</s> '+money(sale):money(list))+(d.time?' · '+d.time+'분':'')+'</small></span>';
+   b.innerHTML='<img src="'+htmlText(d.img||'assets/nail_5.jpg')+'" alt=""><span><b>'+htmlText(d.name)+'</b><small>'+(sale?'<s>'+money(list)+'</s> '+money(sale):money(list))+(d.time?' · '+d.time+'분':'')+'</small></span>';
    b.onclick=()=>{quickSelectedMonthlyArt=d;ensureQuickDuration(d.time||90);renderQuickMonthlyArts()};grid.appendChild(b)
  })
 }
@@ -247,6 +251,7 @@ function handleQuickServiceChange(){
 }
 function openQuickBooking(time='13:00',staff='루디아'){
  syncQuickBookingOptions();const safeStaff=salonStaffNames.includes(staff)?staff:(salonStaffNames[0]||staff);quickBookingDraft={time,staff:safeStaff};quickSelectedMonthlyArt=null;
+ delete $('#qbCustomer').dataset.cloudCustomerId;delete $('#qbCustomer').dataset.cloudCustomerName;
  $('#qbTime').value=time;$('#qbStaff').value=safeStaff;$('#qbCustomer').value='';if($('#qbPhone'))$('#qbPhone').value='';if($('#qbCustomDesignNote'))$('#qbCustomDesignNote').value='';ensureQuickDuration(90);
  if($('#qbService')?.options.length){const preferred=[...$('#qbService').options].find(o=>o.value==='젤 아트')||$('#qbService').options[0];$('#qbService').value=preferred?.value||'젤 아트'}
  handleQuickServiceChange();
@@ -254,6 +259,7 @@ function openQuickBooking(time='13:00',staff='루디아'){
 }
 function closeQuickBooking(){$('#quickBookingSheet')?.classList.remove('open');$('#quickBookingSheet')?.setAttribute('aria-hidden','true');document.body.style.overflow=''}
 async function saveQuickBooking(){
+ if(salonCloudMode!=='demo'&&!window.LudiaSalonCloud?.isConnected?.())return toast('클라우드 연결을 확인한 후 다시 저장해 주세요');
  const customer=$('#qbCustomer')?.value.trim();if(!customer)return toast('고객 이름을 입력해 주세요');
  const phone=$('#qbPhone')?.value.trim()||'',rawService=$('#qbService')?.value||'젤 아트',time=$('#qbTime')?.value||quickBookingDraft.time,staff=$('#qbStaff')?.value||quickBookingDraft.staff;
  const selectedArt=rawService==='이달의 아트'?quickSelectedMonthlyArt:null;
@@ -271,16 +277,16 @@ async function saveQuickBooking(){
      await window.LudiaSalonCloud.saveAppointment(payload);closeQuickBooking();toast(customer+' · '+time+' 예약 저장 · 실시간 반영');return
    }
    salonAppointments.push({id:Date.now(),dayOffset:bookingDayOffset,time,customer,service,staff,duration,amount,status:'대기',note:payload.note,membership:'확인 필요',last:'신규',source:'manual',artId:payload.artId,artName:payload.artName,designType:payload.designType});
-   salonAppointments.sort((a,b)=>(a.dayOffset||0)-(b.dayOffset||0)||a.time.localeCompare(b.time));closeQuickBooking();renderBooking();if(bookingDayOffset===0)renderOpsToday();toast(customer+' · '+time+' 예약 저장')
+   salonAppointments.sort((a,b)=>(a.dayOffset||0)-(b.dayOffset||0)||a.time.localeCompare(b.time));if(!salonCustomers.some(c=>c.name===customer&&(!phone||c.phone===phone)))salonCustomers.unshift({name:customer,phone:phone||'연락처 없음',visit:0,last:'신규',tags:[],membership:'없음',note:payload.note,img:img(5)});await persistNow();closeQuickBooking();renderBooking();if(bookingDayOffset===0)renderOpsToday();toast(customer+' · '+time+' 예약 저장')
  }catch(error){console.error(error);toast('예약 저장에 실패했어요 · 연결 상태를 확인해 주세요')}finally{if(btn)btn.disabled=false}
 }
 function renderCustomers(){
  const q=($('#customerSearch')?.value||'').trim().toLowerCase();
- const data=salonCustomers.filter(c=>!q||[c.name,c.phone,c.note,...c.tags].join(' ').toLowerCase().includes(q));
+ const data=salonCustomers.filter(c=>!q||[c.name,c.phone,c.note,...(c.tags||[])].join(' ').toLowerCase().includes(q));
  const pages=Math.max(1,Math.ceil(data.length/CUSTOMER_PAGE_SIZE));customerPage=Math.min(Math.max(1,customerPage),pages);
  const start=(customerPage-1)*CUSTOMER_PAGE_SIZE,pageData=data.slice(start,start+CUSTOMER_PAGE_SIZE);
  const box=$('#customerGrid');if(!box)return;box.innerHTML='';
- pageData.forEach(c=>{const a=document.createElement('article');a.className='customer-card panel';a.innerHTML=`<div class="customer-top"><img src="${c.img}" alt=""><div><b>${c.name}</b><small>${c.phone}</small></div><em>${c.visit}회</em></div><p>${c.note||'고객 메모 없음'}</p><div class="customer-tags">${(c.tags||[]).slice(0,3).map(t=>`<span>${t}</span>`).join('')}</div><div class="customer-foot"><span>${c.last||'신규'} 방문</span><b>${c.membership}</b></div>`;a.onclick=()=>toast(`${c.name} 고객카드 · 상세 연결 준비됨`);box.appendChild(a)});
+ pageData.forEach(c=>{const a=document.createElement('article');a.className='customer-card panel';a.innerHTML=`<div class="customer-top"><img src="${htmlText(c.img)}" alt=""><div><b>${htmlText(c.name)}</b><small>${htmlText(c.phone)}</small></div><em>${c.visit}회</em></div><p>${htmlText(c.note||'고객 메모 없음')}</p><div class="customer-tags">${(c.tags||[]).slice(0,3).map(t=>`<span>${htmlText(t)}</span>`).join('')}</div><div class="customer-foot"><span>${htmlText(c.last||'신규')} 방문</span><b>${htmlText(c.membership)}</b></div>`;a.onclick=()=>toast(`${htmlText(c.name)} 고객카드 · 상세 연결 준비됨`);box.appendChild(a)});
  const nav=$('#customerPagination'),indicator=$('#customerPageIndicator'),prev=$('#customerPrevPage'),next=$('#customerNextPage');
  if(nav)nav.classList.toggle('hidden',data.length<=CUSTOMER_PAGE_SIZE);
  if(indicator){
@@ -298,12 +304,20 @@ function renderCustomers(){
 }
 
 function applyCloudSalonData(payload){
- salonCloudMode='cloud';salonAppointments=payload.appointments||[];salonCustomers=payload.customers||[];customerPage=1;salonStaffNames=payload.staffNames?.length?payload.staffNames:['미지정'];salonServices=payload.services||[];
+ activeSalonId=payload.salonId||null;salonCloudMode='cloud';salonAppointments=payload.appointments||[];salonCustomers=payload.customers||[];customerPage=1;salonStaffNames=payload.staffNames?.length?payload.staffNames:['미지정'];salonServices=payload.services||[];
  if(bookingStaff!=='전체'&&!salonStaffNames.includes(bookingStaff))bookingStaff='전체';
  syncQuickBookingOptions();renderOpsToday();renderBooking();renderCustomers();updateCloudAccountStatus({configured:true,connected:true,salonName:payload.salonName,email:payload.email,realtime:'live'});syncCloudArtLibrary();syncProfilePhoto();
 }
+function prepareCloudSalonData(){
+ if(salonCloudMode==='demo')localSalonSession=structuredClone({library:state.library,designs:state.designs,appointments:salonAppointments,customers:salonCustomers,draft:state.draft});
+ salonCloudMode='connecting';activeSalonId=null;artLoadSequence++;salonAppointments=[];salonCustomers=[];state.library=[];state.designs=[];state.active=null;state.collection=new Set();
+ closeSheet();closeFinalView();closeOpsDetail();closeQuickBooking();closeDesignRegister();setProfilePhoto(null);renderLibrary();renderRecent();renderMonthlyMenu();renderOpsToday();renderBooking();renderCustomers();
+}
 function resetCloudSalonData(){
- salonCloudMode='demo';salonAppointments=DEMO_APPOINTMENTS.map(x=>({...x}));salonCustomers=DEMO_CUSTOMERS.map(x=>({...x}));customerPage=1;salonStaffNames=['루디아','지안'];salonServices=[];bookingStaff='전체';renderOpsToday();renderBooking();renderCustomers();setProfilePhoto(null)
+ artLoadSequence++;activeSalonId=null;salonCloudMode='demo';
+ state.library=localSalonSession?.library||baseDesigns.slice(0,5);state.designs=localSalonSession?.designs||[...baseDesigns];state.draft=localSalonSession?.draft||state.draft;state.active=null;
+ salonAppointments=localSalonSession?.appointments||DEMO_APPOINTMENTS.map(x=>({...x}));salonCustomers=localSalonSession?.customers||DEMO_CUSTOMERS.map(x=>({...x}));customerPage=1;salonStaffNames=['루디아','지안'];salonServices=[];bookingStaff='전체';
+ closeSheet();closeFinalView();closeOpsDetail();closeQuickBooking();closeDesignRegister();renderLibrary();renderRecent();renderMonthlyMenu();renderOpsToday();renderBooking();renderCustomers();syncProfilePhoto();
 }
 function updateCloudAccountStatus(status={}){
  const label=$('#cloudAccountStatus'),badge=$('#cloudAccountBadge');if(!label||!badge)return;
@@ -315,7 +329,7 @@ function updateCloudAccountStatus(status={}){
 }
 async function initSalonCloud(){
  if(!window.LudiaSalonCloud){updateCloudAccountStatus({configured:false});return}
- await window.LudiaSalonCloud.init({applyData:applyCloudSalonData,onSignedOut:resetCloudSalonData,onStatus:updateCloudAccountStatus,toast})
+ await window.LudiaSalonCloud.init({applyData:applyCloudSalonData,onSignedOut:resetCloudSalonData,onSessionChanging:prepareCloudSalonData,onStatus:updateCloudAccountStatus,toast})
 }
 const PROFILE_PHOTO_LOCAL_KEY='ludiaProfilePhotoLocal';
 function setProfilePhoto(url){
@@ -327,19 +341,19 @@ function setProfilePhoto(url){
  });
 }
 async function syncProfilePhoto(){
- const local=localStorage.getItem(PROFILE_PHOTO_LOCAL_KEY)||null;
+ const local=salonCloudMode==='demo'?(localStorage.getItem(PROFILE_PHOTO_LOCAL_KEY)||null):null;
  if(local)setProfilePhoto(local);else setProfilePhoto(null);
  if(!window.LudiaSalonCloud?.isConnected?.()||!window.LudiaSalonCloud?.getProfilePhotoUrl)return;
- try{const url=await window.LudiaSalonCloud.getProfilePhotoUrl();if(url)setProfilePhoto(url)}catch(error){console.warn('[LUDIA profile photo load]',error)}
+ const identity=activeSalonId;try{const url=await window.LudiaSalonCloud.getProfilePhotoUrl();if(identity===activeSalonId&&salonCloudMode==='cloud')setProfilePhoto(url)}catch(error){console.warn('[LUDIA profile photo load]',error)}
 }
 function fileToDataUrl(file){return new Promise((resolve,reject)=>{const reader=new FileReader();reader.onload=()=>resolve(reader.result);reader.onerror=reject;reader.readAsDataURL(file)})}
 $$('.profile-photo-trigger').forEach(el=>el.addEventListener('click',()=>$('#profilePhotoInput')?.click()));
 $('#profilePhotoInput')?.addEventListener('change',async e=>{
- const input=e.currentTarget,file=input.files?.[0];if(!file)return;
+ const input=e.currentTarget,file=input.files?.[0];if(!file)return;if(salonCloudMode!=='demo'&&!window.LudiaSalonCloud?.isConnected?.()){input.value='';return toast('클라우드 연결 후 사진을 변경해 주세요')}
  if(!/^image\/(jpeg|png|webp|avif)$/i.test(file.type||'')){input.value='';return toast('JPG · PNG · WEBP · AVIF 사진만 사용할 수 있어요')}
  if(file.size>5*1024*1024){input.value='';return toast('프로필 사진은 5MB 이하로 선택해 주세요')}
  try{
-   const preview=await fileToDataUrl(file);setProfilePhoto(preview);
+   const preview=await optimizeImageFile(file,800,.88);setProfilePhoto(preview);
    if(window.LudiaSalonCloud?.isConnected?.()&&window.LudiaSalonCloud?.saveProfilePhoto){
      const url=await window.LudiaSalonCloud.saveProfilePhoto(file);localStorage.removeItem(PROFILE_PHOTO_LOCAL_KEY);if(url)setProfilePhoto(url);toast('프로필 사진을 저장했어요')
    }else{
@@ -406,7 +420,7 @@ function startFromHome(){const v=$('#homePrompt').value.trim();state.draft.homeP
 $('#homePrompt').oninput=()=>{state.draft.homePrompt=$('#homePrompt').value;schedulePersist()};$('#homeGenerate').onclick=startFromHome;$('#quickReference').onclick=()=>{setView('create');setTimeout(()=>$('#pickRef').click(),180)};
 const trendData=[['Rose Smoke Magnet','누드핑크 · 실버 캣아이'],['Clear Chrome Point','클리어 · 미러 포인트'],['Soft Wedding Glass','오팔 · 여리한 광']];
 trendData.forEach((x,i)=>{const d=document.createElement('div');d.className='trend-item';d.innerHTML=`<div class="trend-main"><span class="trend-swatch" style="filter:hue-rotate(${i*25}deg)"></span><div><b>${x[0]}</b><small>${x[1]}</small></div></div><span>→</span>`;d.onclick=()=>{$('#homePrompt').value=x[0]+' '+x[1];startFromHome()};$('#trendList').appendChild(d)});
-function recentCard(d){const a=document.createElement('article');a.className='recent-card';a.innerHTML=`${designPreviewHTML(d,'recent')}<div class="card-copy"><b>${d.name}</b><small>${d.tags.slice(0,2).join(' · ')}</small></div>`;a.onclick=()=>openSheet(d);return a}
+function recentCard(d){const a=document.createElement('article');a.className='recent-card';a.innerHTML=`${designPreviewHTML(d,'recent')}<div class="card-copy"><b>${htmlText(d.name)}</b><small>${htmlText(d.tags.slice(0,2).join(' · '))}</small></div>`;a.onclick=()=>openSheet(d);return a}
 function renderRecent(){$('#recentStrip').replaceChildren(...state.library.slice(0,4).map(recentCard))}
 
 function renderDNAChips(){const box=$('#dnaChips');box.innerHTML='';DNA.forEach(d=>{const b=document.createElement('button');b.textContent=d.name;b.classList.toggle('active',state.dna===d.name);b.onclick=()=>{state.dna=d.name;renderDNAChips();updateBrief();schedulePersist()};box.appendChild(b)})}
@@ -458,7 +472,7 @@ function nailMarkup(look,cls=''){
  const v=nailVisualState(look);const gems=Array.from({length:v.gems},(_,i)=>`<i class="model-gem g${i+1}"></i>`).join('');const shape=look.shape||'oval';const length=Math.max(0,Math.min(3,Number.isFinite(look.length)?look.length:2));
  const canvas=look.canvas||{},drawing=canvas.drawing?`<img class="model-canvas-drawing" src="${safeAttr(canvas.drawing)}" alt="">`:'';
  const parts=(canvas.parts||[]).map(p=>{const x=Math.max(0,Math.min(100,Number(p.x)||50)),y=Math.max(0,Math.min(100,Number(p.y)||50)),r=Number(p.r)||0,s=Math.max(.35,Math.min(2.4,Number(p.s)||1));const body=p.data?`<img src="${safeAttr(p.data)}" alt="">`:`<span>${String(p.icon||'✦').replace(/</g,'&lt;')}</span>`;return `<i class="model-canvas-part" style="left:${x}%;top:${y}%;--part-r:${r}deg;--part-s:${s}">${body}</i>`}).join('');
- return `<span class="nail-model ${cls} texture-${v.texture} shape-${shape} length-${length}" style="--nail-base:${v.base};--nail-accent:${v.accent};--mag:${v.magnet/3};--aur:${v.aurora/3};--french:${v.french/3}"><span class="model-base"></span><span class="model-wash"></span><span class="model-aurora"></span><span class="model-magnet"></span><span class="model-french"></span>${drawing}${gems}${parts}<span class="model-gloss"></span></span>`
+ return `<span class="nail-model ${cls} texture-${safeAttr(v.texture)} shape-${safeAttr(shape)} length-${length}" style="--nail-base:${safeAttr(v.base)};--nail-accent:${safeAttr(v.accent)};--mag:${v.magnet/3};--aur:${v.aurora/3};--french:${v.french/3}"><span class="model-base"></span><span class="model-wash"></span><span class="model-aurora"></span><span class="model-magnet"></span><span class="model-french"></span>${drawing}${gems}${parts}<span class="model-gloss"></span></span>`
 }
 function modelPreviewHTML(d,mode='card'){
  ensureFingerLooks(d);
@@ -468,8 +482,20 @@ function modelPreviewHTML(d,mode='card'){
  }
  const fingers=FINGERS.slice(5,10);return `<div class="model-preview ${mode}"><div class="model-palm">${fingers.map((f,i)=>`<span class="model-finger mf${i+1}">${nailMarkup(d.fingerLooks[f],'preview-nail')}</span>`).join('')}</div></div>`
 }
-function designPreviewHTML(d,mode='card'){return d.model?modelPreviewHTML(d,mode):`<img src="${d.img}" alt="${d.name}">`}
-function saveDesign(d){if(state.library.some(x=>x.id===d.id)){toast('이미 보관함에 있어요');return}const sameName=state.library.filter(x=>x.name===d.name).length;const saved={...d,name:sameName?`${d.name} · V${sameName+1}`:d.name,status:d.status==='즐겨찾기'?'즐겨찾기':'후보',savedAt:new Date().toISOString()};state.library.unshift(saved);renderLibrary();renderRecent();renderPicker();schedulePersist();toast(sameName?'변형 버전으로 보관했어요':'보관함에 자동 저장했어요')}
+function designPreviewHTML(d,mode='card'){return d.model?modelPreviewHTML(d,mode):`<img src="${htmlText(d.img)}" alt="${htmlText(d.name)}">`}
+async function saveDesign(d){
+ if(!d)return false;
+ if(salonCloudMode!=='demo'&&!window.LudiaSalonCloud?.isConnected?.()){toast('클라우드 연결 후 다시 저장해 주세요');return false}
+ try{
+  let saved=structuredClone({...d,savedAt:new Date().toISOString()});
+  if(salonCloudMode==='cloud'){
+   const payload={id:d.cloudArt?d.id:null,name:d.name,price:d.price,listPrice:d.listPrice??d.price,salePrice:d.salePrice||0,monthKey:d.monthKey||'',time:d.time,tags:d.tags||[],materials:d.materials||[],difficulty:d.diff,tech:d.tech,description:d.desc,status:d.projectStatus||'draft',designState:{model:d.model,fingerLooks:d.fingerLooks,baseTime:d.baseTime,basePrice:d.basePrice}};
+   saved=d.cloudArt?await window.LudiaSalonCloud.updateArtDesign(payload):await window.LudiaSalonCloud.saveArtDesign(payload);
+   if(!saved)throw new Error('empty design result');state.active=saved;
+  }
+  state.library=[saved,...state.library.filter(x=>String(x.id)!==String(saved.id))];renderLibrary();renderRecent();renderPicker();await persistNow();toast(salonCloudMode==='cloud'?'현재 샵에 디자인을 저장했어요':'이 기기에 디자인을 저장했어요');return true;
+ }catch(error){console.error('[LUDIA editor save]',error);toast('디자인 저장에 실패했어요');return false}
+}
 const FINGERS=['L엄지','L검지','L중지','L약지','L소지','R엄지','R검지','R중지','R약지','R소지'];
 const NAIL_SHAPES=[['round','라운드'],['oval','오벌'],['almond','아몬드'],['square','스퀘어'],['ballerina','발레리나']];
 const NAIL_LENGTH_LABELS=['숏','보통','롱','엑스트라'];
@@ -477,7 +503,8 @@ const NAIL_COLORS=['#f1c7ce','#e6d0c4','#d6b7c7','#b9cee6','#f0ebe5','#a84b59','
 const NAIL_TEXTURES=[['syrup','시럽'],['jelly','젤리'],['glass','글라스'],['pearl','펄'],['smoke','스모크']];
 let editorHistory=[],editorRedo=[],editorOriginal=null,editorPreviewMode='current';
 function snapshotFingerLooks(d){ensureFingerLooks(d);return cloneModel(d.fingerLooks)}
-function restoreFingerLooks(d,snap){d.fingerLooks=cloneModel(snap);recalcDesign(d);renderHandEditor();renderArtLiveStage();renderEditorMetrics();syncEditChipStates();render3DStage();renderDirectStudioPreview();schedulePersist()}
+function syncCanvasFromActive(){const f=window.LudiaNailCanvas?.getCurrentFinger?.();if(f)window.LudiaNailCanvas.openFinger(f,{preserveSelection:true,scroll:false})}
+function restoreFingerLooks(d,snap){d.fingerLooks=cloneModel(snap);syncCanvasFromActive();recalcDesign(d);renderHandEditor();renderArtLiveStage();renderEditorMetrics();syncEditChipStates();render3DStage();renderDirectStudioPreview();schedulePersist()}
 function pushEditorHistory(){if(!state.active)return;editorHistory.push(snapshotFingerLooks(state.active));if(editorHistory.length>40)editorHistory.shift();editorRedo=[];updateHistoryButtons()}
 function updateHistoryButtons(){const u=$('#undoEditBtn'),r=$('#redoEditBtn');if(u)u.disabled=!editorHistory.length;if(r)r.disabled=!editorRedo.length}
 function undoEditor(){if(!state.active||!editorHistory.length)return;editorRedo.push(snapshotFingerLooks(state.active));restoreFingerLooks(state.active,editorHistory.pop());updateHistoryButtons();toast('한 단계 되돌렸어요')}
@@ -557,17 +584,17 @@ function renderHandEditor(){
  if(!state.active)return;ensureFingerLooks(state.active);const box=$('#handEditor');if(!box)return;box.innerHTML='';
  const hands=[['LEFT',FINGERS.slice(0,5)],['RIGHT',FINGERS.slice(5)]];
  hands.forEach(([label,list])=>{const hand=document.createElement('div');hand.className='editor-hand';hand.innerHTML=`<span class="hand-label">${label}</span><div class="editor-fingers"></div>`;const row=hand.querySelector('.editor-fingers');
-   list.forEach((f,i)=>{const look=state.active.fingerLooks[f];const b=document.createElement('button');b.type='button';b.className=`finger-photo ${state.fingers.has('전체')||state.fingers.has(f)?'selected':''}`;b.dataset.finger=f;b.innerHTML=`<span class="finger-model-wrap">${nailMarkup(look,'editor-model')}</span><small>${f.replace(/^L|^R/,'')}</small><i>${Object.values(look.levels||{}).reduce((a,b)=>a+b,0)||(look.mods||[]).length||''}</i>`;b.onclick=()=>{
+   list.forEach((f,i)=>{const look=state.active.fingerLooks[f];const b=document.createElement('button');b.type='button';b.className=`finger-photo ${state.fingers.has('전체')||state.fingers.has(f)?'selected':''}`;b.dataset.finger=f;b.setAttribute('aria-label',f.replace('L','왼손 ').replace('R','오른손 '));b.setAttribute('aria-pressed',String(state.fingers.has('전체')||state.fingers.has(f)));b.innerHTML=`<span class="finger-model-wrap">${nailMarkup(look,'editor-model')}</span><small>${f.replace(/^L|^R/,'')}</small><i>${Object.values(look.levels||{}).reduce((a,b)=>a+b,0)||(look.mods||[]).length||''}</i>`;b.onclick=()=>{
      const wasAll=state.fingers.has('전체'),wasSelected=state.fingers.has(f);
      if(wasAll){state.fingers=new Set([f]);window.LudiaNailCanvas?.openFinger(f,{preserveSelection:true})}
      else if(wasSelected){
        if(state.fingers.size>1){state.fingers.delete(f);if(window.LudiaNailCanvas?.getCurrentFinger?.()===f)window.LudiaNailCanvas?.openFinger(selectedFingerNames()[0],{preserveSelection:true})}
      }else{
-       state.fingers.add(f);window.LudiaNailCanvas?.applyCurrentToSelection?.()
+       state.fingers.add(f)
      }
      renderHandEditor();syncEditChipStates();renderPrecisionEditor();renderArtLiveStage();renderDirectStudioPreview();if($('#finalViewSheet')?.classList.contains('open'))render3DStage()
    };row.appendChild(b)});box.appendChild(hand)});
- const sel=selectedFingerNames();const helper=$('#fingerHelper'),liveState=$('#liveEditState');if(helper)helper.textContent=state.fingers.has('전체')?'전체 손가락에 수정이 즉시 반영됩니다.':`${sel.join(' · ')}만 수정합니다.`;if(liveState)liveState.textContent=state.fingers.has('전체')?'전체 선택':`${sel.length}개 선택`;renderPrecisionEditor();
+ window.LudiaNailCanvas?.updateSelectionLabel?.();const sel=selectedFingerNames();const helper=$('#fingerHelper'),liveState=$('#liveEditState');if(helper)helper.textContent=state.fingers.has('전체')?'전체 손가락에 수정이 즉시 반영됩니다.':`${sel.join(' · ')}만 수정합니다.`;if(liveState)liveState.textContent=state.fingers.has('전체')?'전체 선택':`${sel.length}개 선택`;renderPrecisionEditor();
 }
 function toggleFingerFromPhoto(f){
  if(state.fingers.has('전체'))state.fingers=new Set([f]);else if(state.fingers.has(f)&&state.fingers.size>1)state.fingers.delete(f);else if(!state.fingers.has(f))state.fingers.add(f);
@@ -587,7 +614,7 @@ function renderPrecisionEditor(){
  const gems=looks.map(x=>x.gems||0);$('#partsCount').textContent=gems.every(x=>x===gems[0])?String(gems[0]):'혼합'
 }
 function applyPrecisionEdit(label,mutator){
- if(!state.active)return;pushEditorHistory();selectedFingerNames().forEach(f=>mutator(state.active.fingerLooks[f]));recalcDesign(state.active);renderHandEditor();renderArtLiveStage();renderEditorMetrics();render3DStage();syncEditChipStates();schedulePersist();updateHistoryButtons();renderDirectStudioPreview();toast(label+' 적용')
+ if(!state.active)return;pushEditorHistory();selectedFingerNames().forEach(f=>mutator(state.active.fingerLooks[f]));syncCanvasFromActive();recalcDesign(state.active);renderHandEditor();renderArtLiveStage();renderEditorMetrics();render3DStage();syncEditChipStates();schedulePersist();updateHistoryButtons();renderDirectStudioPreview();toast(label+' 적용')
 }
 function applyLiveMod(mod,{record=true,quiet=false}={}){
  if(!state.active)return;ensureFingerLooks(state.active);if(record)pushEditorHistory();const targets=selectedFingerNames();const stepped=new Set(['자석감 강하게','오로라감 추가','포인트 추가','화려하게']);
@@ -596,16 +623,16 @@ function applyLiveMod(mod,{record=true,quiet=false}={}){
    if(stepped.has(mod)){look.levels[mod]=Math.min(3,(look.levels[mod]||0)+1);if(!look.mods.includes(mod))look.mods.push(mod)}
    else{look.mods=look.mods.includes(mod)?look.mods.filter(x=>x!==mod):[...look.mods,mod]}
  });
- recalcDesign(state.active);renderHandEditor();syncEditChipStates();renderArtLiveStage();renderEditorMetrics();render3DStage();schedulePersist();updateHistoryButtons();renderDirectStudioPreview();if(!quiet)toast((targets.length===10?'전체':targets.join(' · '))+' · '+mod+' 즉시 반영');
+ syncCanvasFromActive();recalcDesign(state.active);renderHandEditor();syncEditChipStates();renderArtLiveStage();renderEditorMetrics();render3DStage();schedulePersist();updateHistoryButtons();renderDirectStudioPreview();if(!quiet)toast((targets.length===10?'전체':targets.join(' · '))+' · '+mod+' 즉시 반영');
 }
-function renderEditorMetrics(){const d=state.active;if(!d)return;$('#metricRow').innerHTML=`<div class="metric"><span>난이도</span><b>${d.diff}</b></div><div class="metric"><span>시간</span><b>${d.time}분</b></div><div class="metric"><span>권장가</span><b>${money(d.price)}</b></div><div class="metric"><span>실행성</span><b>${d.fit}%</b></div>`}
+function renderEditorMetrics(){const d=state.active;if(!d)return;$('#metricRow').innerHTML=`<div class="metric"><span>난이도</span><b>${htmlText(d.diff)}</b></div><div class="metric"><span>시간</span><b>${d.time}분</b></div><div class="metric"><span>권장가</span><b>${money(d.price)}</b></div><div class="metric"><span>실행성</span><b>${d.fit}%</b></div>`}
 function openSheet(d){
  const sheet=$('#editSheet');if(!sheet)return toast('편집 화면을 불러오지 못했어요');
- state.active=d;state.fingers=new Set(['전체']);ensureFingerLooks(d);recalcDesign(d);editorOriginal=snapshotFingerLooks(d);editorHistory=[];editorRedo=[];editorPreviewMode='current';
+ window.LudiaNailCanvas?.reset?.();state.active=d;state.fingers=new Set(['전체']);ensureFingerLooks(d);recalcDesign(d);editorOriginal=snapshotFingerLooks(d);editorHistory=[];editorRedo=[];editorPreviewMode='current';
  sheet.classList.add('open');sheet.setAttribute('aria-hidden','false');document.body.style.overflow='hidden';
  try{
   if($('#sheetName'))$('#sheetName').textContent=d.name||'내 네일 디자인';if($('#sheetDesc'))$('#sheetDesc').textContent=d.desc||'';
-  renderEditorMetrics();const guide=$('#serviceGuide');if(guide)guide.innerHTML='<b>실제 시술 가이드</b><span>재료 · '+((d.materials||[]).join(' · ')||'직접 구성')+'</span><span>순서 · '+(d.tech||'직접 편집')+'</span><span>대체 · 품절 파츠가 있으면 미니 스톤/실버 라인/진주 계열로 우선 대체</span>';
+  renderEditorMetrics();const guide=$('#serviceGuide');if(guide)guide.innerHTML='<b>실제 시술 가이드</b><span>재료 · '+htmlText((d.materials||[]).join(' · ')||'직접 구성')+'</span><span>순서 · '+htmlText(d.tech||'직접 편집')+'</span><span>대체 · 품절 파츠가 있으면 미니 스톤/실버 라인/진주 계열로 우선 대체</span>';
   renderHandEditor();renderArtLiveStage();syncEditChipStates();updateHistoryButtons();if($('#editPrompt'))$('#editPrompt').value='';
  }catch(error){console.error('[LUDIA editor open]',error);toast('편집기는 열렸어요 · 일부 보조 UI를 확인 중입니다')}
 }
@@ -627,7 +654,7 @@ $('#applyEditBtn').onclick=()=>{const text=$('#editPrompt').value.trim();if(!sta
  const fingers=selectedFingerNames();state.active.editHistory=[...(state.active.editHistory||[]),{at:new Date().toISOString(),fingers,text,after:{time:state.active.time,price:state.active.price,diff:state.active.diff}}];
  schedulePersist();toast('요청을 LIVE 프리뷰에 바로 반영했어요')
 };
-$('#finalSaveFromEditor').onclick=()=>{if(!state.active)return;saveDesign(state.active);toast('현재 시술안을 저장했어요')};
+$('#finalSaveFromEditor').onclick=()=>saveDesign(state.active);
 
 let viewerRotX=-8,viewerRotY=0,viewerDragging=false,viewerPX=0,viewerPY=0,viewerFocusFinger=null;
 function render3DStage(){
@@ -648,20 +675,22 @@ $('#final3dBtn').onclick=openFinalView;$$('[data-close-final]').forEach(x=>x.onc
 $('#viewerFocusBack')?.addEventListener('click',()=>{viewerFocusFinger=null;viewerRotX=-8;viewerRotY=0;render3DStage()});
 $$('[data-view-angle]').forEach(b=>b.onclick=()=>{const a=b.dataset.viewAngle;$$('[data-view-angle]').forEach(x=>x.classList.remove('active'));b.classList.add('active');if(a==='front'){viewerRotX=-8;viewerRotY=0}if(a==='left'){viewerRotX=-6;viewerRotY=-30}if(a==='right'){viewerRotX=-6;viewerRotY=30}if(a==='top'){viewerRotX=25;viewerRotY=0}render3DStage()});
 const viewerShell=$('#viewerShell');
-viewerShell?.addEventListener('pointerdown',e=>{viewerDragging=true;viewerPX=e.clientX;viewerPY=e.clientY;viewerShell.setPointerCapture?.(e.pointerId)});
-viewerShell?.addEventListener('pointermove',e=>{if(!viewerDragging)return;viewerRotY=Math.max(-55,Math.min(55,viewerRotY+(e.clientX-viewerPX)*.35));viewerRotX=Math.max(-30,Math.min(35,viewerRotX-(e.clientY-viewerPY)*.25));viewerPX=e.clientX;viewerPY=e.clientY;render3DStage()});
+let viewerMoved=false,viewerStartX=0,viewerStartY=0;
+viewerShell?.addEventListener('pointerdown',e=>{viewerDragging=true;viewerMoved=false;viewerPX=viewerStartX=e.clientX;viewerPY=viewerStartY=e.clientY});
+viewerShell?.addEventListener('click',e=>{if(viewerMoved){e.preventDefault();e.stopImmediatePropagation()}},true);
+viewerShell?.addEventListener('pointermove',e=>{if(!viewerDragging)return;if(!viewerMoved&&Math.hypot(e.clientX-viewerStartX,e.clientY-viewerStartY)<5)return;viewerMoved=true;viewerShell.setPointerCapture?.(e.pointerId);viewerRotY=Math.max(-55,Math.min(55,viewerRotY+(e.clientX-viewerPX)*.35));viewerRotX=Math.max(-30,Math.min(35,viewerRotX-(e.clientY-viewerPY)*.25));viewerPX=e.clientX;viewerPY=e.clientY;render3DStage()});
 ['pointerup','pointercancel','pointerleave'].forEach(ev=>viewerShell?.addEventListener(ev,()=>viewerDragging=false));
-$('#finalSaveBtn').onclick=()=>{if(state.active){saveDesign(state.active);closeFinalView()}};
+$('#finalSaveBtn').onclick=async()=>{if(state.active&&await saveDesign(state.active))closeFinalView()};
 
-function renderLibrary(){const q=($('#librarySearch')?.value||'').trim().toLowerCase();const f=state.filter;const data=state.library.filter(d=>(f==='전체'||d.status===f||d.tags.includes(f))&&(!q||d.name.toLowerCase().includes(q)||d.tags.join(' ').toLowerCase().includes(q)));$('#libraryGrid').innerHTML='';data.forEach(d=>{const a=document.createElement('article');a.className='library-card';a.innerHTML=`<span class="status-badge">${d.status}</span>${designPreviewHTML(d,'library')}<div class="card-copy"><b>${d.name}</b><small>${d.diff} · ${d.time}분 · ${money(d.price)}</small><div class="tagline">${d.tags.slice(0,3).map(t=>`<span>#${t}</span>`).join('')}</div></div>`;a.onclick=()=>openSheet(d);$('#libraryGrid').appendChild(a)});$('#libraryEmpty').classList.toggle('hidden',data.length>0)}
+function renderLibrary(){const q=($('#librarySearch')?.value||'').trim().toLowerCase();const f=state.filter;const data=state.library.filter(d=>(f==='전체'||d.status===f||d.tags.includes(f))&&(!q||d.name.toLowerCase().includes(q)||d.tags.join(' ').toLowerCase().includes(q)));$('#libraryGrid').innerHTML='';data.forEach(d=>{const a=document.createElement('article');a.className='library-card';a.innerHTML=`<span class="status-badge">${d.status}</span>${designPreviewHTML(d,'library')}<div class="card-copy"><b>${htmlText(d.name)}</b><small>${htmlText(d.diff)} · ${d.time}분 · ${money(d.price)}</small><div class="tagline">${d.tags.slice(0,3).map(t=>`<span>#${htmlText(t)}</span>`).join('')}</div></div>`;a.onclick=()=>openSheet(d);$('#libraryGrid').appendChild(a)});$('#libraryEmpty').classList.toggle('hidden',data.length>0)}
 async function syncCloudArtLibrary(){
  if(!window.LudiaSalonCloud?.isConnected?.()||!window.LudiaSalonCloud?.loadArtDesigns)return;
+ const identity=activeSalonId,sequence=++artLoadSequence;
  try{
   const cloud=await window.LudiaSalonCloud.loadArtDesigns();
-  const local=state.library.filter(x=>!x.cloudArt);
-  state.library=[...cloud,...local.filter(x=>!cloud.some(y=>String(y.id)===String(x.id)))];
-  renderLibrary();renderRecent();renderMonthlyMenu();renderBooking();
- }catch(error){console.warn('[LUDIA art library]',error)}
+  if(sequence!==artLoadSequence||identity!==activeSalonId||salonCloudMode!=='cloud')return;
+  state.library=cloud;renderLibrary();renderRecent();renderMonthlyMenu();renderBooking();
+ }catch(error){console.warn('[LUDIA art library]',error);toast('샵 아트 목록을 불러오지 못했어요. 다시 시도해 주세요')}
 }
 let designRegisterFile=null,designRegisterObjectUrl=null,designRegisterMonthlyMode=false;
 function closeDesignRegister(){
@@ -696,11 +725,12 @@ $('#monthlyMenuEmptyAdd')?.addEventListener('click',()=>openDesignRegister({mont
 $$('[data-close-design-register]').forEach(x=>x.addEventListener('click',closeDesignRegister));
 $('#designDetailToggle')?.addEventListener('click',()=>{$('#designDetailFields')?.classList.toggle('hidden');$('#designDetailToggle')?.classList.toggle('open')});
 $('#designPhotoInput')?.addEventListener('change',e=>{
- const file=e.target.files?.[0];if(!file)return;if(file.size>6*1024*1024){e.target.value='';return toast('사진은 6MB 이하로 등록해 주세요')}
+ const file=e.target.files?.[0];if(!file)return;if(!/^image\/(jpeg|png|webp|avif)$/i.test(file.type||'')){e.target.value='';return toast('JPG · PNG · WEBP · AVIF 사진을 선택해 주세요')}if(file.size>6*1024*1024){e.target.value='';return toast('사진은 6MB 이하로 등록해 주세요')}
  designRegisterFile=file;if(designRegisterObjectUrl)URL.revokeObjectURL(designRegisterObjectUrl);designRegisterObjectUrl=URL.createObjectURL(file);
  const img=$('#designPhotoPreview');if(img){img.src=designRegisterObjectUrl;img.classList.add('visible')}$('#designPhotoEmpty')?.classList.add('hidden')
 });
 $('#saveRegisteredDesignBtn')?.addEventListener('click',async()=>{
+ if(salonCloudMode!=='demo'&&!window.LudiaSalonCloud?.isConnected?.())return toast('클라우드 연결 후 다시 저장해 주세요');
  const name=$('#designNameInput')?.value.trim();if(!name)return toast('디자인 이름을 입력해 주세요');
  const existing=monthlyEditingId?state.library.find(x=>String(x.id)===String(monthlyEditingId)):null;
  if(!designRegisterFile&&!existing?.img)return toast('대표 사진을 추가해 주세요');
@@ -708,6 +738,7 @@ $('#saveRegisteredDesignBtn')?.addEventListener('click',async()=>{
  const monthKey=$('#designMonthInput')?.value||'',category=$('#designCategoryInput')?.value.trim()||'',tags=($('#designTagsInput')?.value||'').split(',').map(x=>x.trim()).filter(Boolean);
  if(category&&!tags.includes(category))tags.unshift(category);
  const materials=($('#designMaterialsInput')?.value||'').split(',').map(x=>x.trim()).filter(Boolean),difficulty=$('#designDifficultyInput')?.value||'보통',status=designRegisterMonthlyMode?'monthly':($('#designStatusInput')?.value||'draft'),tech=$('#designTechInput')?.value.trim()||'';
+ if(listPrice<0||salePrice<0||salePrice>listPrice||time<5||time>720)return toast('가격과 시술시간(5~720분)을 확인해 주세요');
  const monthly=status==='monthly';if(monthly&&!monthKey)return toast('노출 월을 선택해 주세요');
  const btn=$('#saveRegisteredDesignBtn');if(btn){btn.disabled=true;btn.textContent='저장 중…'}
  try{
@@ -744,7 +775,7 @@ function renderMonthlyMenu(){
  items.forEach(d=>{
    const card=document.createElement('article');card.className='monthly-menu-card';
    const list=Number(d.listPrice??d.price)||0,sale=Number(d.salePrice)||0;
-   card.innerHTML='<div class="monthly-menu-photo"><img src="'+(d.img||'assets/nail_5.jpg')+'" alt="'+d.name+'"></div><div class="monthly-menu-copy"><span>이달의 아트</span><b>'+d.name+'</b><div class="monthly-menu-price">'+(sale?'<s>'+money(list)+'</s><strong>'+money(sale)+'</strong>':'<strong>'+money(list)+'</strong>')+'</div><small>'+(d.time?d.time+'분 · ':'')+monthKeyLabel(key)+'</small><div class="monthly-menu-actions"><button type="button" data-edit>수정</button><button type="button" data-remove>메뉴에서 내리기</button></div></div>';
+   card.innerHTML='<div class="monthly-menu-photo"><img src="'+htmlText(d.img||'assets/nail_5.jpg')+'" alt="'+htmlText(d.name)+'"></div><div class="monthly-menu-copy"><span>이달의 아트</span><b>'+htmlText(d.name)+'</b><div class="monthly-menu-price">'+(sale?'<s>'+money(list)+'</s><strong>'+money(sale)+'</strong>':'<strong>'+money(list)+'</strong>')+'</div><small>'+(d.time?d.time+'분 · ':'')+monthKeyLabel(key)+'</small><div class="monthly-menu-actions"><button type="button" data-edit>수정</button><button type="button" data-remove>메뉴에서 내리기</button></div></div>';
    card.querySelector('[data-edit]').onclick=()=>openDesignRegister({monthly:true,design:d});card.querySelector('[data-remove]').onclick=()=>removeMonthlyArt(d);grid.appendChild(card)
  });
  if($('#qbService')?.value==='이달의 아트')renderQuickMonthlyArts()
@@ -754,7 +785,7 @@ $('#monthlyMenuNext')?.addEventListener('click',()=>{monthlyMenuOffset++;renderM
 
 function renderPicker(){renderMonthlyMenu()}
 function renderCollectionPreview(){renderMonthlyMenu()}
-function renderSettings(){$('#dnaList').replaceChildren(...DNA.map(d=>{const r=document.createElement('div');r.className='dna-row';r.innerHTML=`<div class="dna-info"><b>${d.name}</b><small>${d.desc}</small></div><span class="dna-score">${d.score}%</span>`;return r}));$('#inventoryList').replaceChildren(...inventory.map(x=>{const r=document.createElement('div');r.className='inventory-row';r.innerHTML=`<div class="inventory-info"><b>${x.name}</b><small>${x.state} · ${x.qty}</small></div><span class="stock-dot ${x.state==='부족'?'low':x.state==='품절'?'out':''}"></span>`;return r}))}
+function renderSettings(){$('#dnaList').replaceChildren(...DNA.map(d=>{const r=document.createElement('div');r.className='dna-row';r.innerHTML=`<div class="dna-info"><b>${htmlText(d.name)}</b><small>${d.desc}</small></div><span class="dna-score">${d.score}%</span>`;return r}));$('#inventoryList').replaceChildren(...inventory.map(x=>{const r=document.createElement('div');r.className='inventory-row';r.innerHTML=`<div class="inventory-info"><b>${x.name}</b><small>${x.state} · ${x.qty}</small></div><span class="stock-dot ${x.state==='부족'?'low':x.state==='품절'?'out':''}"></span>`;return r}))}
 function hydrateFromState(){if($('#homePrompt'))$('#homePrompt').value=state.draft.homePrompt||'';if($('#conceptInput'))$('#conceptInput').value=state.draft.concept||'';if($('#maxTime'))$('#maxTime').value=String(state.draft.maxTime||'90');if($('#targetPrice'))$('#targetPrice').value=String(state.draft.targetPrice||'69000');if($('#stockFirst'))$('#stockFirst').checked=state.draft.stockFirst!==false;if(state.draft.refDataUrl){$('#refPreviewImg').src=state.draft.refDataUrl;$('#refEmpty').classList.add('hidden');$('#refPreview').classList.remove('hidden')}else{$('#refPreview').classList.add('hidden');$('#refEmpty').classList.remove('hidden')}}
 function renderAll(){renderDNAChips();renderConditions();renderNails();renderLibrary();renderRecent();renderPicker();renderCollectionPreview();renderSettings();updateBrief();updateStorageStats();renderDirectStudioPreview()}
 function installCoreNavigation(){
@@ -782,13 +813,13 @@ $('#exportBackupBtn').onclick=exportBackup;$('#importBackupBtn').onclick=()=>$('
 
 
 $$('[data-close-ops]').forEach(x=>x.onclick=closeOpsDetail);
-$('#opsStatusBtn').onclick=async()=>{if(!activeAppointment||activeAppointment.status==='완료')return;const next=activeAppointment.status==='대기'?'진행중':'완료';const btn=$('#opsStatusBtn');btn.disabled=true;try{if(salonCloudMode==='cloud'&&activeAppointment.cloudId&&window.LudiaSalonCloud?.isConnected()){await window.LudiaSalonCloud.updateAppointmentStatus(activeAppointment.cloudId,next);toast(next==='진행중'?'시술을 시작했어요':'시술 완료로 변경했어요')}else{activeAppointment.status=next;toast(next==='진행중'?'시술을 시작했어요':'시술 완료로 변경했어요');renderOpsToday();renderBooking()}closeOpsDetail()}catch(error){console.error(error);toast('상태 변경에 실패했어요')}finally{btn.disabled=false}};
+$('#opsStatusBtn').onclick=async()=>{if(!activeAppointment||activeAppointment.status==='완료')return;const next=activeAppointment.status==='대기'?'진행중':'완료';const btn=$('#opsStatusBtn');btn.disabled=true;try{if(salonCloudMode==='cloud'&&activeAppointment.cloudId&&window.LudiaSalonCloud?.isConnected()){await window.LudiaSalonCloud.updateAppointmentStatus(activeAppointment.cloudId,next);toast(next==='진행중'?'시술을 시작했어요':'시술 완료로 변경했어요')}else{activeAppointment.status=next;await persistNow();toast(next==='진행중'?'시술을 시작했어요':'시술 완료로 변경했어요');renderOpsToday();renderBooking()}closeOpsDetail()}catch(error){console.error(error);toast('상태 변경에 실패했어요')}finally{btn.disabled=false}};
 $('#opsCustomerBtn').onclick=()=>{if(!activeAppointment)return;closeOpsDetail();setView('customers');const input=$('#customerSearch');input.value=activeAppointment.customer;renderCustomers()};
 $('#customerSearch').oninput=()=>{customerPage=1;renderCustomers()};
 $('#customerRefreshBtn')?.addEventListener('click',async()=>{
  const btn=$('#customerRefreshBtn');if(btn){btn.disabled=true;btn.textContent='↻ 동기화 중'}
  try{
-   customerPage=1;
+   customerPage=1;if(salonCloudMode!=='demo'&&!window.LudiaSalonCloud?.isConnected?.())throw new Error('cloud disconnected');
    if(window.LudiaSalonCloud?.isConnected?.()&&window.LudiaSalonCloud?.refresh){await window.LudiaSalonCloud.refresh();toast('고객 목록을 최신 상태로 불러왔어요')}
    else{renderCustomers();toast('고객 목록을 새로 표시했어요')}
  }catch(error){console.error('[LUDIA customer refresh]',error);toast('고객 목록 새로고침에 실패했어요')}
@@ -804,7 +835,7 @@ $$('.more-card:not([data-nav])').forEach(b=>b.onclick=()=>toast(`${b.querySelect
 
 setInterval(()=>{if(state.view==='create'){const s=Math.floor((Date.now()-state.start)/1000),m=Math.floor(s/60);$('#createTimer').textContent=`${String(m).padStart(2,'0')}:${String(s%60).padStart(2,'0')}`;$('#createTimer').parentElement.classList.toggle('warn',s>300)}},1000);
 (async function boot(){try{const mode=await loadPersisted();hydrateFromState();renderAll();renderOpsToday();renderBooking();renderCustomers();syncProfilePhoto();setView('opsHome');setSaveStatus('saved',mode==='new'?'자동저장 준비':'자동저장됨');if(mode==='restored'||mode==='migrated')toast(mode==='migrated'?'기존 보관함을 새 저장방식으로 옮겼어요':'이전 작업을 복원했어요');if(mode==='new')schedulePersist();initSalonCloud().catch(error=>console.error('[LUDIA cloud init]',error))}catch(error){console.error('[LUDIA boot recovery]',error);renderOpsToday();renderBooking();renderCustomers();setView('opsHome');setSaveStatus('error','일부 기능 복구 모드')}})();
-if('serviceWorker' in navigator)window.addEventListener('load',()=>navigator.serviceWorker.register('sw.js').catch(()=>{}));
+if('serviceWorker' in navigator)window.addEventListener('load',()=>navigator.serviceWorker.register('sw.js',{updateViaCache:'none'}).then(reg=>reg.update()).catch(()=>{}));
 
 /* v2.37 · Nail Canvas Pro — commit-on-save editor */
 (()=>{
@@ -819,26 +850,29 @@ if('serviceWorker' in navigator)window.addEventListener('load',()=>navigator.ser
  const stateShot=()=>({base:working.base,accent:working.accent,parts:clone(working.parts),drawing:canvas.toDataURL('image/png')});
  const updateBtns=()=>{document.getElementById('nailUndoBtn').disabled=!undo.length;document.getElementById('nailRedoBtn').disabled=!redo.length};
  const push=()=>{if(!working)return;undo.push(stateShot());if(undo.length>40)undo.shift();redo=[];updateBtns()};
- function drawData(data){ctx.clearRect(0,0,canvas.width,canvas.height);if(!data)return;const im=new Image();im.onload=()=>ctx.drawImage(im,0,0,canvas.width,canvas.height);im.src=data}
+ let drawRevision=0,canvasLoading=false;
+ function drawData(data,done=()=>{}){const revision=++drawRevision;canvasLoading=Boolean(data);ctx.clearRect(0,0,canvas.width,canvas.height);if(!data){done();return}const im=new Image();im.onload=()=>{if(revision!==drawRevision)return;ctx.drawImage(im,0,0,canvas.width,canvas.height);canvasLoading=false;done()};im.onerror=()=>{if(revision===drawRevision){canvasLoading=false;done()}};im.src=data}
  function liveRender({hand=false,persist=false}={}){
-   if(!working||!state.active)return;
+   if(!working||!state.active||canvasLoading)return;
    const drawing=canvas.toDataURL('image/png'),targets=selectedFingerNames();
    targets.forEach(f=>{const look=state.active.fingerLooks[f];look.base=working.base;look.accent=working.accent;look.canvas={drawing,parts:clone(working.parts)}});
    recalcDesign(state.active);renderArtLiveStage();renderDirectStudioPreview();if($('#finalViewSheet')?.classList.contains('open'))render3DStage();if(hand)renderHandEditor();if(persist)schedulePersist()
  }
  function queueLiveRender(){clearTimeout(liveSyncTimer);liveSyncTimer=setTimeout(()=>liveRender(),90)}
- function restore(s){if(!s)return;working.base=s.base;working.accent=s.accent;working.parts=clone(s.parts||[]);tip.style.setProperty('--pro-nail-base',working.base);drawData(s.drawing);renderPlacedParts();setTimeout(()=>liveRender({hand:true}),20);updateBtns()}
+ function restore(s){if(!s)return;working.base=s.base;working.accent=s.accent;working.parts=clone(s.parts||[]);tip.style.setProperty('--pro-nail-base',working.base);drawData(s.drawing,()=>liveRender({hand:true,persist:true}));renderPlacedParts();updateBtns()}
  function openFinger(f,{preserveSelection=false,scroll=true}={}){if(!state.active)return;ensureFingerLooks(state.active);currentFinger=f;if(!preserveSelection)state.fingers=new Set([f]);const look=state.active.fingerLooks[f];working={base:look.base||'#f3d7d9',accent:look.accent||look.base||'#f3d7d9',parts:clone(look.canvas?.parts||[])};undo=[];redo=[];tip.style.setProperty('--pro-nail-base',working.base);drawData(look.canvas?.drawing||null);renderPlacedParts();root.classList.add('ready');const targets=selectedFingerNames(),title=document.getElementById('nailCanvasTitle');if(title)title.textContent=(targets.length>1?targets.length+'개 손가락 동시 편집 · ':f.replace('L','왼손 ').replace('R','오른손 ')+' · ')+'LIVE';if(scroll)root.scrollIntoView({behavior:'smooth',block:'start'});updateBtns()}
+ function reset(){clearTimeout(liveSyncTimer);drawRevision++;canvasLoading=false;working=null;currentFinger=null;drawing=false;undo=[];redo=[];ctx.clearRect(0,0,canvas.width,canvas.height);partsLayer.replaceChildren();root.classList.remove('ready');updateBtns()}
+ function updateSelectionLabel(){const title=document.getElementById('nailCanvasTitle');if(title&&currentFinger)title.textContent=(selectedFingerNames().length>1?selectedFingerNames().length+'개 손가락 동시 편집':currentFinger.replace('L','왼손 ').replace('R','오른손 '))+' · LIVE'}
  function applyCurrentToSelection(){if(!working||!state.active)return;liveRender({hand:true})}
  function getCurrentFinger(){return currentFinger}
- window.LudiaNailCanvas={openFinger,applyCurrentToSelection,getCurrentFinger};
- function applyColor(hex){if(!working)return toast('위의 10손가락 중 하나를 눌러주세요');push();working.base=hex;working.accent=hex;ink=hex;tip.style.setProperty('--pro-nail-base',hex);liveRender({hand:true})}
+ window.LudiaNailCanvas={openFinger,applyCurrentToSelection,getCurrentFinger,reset,updateSelectionLabel};
+ function applyColor(hex){if(!working)return toast('위의 10손가락 중 하나를 눌러주세요');push();working.base=hex;working.accent=hex;ink=hex;tip.style.setProperty('--pro-nail-base',hex);liveRender({hand:true,persist:true})}
  function renderColors(group='favorite'){const box=document.getElementById('nailProColors');box.innerHTML='';colors.filter(x=>group==='favorite'?fav.includes(x[0]):group==='all'||x[2]===group).forEach(x=>{const b=document.createElement('button');b.className='nail-pro-swatch';b.innerHTML='<i style="background:'+x[0]+'"></i><small>'+x[1]+'</small>';let t,long=false;b.onpointerdown=()=>{long=false;t=setTimeout(()=>{long=true;fav.includes(x[0])?fav=fav.filter(v=>v!==x[0]):fav.push(x[0]);localStorage.setItem('ludiaNailFavColors',JSON.stringify(fav));renderColors(group)},520)};b.onpointerup=()=>{clearTimeout(t);if(!long)applyColor(x[0])};b.onpointerleave=()=>clearTimeout(t);box.appendChild(b)})}
  function renderPlacedParts(){partsLayer.innerHTML='';if(!working)return;working.parts.forEach((p,i)=>{const el=document.createElement('button');el.className='placed-nail-part';el.style.left=p.x+'%';el.style.top=p.y+'%';el.style.transform='translate(-50%,-50%) rotate('+p.r+'deg) scale('+p.s+')';el.innerHTML=p.data?'<img src="'+p.data+'" alt="">':'<span>'+p.icon+'</span>';let sx,sy,ox,oy,moved=false,saved=false;el.onpointerdown=e=>{e.preventDefault();push();saved=true;sx=e.clientX;sy=e.clientY;ox=p.x;oy=p.y;el.setPointerCapture(e.pointerId)};el.onpointermove=e=>{if(!el.hasPointerCapture(e.pointerId))return;const r=partsLayer.getBoundingClientRect();p.x=Math.max(7,Math.min(93,ox+(e.clientX-sx)/r.width*100));p.y=Math.max(7,Math.min(93,oy+(e.clientY-sy)/r.height*100));moved=true;el.style.left=p.x+'%';el.style.top=p.y+'%';queueLiveRender()};el.onpointerup=e=>{if(el.hasPointerCapture(e.pointerId))el.releasePointerCapture(e.pointerId);if(!moved){p.r=(p.r+30)%360;p.s=p.s>=1.55?.75:p.s+.15}renderPlacedParts();liveRender({hand:true,persist:true})};el.ondblclick=()=>{if(!saved)push();working.parts.splice(i,1);renderPlacedParts();liveRender({hand:true,persist:true})};partsLayer.appendChild(el)})}
  function addPart(x){if(!working)return toast('위의 10손가락 중 하나를 눌러주세요');push();working.parts.push({icon:x.icon||'',data:x.data||'',name:x.name,x:50,y:48,r:0,s:1});renderPlacedParts();liveRender({hand:true,persist:true})}
  function renderParts(group='favorite'){const box=document.getElementById('nailProParts');box.innerHTML='';let list=group==='mine'?customParts.map(x=>({...x,mine:true})):baseParts.filter(x=>group==='favorite'?['stone','pearl','ribbon'].includes(x[2]):x[2]===group).map(x=>({icon:x[0],name:x[1],group:x[2]}));list.forEach(x=>{const b=document.createElement('button');b.className='nail-pro-part';b.innerHTML=x.mine?'<img src="'+x.data+'" alt=""><small>'+x.name+'</small><em>MY</em>':'<span>'+x.icon+'</span><small>'+x.name+'</small>';b.onclick=()=>addPart(x);box.appendChild(b)})}
  function pos(e){const r=canvas.getBoundingClientRect();return{x:(e.clientX-r.left)*canvas.width/r.width,y:(e.clientY-r.top)*canvas.height/r.height}}
- canvas.onpointerdown=e=>{if(!working)return toast('위의 10손가락 중 하나를 눌러주세요');push();drawing=true;last=pos(e);canvas.setPointerCapture(e.pointerId);if(brush==='dot'){ctx.fillStyle=ink;ctx.beginPath();ctx.arc(last.x,last.y,brushSize*.9,0,Math.PI*2);ctx.fill();queueLiveRender()}};
+ canvas.onpointerdown=e=>{if(canvasLoading)return;if(!working)return toast('위의 10손가락 중 하나를 눌러주세요');push();drawing=true;last=pos(e);canvas.setPointerCapture(e.pointerId);if(brush==='dot'){ctx.fillStyle=ink;ctx.beginPath();ctx.arc(last.x,last.y,brushSize*.9,0,Math.PI*2);ctx.fill();queueLiveRender()}};
  canvas.onpointermove=e=>{if(!drawing)return;const p=pos(e);ctx.strokeStyle=ink;ctx.fillStyle=ink;ctx.lineWidth=brushSize;ctx.lineCap='round';ctx.lineJoin='round';if(brush==='dot'){ctx.beginPath();ctx.arc(p.x,p.y,brushSize*.9,0,Math.PI*2);ctx.fill()}else{ctx.beginPath();ctx.moveTo(last.x,last.y);ctx.lineTo(p.x,p.y);ctx.globalAlpha=brush==='air'?.18:1;ctx.stroke();ctx.globalAlpha=1}last=p;queueLiveRender()};
  canvas.onpointerup=canvas.onpointercancel=()=>{if(drawing)liveRender({hand:true,persist:true});drawing=false;last=null};
  document.getElementById('nailBrushSize').oninput=e=>brushSize=+e.target.value;
@@ -853,3 +887,4 @@ if('serviceWorker' in navigator)window.addEventListener('load',()=>navigator.ser
  document.getElementById('nailCanvasSave').onclick=()=>{if(!working||!currentFinger)return toast('먼저 손톱을 선택해 주세요');liveRender({hand:true,persist:true});const targets=selectedFingerNames();toast((targets.length>1?targets.length+'개 손가락':'선택 손가락')+' 디자인 저장 완료');setTimeout(()=>document.getElementById('handEditor')?.scrollIntoView({behavior:'smooth',block:'center'}),100)};
  renderColors();renderParts();
 })();
+

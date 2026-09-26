@@ -33,7 +33,7 @@
   }
 
   function close(){const s=$('#postCheckoutSheet');if(!s)return;s.classList.remove('open');s.setAttribute('aria-hidden','true');document.body.style.overflow='';snapshot=null}
-  function show(){if(!snapshot)return;ensureSheet();$('#postCheckoutTitle').textContent=`${snapshot.customer||'고객'} 시술을 마쳤어요`;$('#postCheckoutMeta').textContent=`${snapshot.service||'시술'} · 결제와 매출 저장 완료`;const s=$('#postCheckoutSheet');s.classList.add('open');s.setAttribute('aria-hidden','false');document.body.style.overflow='hidden'}
+  function show(){if(!snapshot)return;ensureSheet();$('#postCheckoutTitle').textContent=`${window.LudiaEscapeHTML(snapshot.customer||'고객')} 시술을 마쳤어요`;$('#postCheckoutMeta').textContent=`${window.LudiaEscapeHTML(snapshot.service||'시술')} · 결제와 매출 저장 완료`;const s=$('#postCheckoutSheet');s.classList.add('open');s.setAttribute('aria-hidden','false');document.body.style.overflow='hidden'}
 
   async function getClient(){
     if(client)return client;
@@ -81,7 +81,7 @@
         if(staff&&[...staff.options].some(o=>o.value===keep.staff)){staff.value=keep.staff;dispatchChange(staff)}
         if(service&&[...service.options].some(o=>o.value===keep.service)){service.value=keep.service;dispatchChange(service)}
         const selected=window.LudiaSalonCloud?.getLastPayload?.()?.services?.find(s=>s.name===service?.value);if(selected?.duration_minutes&&duration){duration.value=String(selected.duration_minutes);dispatchChange(duration)}
-        const note=$('#qbAvailabilityNote');if(note)note.textContent=`${keep.staff||'최근 담당자'} · ${keep.service||'최근 시술'} 기준으로 채웠어요. 추천 시간만 선택해 주세요.`;
+        const note=$('#qbAvailabilityNote');if(note)note.textContent=`${window.LudiaEscapeHTML(keep.staff||'최근 담당자')} · ${window.LudiaEscapeHTML(keep.service||'최근 시술')} 기준으로 채웠어요. 추천 시간만 선택해 주세요.`;
       },100)},80);
     }catch(error){console.warn('[LUDIA post checkout]',error);alert('고객 정보를 안전하게 확인하지 못했어요. 고객 화면에서 다시 예약해 주세요.')}finally{if(btn){btn.disabled=false;btn.textContent='다음 예약 잡기'}}
   }
@@ -92,3 +92,4 @@
     watcher=setInterval(()=>{ticks++;if(!snapshot){clearInterval(watcher);return}if(!sheet.classList.contains('open')){clearInterval(watcher);setTimeout(async()=>{if(await verifyCompleted())show();else snapshot=null},120);return}if(ticks>100){clearInterval(watcher);snapshot=null}},100);
   },true);
 })();
+

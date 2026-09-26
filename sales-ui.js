@@ -49,8 +49,8 @@
     const methods=data.methods||[],staff=data.staff||[],daily=data.daily||[];const maxDay=Math.max(1,...daily.map(x=>Number(x.amount||0)));
     $('#salesContent').innerHTML=`<section class="sales-hero"><span>총 매출</span><strong>${won(data.grossSales)}</strong><div><b>${data.paymentCount||0}건</b><i></i><b>객단가 ${won(data.averageTicket)}</b></div></section>
       <section class="sales-metrics"><div><span>고객</span><b>${data.customerCount||0}명</b></div><div><span>완료 시술</span><b>${data.appointmentCount||0}건</b></div></section>
-      <section class="sales-section"><h3>결제수단</h3><div class="sales-list">${methods.length?methods.map(x=>`<div><span>${labels[x.method]||x.method}</span><b>${won(x.amount)}</b><small>${x.count}건</small></div>`).join(''):'<p class="sales-empty">결제 내역이 없어요.</p>'}</div></section>
-      <section class="sales-section"><h3>담당자</h3><div class="sales-list staff">${staff.length?staff.map(x=>`<div><span>${x.staffName}</span><b>${won(x.amount)}</b><small>${x.count}건 · 객단가 ${won(x.averageTicket)}</small></div>`).join(''):'<p class="sales-empty">담당자 매출이 없어요.</p>'}</div></section>
+      <section class="sales-section"><h3>결제수단</h3><div class="sales-list">${methods.length?methods.map(x=>`<div><span>${window.LudiaEscapeHTML(labels[x.method]||x.method)}</span><b>${won(x.amount)}</b><small>${x.count}건</small></div>`).join(''):'<p class="sales-empty">결제 내역이 없어요.</p>'}</div></section>
+      <section class="sales-section"><h3>담당자</h3><div class="sales-list staff">${staff.length?staff.map(x=>`<div><span>${window.LudiaEscapeHTML(x.staffName)}</span><b>${won(x.amount)}</b><small>${x.count}건 · 객단가 ${won(x.averageTicket)}</small></div>`).join(''):'<p class="sales-empty">담당자 매출이 없어요.</p>'}</div></section>
       ${range==='today'?'':`<section class="sales-section"><h3>일별 흐름</h3><div class="sales-bars">${daily.map(x=>`<div title="${x.date} ${won(x.amount)}"><i style="height:${Math.max(5,Math.round(Number(x.amount||0)/maxDay*100))}%"></i><span>${String(x.date).slice(5)}</span></div>`).join('')}</div></section>`}`;
   }
   async function load(){
@@ -63,3 +63,4 @@
   clearPlaceholder();
   document.addEventListener('click',e=>{const b=e.target.closest('.native-settings-group button');if(!b||b.querySelector('b')?.textContent.trim()!=='매출')return;e.preventDefault();open()});
 })();
+

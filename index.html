@@ -7,7 +7,7 @@
   <meta name="description" content="LUDIA NAIL - 예약·고객관리와 LUDIA ART STUDIO를 하나로 묶은 모바일 네일샵 운영 웹앱" />
   <title>LUDIA NAIL</title>
   <link rel="manifest" href="manifest.webmanifest" />
-  <link rel="stylesheet" href="styles.css?v=2.54.2" />
+  <link rel="stylesheet" href="styles.css?v=2.54.3" />
 </head>
 <body>
   <div class="app">
@@ -480,6 +480,7 @@
         <div class="viewer-angle-row">
           <button data-view-angle="front" class="active">정면</button><button data-view-angle="left">좌 30°</button><button data-view-angle="right">우 30°</button><button data-view-angle="top">위 25°</button>
         </div>
+        <div class="viewer-edit-controls"><label for="viewerFingerSelect">확대할 손톱</label><select id="viewerFingerSelect"><option value="">전체 손 보기</option></select><span id="viewerEditTarget">선택 손톱 컬러</span><div id="viewerColors"></div></div>
         <div class="sheet-actions"><button class="soft-btn wide" data-close-final>편집 계속</button><button class="primary-btn wide" id="finalSaveBtn">최종본 저장</button></div>
       </div>
     </div>
@@ -626,10 +627,9 @@
 
   <div class="toast" id="toast" role="status"></div>
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.116.0/dist/umd/supabase.min.js"></script>
-  <script src="salon-cloud.js?v=2.54.2"></script>
-  <script src="app.js?v=2.54.2"></script>
-  <script src="core-shell.js?v=2.54.2"></script>
-  <script src="runtime-loader.js?v=2.54.2"></script>
+  <script src="salon-cloud.js?v=2.54.3"></script>
+  <script src="app.js?v=2.54.3"></script>
+  <script src="core-shell.js?v=2.54.3"></script>
+  <script src="runtime-loader.js?v=2.54.3"></script>
 </body>
 </html>
-

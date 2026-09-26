@@ -32,10 +32,12 @@ window.LudiaSalonCloud=(()=>{
     state.configured=Boolean(cfg?.configured);if(!state.configured)return emitStatus({loading:false,connected:false,error:null,realtime:'offline'});
     if(!window.supabase?.createClient)return fail('Supabase 클라이언트를 불러오지 못했어요');
     client=window.supabase.createClient(cfg.url,cfg.anonKey,{auth:{persistSession:true,autoRefreshToken:true,detectSessionInUrl:true,storageKey:'ludia-salon-auth'}});
-    client.auth.onAuthStateChange((event,session)=>{if(event==='SIGNED_OUT'){resetCloudData();emitStatus({connected:false,loading:false,email:'',salonName:'',realtime:'offline',error:null});callbacks.onSignedOut?.();return}if(session?.user)setTimeout(()=>activateSession(session).catch(()=>{}),0)});
+    client.auth.onAuthStateChange((event,session)=>{if(event==='SIGNED_OUT'){const hadUser=Boolean(user);resetCloudData();emitStatus({connected:false,loading:false,email:'',salonName:'',realtime:'offline',error:null});callbacks.onSignedOut?.();if(hadUser)window.location.reload();return}if(session?.user)setTimeout(()=>activateSession(session).catch(()=>{}),0)});
     const {data:{session},error}=await client.auth.getSession();if(error)return fail('로그인 세션을 확인하지 못했어요',error);if(session?.user)await activateSession(session);else emitStatus({loading:false,connected:false,error:null,realtime:'offline'});
   }
-  async function activateSession(session){if(user?.id!==session.user.id){resetCloudData();callbacks.onSessionChanging?.()}user=session.user;state.email=user.email||'';emitStatus({loading:true,connected:false,error:null});await loadData()}
+  // Optional operation sheets retain private data in closure variables. A new
+  // document clears every module at an identity boundary, including in-flight work.
+  async function activateSession(session){const switching=Boolean(user&&user.id!==session.user.id);if(user?.id!==session.user.id){resetCloudData();callbacks.onSessionChanging?.();if(switching){window.location.reload();return}}user=session.user;state.email=user.email||'';emitStatus({loading:true,connected:false,error:null});await loadData()}
   async function loadData(){
     if(!client||!user)return;const generation=sessionGeneration,request=++dataRequestSequence;
     try{

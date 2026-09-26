@@ -660,19 +660,29 @@ let viewerRotX=-8,viewerRotY=0,viewerDragging=false,viewerPX=0,viewerPY=0,viewer
 function render3DStage(){
  const stage=$('#viewerStage');if(!stage||!state.active)return;ensureFingerLooks(state.active);stage.innerHTML='';stage.style.transform=`rotateX(${viewerRotX}deg) rotateY(${viewerRotY}deg)`;
  const back=$('#viewerFocusBack'),hint=$('#viewerHint');
+ if($('#viewerFingerSelect'))$('#viewerFingerSelect').value=viewerFocusFinger||'';
+ if($('#viewerEditTarget'))$('#viewerEditTarget').textContent=viewerFocusFinger?viewerFocusFinger.replace('L','왼손 ').replace('R','오른손 ')+' 컬러':`선택한 ${selectedFingerNames().length}개 손톱 컬러`;
  if(viewerFocusFinger){
    const look=state.active.fingerLooks[viewerFocusFinger];const single=document.createElement('div');single.className='viewer-single-card';single.innerHTML=`<div class="viewer-single-nail">${nailMarkup(look,'viewer-focus-model')}</div><b>${viewerFocusFinger.replace('L','왼손 ').replace('R','오른손 ')}</b><small>드래그해서 각도를 확인하세요</small>`;stage.appendChild(single);
    back?.classList.remove('hidden');if(hint)hint.textContent='↔ 드래그 · ↕ 기울이기 · 전체 손으로 돌아가기';
    return
  }
  back?.classList.add('hidden');if(hint)hint.textContent='손톱을 누르면 단독 확대 · ↔ 드래그 · ↕ 기울이기';
- const hand=document.createElement('div');hand.className='viewer-hand-card';
- FINGERS.forEach((f,i)=>{const look=state.active.fingerLooks[f];const n=document.createElement('button');n.type='button';n.className=`viewer-nail v${i+1}`;n.setAttribute('aria-label',f+' 단독 확대');n.innerHTML=`${nailMarkup(look,'viewer-model')}<small>${f}</small>`;n.onclick=e=>{e.stopPropagation();viewerFocusFinger=f;viewerRotX=-4;viewerRotY=0;render3DStage()};hand.appendChild(n)});stage.appendChild(hand)
+ const hands=document.createElement('div');hands.className='viewer-hands';
+ ['L','R'].forEach(side=>{
+   const hand=document.createElement('div');hand.className='viewer-whole-hand '+(side==='R'?'right':'left');
+   hand.innerHTML=`<div class="viewer-hand-shape"><svg viewBox="0 0 260 380" aria-hidden="true"><path d="M82 367 L80 310 C58 285 30 239 17 213 C5 192 25 175 41 191 L73 225 L66 94 C65 71 90 69 94 92 L100 181 L104 51 C105 28 131 28 132 51 L135 179 L145 65 C147 41 173 43 172 67 L169 191 L190 109 C195 87 220 93 215 116 L199 221 C213 249 203 289 186 315 L183 367 Z"/><path class="viewer-palm-line" d="M83 236 Q126 212 179 237 M89 279 Q126 260 177 279"/></svg></div><span class="viewer-hand-label">${side==='L'?'왼손':'오른손'}</span>`;
+   const shape=hand.querySelector('.viewer-hand-shape');
+   FINGERS.filter(f=>f.startsWith(side)).forEach((f,i)=>{const n=document.createElement('button');n.type='button';n.className=`viewer-nail viewer-finger-${i}`;n.setAttribute('aria-label',f+' 단독 확대');n.innerHTML=nailMarkup(state.active.fingerLooks[f],'viewer-model');n.onclick=e=>{e.stopPropagation();viewerFocusFinger=f;viewerRotX=-4;viewerRotY=0;render3DStage()};shape.appendChild(n)});hands.appendChild(hand)
+ });stage.appendChild(hands)
 }
 function openFinalView(){if(!state.active)return;viewerRotX=-8;viewerRotY=0;viewerFocusFinger=null;render3DStage();$('#finalViewSheet').classList.add('open');$('#finalViewSheet').setAttribute('aria-hidden','false');document.body.style.overflow='hidden'}
 function closeFinalView(){$('#finalViewSheet').classList.remove('open');$('#finalViewSheet').setAttribute('aria-hidden','true');document.body.style.overflow=$('#editSheet').classList.contains('open')?'hidden':''}
 $('#final3dBtn').onclick=openFinalView;$$('[data-close-final]').forEach(x=>x.onclick=closeFinalView);
 $('#viewerFocusBack')?.addEventListener('click',()=>{viewerFocusFinger=null;viewerRotX=-8;viewerRotY=0;render3DStage()});
+FINGERS.forEach(f=>{const option=document.createElement('option');option.value=f;option.textContent=f.replace('L','왼손 ').replace('R','오른손 ');$('#viewerFingerSelect')?.appendChild(option)});
+$('#viewerFingerSelect')?.addEventListener('change',e=>{viewerFocusFinger=e.target.value||null;viewerRotX=-8;viewerRotY=0;render3DStage()});
+NAIL_COLORS.forEach(color=>{const b=document.createElement('button');b.type='button';b.className='nail-color-swatch';b.style.setProperty('--swatch',color);b.setAttribute('aria-label','미리보기 컬러 '+color);b.onclick=()=>{if(viewerFocusFinger)state.fingers=new Set([viewerFocusFinger]);applyPrecisionEdit('컬러',look=>look.base=color);render3DStage()};$('#viewerColors')?.appendChild(b)});
 $$('[data-view-angle]').forEach(b=>b.onclick=()=>{const a=b.dataset.viewAngle;$$('[data-view-angle]').forEach(x=>x.classList.remove('active'));b.classList.add('active');if(a==='front'){viewerRotX=-8;viewerRotY=0}if(a==='left'){viewerRotX=-6;viewerRotY=-30}if(a==='right'){viewerRotX=-6;viewerRotY=30}if(a==='top'){viewerRotX=25;viewerRotY=0}render3DStage()});
 const viewerShell=$('#viewerShell');
 let viewerMoved=false,viewerStartX=0,viewerStartY=0;
@@ -888,4 +898,3 @@ if('serviceWorker' in navigator)window.addEventListener('load',()=>navigator.ser
  document.getElementById('nailCanvasSave').onclick=()=>{if(!working||!currentFinger)return toast('먼저 손톱을 선택해 주세요');liveRender({hand:true,persist:true});const targets=selectedFingerNames();toast((targets.length>1?targets.length+'개 손가락':'선택 손가락')+' 디자인 저장 완료');setTimeout(()=>document.getElementById('handEditor')?.scrollIntoView({behavior:'smooth',block:'center'}),100)};
  renderColors();renderParts();
 })();
-

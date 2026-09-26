@@ -1876,9 +1876,6 @@ html[data-theme="dark"] .weekly-booking-copy>em{color:#c5c5ce}
 html[data-theme="dark"] .weekly-booking-card.done{opacity:1}
 html[data-theme="dark"] .weekly-booking-card.cancelled{opacity:.8}
 .viewer-shell{touch-action:none}
-.viewer-hand-card{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:14px;align-items:end;padding:25px;width:100%;height:auto;min-height:300px}
-.viewer-hand-card .viewer-nail{position:relative!important;inset:auto!important;transform:none!important;width:100%!important;height:155px!important;min-width:0}
-.viewer-hand-card .viewer-nail .nail-model{max-height:130px}
 @media(min-width:1100px) and (max-width:1599px){
  body.booking-view .desktop-rail{width:168px}
  body.booking-view .workspace{margin-left:168px;padding-left:20px;padding-right:20px}
@@ -1896,8 +1893,6 @@ html[data-theme="dark"] .weekly-booking-card.cancelled{opacity:.8}
  .monthly-menu-actions button{font-size:12px;min-height:40px}
  .monthly-menu-price{flex-wrap:wrap}.monthly-menu-price strong{font-size:18px}.monthly-menu-price s{font-size:12px}
  .monthly-menu-head .primary-btn{font-size:13px;min-height:44px}
- .viewer-hand-card{gap:8px;padding:12px}.viewer-hand-card .viewer-nail{height:108px!important}
- .viewer-hand-card .viewer-nail .nail-model{max-height:90px}
  .sheet input,.sheet select,.sheet textarea{font-size:16px}
 }
 
@@ -1909,3 +1904,28 @@ html[data-theme="dark"] .weekly-booking-card.cancelled{opacity:.8}
 .nail-draw-tools label{font-size:12px}
 html[data-theme="dark"] .nail-pro-part span{background:#45454a;color:#fff}
 html[data-theme="dark"] .nail-pro-swatch small,html[data-theme="dark"] .nail-pro-part small{color:#d1d1d6}
+
+/* Full hands use separate silhouettes, so the ten nail targets never overlap. */
+.viewer-hands{display:flex;gap:16px;width:100%;height:100%;align-items:center;justify-content:center}
+.viewer-whole-hand{position:relative;width:46%;max-width:240px;aspect-ratio:260/380}
+.viewer-hand-shape{position:relative;width:100%;height:100%;filter:drop-shadow(0 14px 12px #593a2825)}
+.viewer-whole-hand.right .viewer-hand-shape{transform:scaleX(-1)}
+.viewer-hand-shape>svg{position:absolute;inset:0;width:100%;height:100%;fill:#e9c8b3;stroke:#bf9178;stroke-width:1}
+.viewer-hand-shape .viewer-palm-line{fill:none;stroke:#c99e87;stroke-width:1.5;opacity:.55}
+.viewer-hand-label{display:block;text-align:center;font-size:13px;color:#61544d;margin-top:2px}
+.viewer-hand-shape .viewer-nail{width:10%;height:12%;min-height:0;transform:translateZ(12px)}
+.viewer-hand-shape .viewer-nail .nail-model{min-height:0;width:100%;max-height:100%;border-radius:45% 45% 32% 32%}
+.viewer-hand-shape .viewer-finger-0{left:7.5%;top:49%;transform:rotate(-34deg) translateZ(12px);width:11%}
+.viewer-hand-shape .viewer-finger-1{left:26.5%;top:19.5%;transform:rotate(-4deg) translateZ(12px)}
+.viewer-hand-shape .viewer-finger-2{left:41%;top:9%;width:10%}
+.viewer-hand-shape .viewer-finger-3{left:56%;top:12.5%;transform:rotate(3deg) translateZ(12px)}
+.viewer-hand-shape .viewer-finger-4{left:74%;top:25%;transform:rotate(12deg) translateZ(12px);width:9%;height:10%}
+.viewer-hint{font-size:12px;text-align:center;width:max-content;max-width:90%;bottom:10px}
+.viewer-angle-row button,.viewer-focus-back{font-size:13px;min-height:42px}
+.viewer-edit-controls{display:grid;grid-template-columns:auto 1fr;align-items:center;gap:8px 12px;margin-bottom:16px;font-size:13px}
+.viewer-edit-controls select{min-height:42px;border:1px solid var(--line);background:var(--card,#fff);color:var(--text);border-radius:10px;padding:8px}
+#viewerColors{display:flex;gap:5px;flex-wrap:wrap}
+#viewerColors button{width:34px;height:34px;min-width:34px}
+html[data-theme="dark"] .viewer-angle-row button{background:#3a3a3c;color:#fff}
+html[data-theme="dark"] .viewer-angle-row button.active{background:#0a84ff}
+@media(max-width:760px){.viewer-stage{width:94%;height:78%}.viewer-hands{gap:4px}.viewer-shell{height:350px}.viewer-edit-controls{grid-template-columns:1fr}.viewer-hint{font-size:11px}.viewer-hand-label{font-size:12px}}

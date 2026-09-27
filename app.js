@@ -397,33 +397,7 @@ $('#profilePhotoInput')?.addEventListener('change',async e=>{
  }catch(error){console.error('[LUDIA profile photo save]',error);toast('프로필 사진 저장에 실패했어요');await syncProfilePhoto()}
  finally{input.value=''}
 });
-function buildDirectStudioDesign({fresh=false}={}){
- if(!fresh&&state.active){ensureFingerLooks(state.active);return state.active}
- const source=state.draft.homePrompt||state.draft.concept||'';
- const base=cloneModel(baseDesigns[0]);
- base.id='studio-'+Date.now();
- base.name='내 네일 디자인';
- base.desc=source||'손가락을 선택하고 원하는 디자인을 직접 만들어보세요.';
- base.status='작업중';
- base.model=promptModelAdjust(cloneModel(MODEL_VARIANTS[0]),source);
- base.fingerLooks=null;
- ensureFingerLooks(base);
- state.active=base;
- state.designs=[base];
- state.fingers=new Set(['전체']);
- return base
-}
-function renderDirectStudioPreview(){
- const box=$('#directStudioPreview');if(!box)return;
- const d=buildDirectStudioDesign();
- box.innerHTML=modelPreviewHTML(d,'direct-studio-preview');
-}
-function openDirectStudio({fresh=false}={}){
- const d=buildDirectStudioDesign({fresh});
- renderDirectStudioPreview();
- openSheet(d);
- $('#editSheet')?.classList.add('direct-studio-mode');
-}
+function renderDirectStudioPreview(){}
 function setView(v){
  state.view=v;document.body.classList.toggle('booking-view',v==='booking');$$('.screen').forEach(x=>x.classList.remove('active'));const target=$(`#${v}Screen`);if(!target)return;target.classList.add('active');
  const artViews=new Set(['home','create','library','collection','settings']);
@@ -443,7 +417,7 @@ function setView(v){
  window.scrollTo({top:0,behavior:'smooth'});
 }
 $$('[data-nav]').forEach(b=>b.onclick=()=>setView(b.dataset.nav));window.__ludiaNavBound=true;
-$('#openStudioBtn')?.addEventListener('click',()=>openDirectStudio());$('#newStudioBtn')?.addEventListener('click',()=>{state.active=null;openDirectStudio({fresh:true})});
+
 const applyTheme=mode=>{const dark=mode==='dark';document.documentElement.dataset.theme=dark?'dark':'light';document.body.classList.toggle('dark-mode',dark);localStorage.setItem('ludiaTheme',dark?'dark':'light');const meta=document.querySelector('meta[name="theme-color"]');if(meta)meta.content=dark?'#111113':'#f6f4ef';const btn=$('#themeBtn');if(btn){btn.classList.toggle('is-dark',dark);btn.setAttribute('aria-label',dark?'화이트 모드로 전환':'블랙 모드로 전환')}const bookingBtn=$('#bookingThemeBtn');if(bookingBtn){bookingBtn.classList.toggle('is-dark',dark);bookingBtn.setAttribute('aria-pressed',dark?'true':'false');bookingBtn.setAttribute('aria-label',dark?'화이트 모드로 전환':'블랙 모드로 전환')}const homeBtn=$('#homeThemeBtn');if(homeBtn){homeBtn.classList.toggle('is-dark',dark);homeBtn.setAttribute('aria-pressed',dark?'true':'false');homeBtn.setAttribute('aria-label',dark?'화이트 모드로 전환':'블랙 모드로 전환')}};
 const savedTheme=localStorage.getItem('ludiaTheme');applyTheme(savedTheme==='dark'?'dark':'light');
 const toggleTheme=()=>applyTheme(document.documentElement.dataset.theme==='dark'?'light':'dark');
@@ -1080,7 +1054,7 @@ $$('[data-close-pricing]').forEach(b=>b.addEventListener('click',closePricingShe
 
 function renderSettings(){renderPricingSettings();$('#dnaList').replaceChildren(...DNA.map(d=>{const r=document.createElement('div');r.className='dna-row';r.innerHTML=`<div class="dna-info"><b>${htmlText(d.name)}</b><small>${d.desc}</small></div><span class="dna-score">${d.score}%</span>`;return r}));$('#inventoryList').replaceChildren(...inventory.map(x=>{const r=document.createElement('div');r.className='inventory-row';r.innerHTML=`<div class="inventory-info"><b>${x.name}</b><small>${x.state} · ${x.qty}</small></div><span class="stock-dot ${x.state==='부족'?'low':x.state==='품절'?'out':''}"></span>`;return r}))}
 function hydrateFromState(){if($('#conceptInput'))$('#conceptInput').value=state.draft.concept||'';if($('#maxTime'))$('#maxTime').value=String(state.draft.maxTime||'90');if($('#targetPrice'))$('#targetPrice').value=String(state.draft.targetPrice||'69000');if($('#stockFirst'))$('#stockFirst').checked=state.draft.stockFirst!==false;if(state.draft.refDataUrl){$('#refPreviewImg').src=state.draft.refDataUrl;$('#refEmpty').classList.add('hidden');$('#refPreview').classList.remove('hidden')}else{$('#refPreview').classList.add('hidden');$('#refEmpty').classList.remove('hidden')}}
-function renderAll(){renderDNAChips();renderConditions();renderNails();renderLibrary();renderRecent();renderPicker();renderCollectionPreview();renderSettings();updateBrief();updateStorageStats();renderDirectStudioPreview()}
+function renderAll(){renderLibrary();renderRecent();renderPicker();renderCollectionPreview();renderSettings();updateStorageStats()}
 function installCoreNavigation(){
  document.addEventListener('click',event=>{
    const closeOps=event.target.closest('[data-close-ops]');if(closeOps){event.preventDefault();event.stopPropagation();closeOpsDetail();return}
@@ -1129,7 +1103,7 @@ $('#bookingPrevWeek')?.addEventListener('click',()=>{bookingDayOffset-=7;refresh
 $('#bookingNextWeek')?.addEventListener('click',()=>{bookingDayOffset+=7;refreshBookingWeek()});$$('[data-close-quick-booking]').forEach(x=>x.onclick=closeQuickBooking);$('#qbSaveBtn').onclick=saveQuickBooking;
 $$('.more-card:not([data-nav])').forEach(b=>b.onclick=()=>toast(`${b.querySelector('b').textContent} · 필요한 핵심 화면만 단계적으로 연결합니다`));
 
-setInterval(()=>{if(state.view==='create'){const s=Math.floor((Date.now()-state.start)/1000),m=Math.floor(s/60);$('#createTimer').textContent=`${String(m).padStart(2,'0')}:${String(s%60).padStart(2,'0')}`;$('#createTimer').parentElement.classList.toggle('warn',s>300)}},1000);
+
 (async function boot(){try{const mode=await loadPersisted();hydrateFromState();renderAll();renderOpsToday();renderBooking();renderCustomers();syncProfilePhoto();setView('opsHome');setSaveStatus('saved',mode==='new'?'자동저장 준비':'자동저장됨');if(mode==='restored'||mode==='migrated')toast(mode==='migrated'?'기존 보관함을 새 저장방식으로 옮겼어요':'이전 작업을 복원했어요');if(mode==='new')schedulePersist();initSalonCloud().catch(error=>console.error('[LUDIA cloud init]',error))}catch(error){console.error('[LUDIA boot recovery]',error);renderOpsToday();renderBooking();renderCustomers();setView('opsHome');setSaveStatus('error','일부 기능 복구 모드')}})();
 if('serviceWorker' in navigator)window.addEventListener('load',()=>navigator.serviceWorker.register('sw.js',{updateViaCache:'none'}).then(reg=>reg.update()).catch(()=>{}));
 

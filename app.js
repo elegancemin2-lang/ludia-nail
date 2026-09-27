@@ -998,36 +998,46 @@ function applyAiEstimateToManual(analysis){
  const qtyMap=new Map((analysis.addons||[]).map(x=>[x.key,Math.max(0,Number(x.qty)||0)]));
  $$('#pricingAddonList .pricing-addon-row').forEach(row=>{row.querySelector('input').value=qtyMap.get(row.dataset.priceKey)||0})
 }
+const PRICING_VISUAL_REFS=[
+ {id:'01',label:'원컬러 + 컬러 추가',f:[55.032362,116.742893,9.865994,53.727214,32.641602,5.408549,33.667399,16.876221,50.54362,70.236177,47.760717],baseKey:'oneColor',addons:[{key:'colorAdd',qty:1}],target:50000},
+ {id:'02',label:'자석젤 + 그라데이션',f:[66.41295,135.170139,5.311415,74.031576,3.238932,4.502066,35.079698,25.814887,60.894586,36.189949,30.927181],baseKey:'magnetic',addons:[{key:'gradationAdd',qty:1}],target:80000},
+ {id:'03',label:'원컬러 + 도트 4개',f:[67.217719,108.662869,.71072,67.25803,31.749132,4.340197,46.436198,20.310059,66.746257,68.907525,45.214083],baseKey:'oneColor',addons:[{key:'dot',qty:4}],target:57000},
+ {id:'04',label:'자석젤 + 그라데이션 + 투명 리본 파츠 2개',f:[50.283773,118.466978,7.364909,52.924262,39.024523,5.522475,34.139513,14.72385,48.863363,69.993531,42.852016],baseKey:'magnetic',addons:[{key:'gradationAdd',qty:1},{key:'clearRibbon',qty:2}],target:88000},
+ {id:'05',label:'그라데이션 + 씬프렌치 + 리본/하트 포인트',f:[74.256375,134.735126,.889757,70.225694,3.925239,5.141063,43.072645,30.522298,73.594944,33.661668,36.708473],baseKey:'gradation',addons:[{key:'thinFrench',qty:1},{key:'ribbonPoint',qty:2},{key:'smallPoint',qty:4}],target:92000},
+ {id:'06',label:'복합 아트 디자인',f:[53.276855,115.382794,10.036892,50.946723,42.675781,7.292651,32.645752,17.656793,50.302544,80.943042,45.28679],baseKey:'fullDesign',addons:[],target:90000}
+];
+const PRICING_VISUAL_SCALE=[8.696267,9.967266,3.810475,9.234555,15.963442,.965014,5.264868,5.506124,9.353775,18.180715,5.829401];
+function pricingVisualFeatures(d){
+ let n=0,sat=0,bright=0,highlight=0,colorful=0,dark=0,edge=0,prev=null,rs=0,gs=0,bs=0,vs=[],ss=[];
+ for(let i=0;i<d.length;i+=4){
+  const r=d[i],g=d[i+1],b=d[i+2],mx=Math.max(r,g,b),mn=Math.min(r,g,b),v=(r+g+b)/3,s=mx-mn;
+  n++;rs+=r;gs+=g;bs+=b;bright+=v;sat+=s;vs.push(v);ss.push(s);
+  if(v>205)highlight++;if(s>45)colorful++;if(v<75)dark++;if(prev!==null)edge+=Math.abs(v-prev);prev=v
+ }
+ const vm=bright/n,sm=sat/n,vstd=Math.sqrt(vs.reduce((a,x)=>a+(x-vm)*(x-vm),0)/n),sstd=Math.sqrt(ss.reduce((a,x)=>a+(x-sm)*(x-sm),0)/n);
+ const rm=rs/n,gm=gs/n,bm=bs/n;
+ return [sm,vm,highlight/n*100,colorful/n*100,dark/n*100,edge/Math.max(1,n-1),rm-gm,gm-bm,rm-bm,vstd,sstd]
+}
+function nearestPricingVisualRef(f){
+ let best=null;
+ PRICING_VISUAL_REFS.forEach(ref=>{
+  const dist=Math.sqrt(f.reduce((s,x,i)=>s+Math.pow((x-ref.f[i])/PRICING_VISUAL_SCALE[i],2),0)/f.length);
+  if(!best||dist<best.dist)best={ref,dist}
+ });
+ return best
+}
 async function localPricePhotoDraft(source){
- // 비용 0원 휴리스틱: 사진의 색/밝기/채도/엣지/하이라이트를 기기 안에서 읽어
- // 가장 가까운 샵 기준 항목을 먼저 제안한다. 결과는 원장이 즉시 수정할 수 있다.
- let blob=source;
- if(typeof source==='string'){const r=await fetch(source);blob=await r.blob()}
+ let blob=source;if(typeof source==='string'){const r=await fetch(source);blob=await r.blob()}
  const url=URL.createObjectURL(blob);
  try{
   const im=await new Promise((resolve,reject)=>{const x=new Image();x.onload=()=>resolve(x);x.onerror=reject;x.src=url});
   const size=192,cv=document.createElement('canvas'),ctx=cv.getContext('2d',{willReadFrequently:true});
   cv.width=size;cv.height=size;ctx.drawImage(im,0,0,size,size);
-  const d=ctx.getImageData(0,0,size,size).data;
-  let n=0,sat=0,bright=0,highlight=0,colorful=0,dark=0,edge=0,prev=0;
-  for(let i=0;i<d.length;i+=4){
-   const r=d[i],g=d[i+1],b=d[i+2],mx=Math.max(r,g,b),mn=Math.min(r,g,b),v=(r+g+b)/3;
-   n++;bright+=v;sat+=mx-mn;if(mx-mn>45)colorful++;if(v>205)highlight++;if(v<75)dark++;
-   if(prev)edge+=Math.abs(v-prev);prev=v
-  }
-  sat/=n;bright/=n;highlight/=n;colorful/=n;dark/=n;edge/=n;
-  let baseKey='oneColor',addons=[],simpleChangeQty=0,pointChangeQty=0,notes=[];
-  // 펄/반사 하이라이트가 많으면 자석/펄 계열, 부드러운 밝기 변화는 그라데이션 후보.
-  if(highlight>.28&&sat<48){baseKey='magnetic';addons.push({key:'gradationAdd',qty:1});notes.push('광택·펄 반사가 많아 자석젤/그라데이션 계열로 우선 분류')}
-  else if(sat<38&&bright>135){baseKey='gradation';notes.push('누드·시럽 계열의 부드러운 명암으로 그라데이션 우선 분류')}
-  else {baseKey='oneColor';notes.push('컬러 베이스 중심으로 원컬러 우선 분류')}
-  if(colorful>.22)addons.push({key:'colorAdd',qty:1});
-  // 작은 고대비 디테일이 많으면 포인트 아트 후보를 자동 추가.
-  if(edge>24||dark>.20){const qty=edge>34?4:2;addons.push({key:'smallPoint',qty});pointChangeQty=qty;notes.push('고대비 포인트가 보여 포인트 손가락 '+qty+'개 후보')}
-  if(highlight>.36&&edge>22){addons.push({key:'stone',qty:2});notes.push('강한 작은 반사 영역이 있어 스톤/큐빅 후보')}
-  const p=mergePricing(state.pricing),raw=(p.base[baseKey]?.price||0)+addons.reduce((s,x)=>s+(p.addons[x.key]?.price||0)*x.qty,0);
-  if(raw>=100000){baseKey='fullDesign';addons=[];pointChangeQty=0;notes.push('세부 합산이 높아 전체 디자인 패키지 기준으로 보정')}
-  return {baseKey,addons,simpleChangeQty,pointChangeQty,unpricedObservations:notes,summary:'무료 자동판독 초안 · 사진 특징을 샵 기준표에 매칭했습니다. 틀린 항목만 수정해 주세요.',confidence:62}
+  const hit=nearestPricingVisualRef(pricingVisualFeatures(ctx.getImageData(0,0,size,size).data)),ref=hit.ref;
+  const confidence=Math.max(45,Math.min(96,Math.round(96-hit.dist*35)));
+  return {baseKey:ref.baseKey,addons:ref.addons.map(x=>({...x})),simpleChangeQty:0,pointChangeQty:0,
+   unpricedObservations:['가장 가까운 기준 사례 '+ref.id+' · '+ref.label,'기준 예상가 '+priceWon(ref.target)+' · 최종 항목은 원장이 수정 가능'],
+   summary:'무료 기준사례 매칭 · 등록된 네일 분류 에셋 중 가장 가까운 시술 구성을 적용했습니다.',confidence,referenceId:ref.id}
  }finally{URL.revokeObjectURL(url)}
 }
 async function analyzePricingPhoto(){

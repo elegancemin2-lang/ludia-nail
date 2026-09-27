@@ -26,7 +26,7 @@ const baseDesigns=[
  {id:6,name:'Aurora Glass',desc:'클리어 핑크와 오로라 필름, 초소형 스톤으로 유리알 느낌.',img:img(2),diff:'보통',time:80,price:79000,fit:91,stock:'보유재료 88%',tags:['오로라','웨딩','글라스'],status:'후보',materials:['클리어 핑크','오로라 필름','미니 스톤'],tech:'클리어 컬러 → 필름 조각 → 볼륨젤 → 미니 스톤 → 탑'}
 ];
 const DEFAULT_PRICING={
- version:1,
+ version:2,
  eventDiscount:10,
  base:{
   oneColor:{label:'원컬러',price:45000},
@@ -35,13 +35,23 @@ const DEFAULT_PRICING={
   fullDesign:{label:'전체 디자인',price:90000}
  },
  addons:{
-  colorAdd:{label:'컬러 추가',price:5000,unit:'개'},
+  colorAdd:{label:'컬러 추가',price:5000,unit:'컬러'},
   gradationAdd:{label:'그라데이션 추가',price:10000,unit:'회'},
-  dot:{label:'도트',price:3000,unit:'개'},
+  thinFrench:{label:'씬프렌치',price:10000,unit:'세트'},
+  dot:{label:'도트',price:3000,unit:'손가락'},
+  lineArt:{label:'라인/체크 아트',price:3000,unit:'손가락'},
+  glitter:{label:'글리터/펄 포인트',price:3000,unit:'손가락'},
+  foilFilm:{label:'호일/필름 포인트',price:3000,unit:'손가락'},
+  smallPoint:{label:'하트/스팽글 소포인트',price:3000,unit:'손가락'},
+  ribbonPoint:{label:'리본/스와 포인트',price:5000,unit:'손가락'},
   clearRibbon:{label:'투명 리본 파츠',price:4000,unit:'개'},
-  thinFrench:{label:'씬프렌치',price:10000,unit:'회'},
-  ribbonPoint:{label:'리본/스와 포인트',price:5000,unit:'개'},
-  smallPoint:{label:'하트/스팽글 소포인트',price:3000,unit:'개'}
+  stone:{label:'스톤/큐빅 포인트',price:3000,unit:'손가락'},
+  pearl:{label:'진주/메탈 파츠',price:3000,unit:'손가락'},
+  chromePowder:{label:'미러/크롬 파우더',price:10000,unit:'세트'},
+  marble:{label:'마블/뉘앙스 아트',price:5000,unit:'손가락'},
+  characterArt:{label:'캐릭터/드로잉 아트',price:7000,unit:'손가락'},
+  extensionRepair:{label:'연장/보수',price:5000,unit:'손가락'},
+  other:{label:'기타 · 직접 입력',price:0,unit:'항목'}
  },
  fingerChange:{
   simple:{label:'단순 변경',price:3000},
@@ -828,7 +838,7 @@ function renderPicker(){renderMonthlyMenu()}
 function renderCollectionPreview(){renderMonthlyMenu()}
 
 const PRICING_BASE_KEYS=['oneColor','gradation','magnetic','fullDesign'];
-const PRICING_ADDON_KEYS=['colorAdd','gradationAdd','dot','clearRibbon','thinFrench','ribbonPoint','smallPoint'];
+const PRICING_ADDON_KEYS=['colorAdd','gradationAdd','thinFrench','dot','lineArt','glitter','foilFilm','smallPoint','ribbonPoint','clearRibbon','stone','pearl','chromePowder','marble','characterArt','extensionRepair','other'];
 let pricingContext='standalone',pricingMode='custom',pricingLastResult={raw:0,regular:0,event:0};
 let pricingReviewLines=[],pricingReviewSeq=0,pricingAiMeta=null,pricingPhotoFile=null,qbCustomPhotoFile=null,qbCustomPhotoUrl=null;
 
@@ -909,7 +919,7 @@ function renderPricingReviewLines(){
  })
 }
 function addPricingReviewLine(){
- pricingReviewLines.push({id:'custom-'+(++pricingReviewSeq),kind:'custom',key:null,label:'추가 항목',qty:1,unitPrice:0});renderPricingReviewLines();recalculatePricingReview();
+ pricingReviewLines.push({id:'custom-'+(++pricingReviewSeq),kind:'custom',key:'other',label:'기타 항목명 입력',qty:1,unitPrice:0});renderPricingReviewLines();recalculatePricingReview();
  const rows=$$('#pricingReviewLines .pricing-review-line');rows.at(-1)?.querySelector('.pricing-line-label')?.focus()
 }
 function renderPricingAiSummary(){
@@ -942,7 +952,7 @@ function renderPricingCalculator(){
  const list=$('#pricingAddonList');if(list){
    list.innerHTML='';PRICING_ADDON_KEYS.forEach(key=>{
      const item=state.pricing.addons[key],row=document.createElement('label');row.className='pricing-addon-row';row.dataset.priceKey=key;
-     row.innerHTML='<span><b>'+htmlText(item.label)+'</b><small>+'+priceWon(item.price)+' / '+htmlText(item.unit||'회')+'</small></span><input type="number" min="0" max="20" value="0" inputmode="numeric">';
+     row.innerHTML='<span><b>'+htmlText(item.label)+'</b><small>'+(item.price?('+'+priceWon(item.price)+' / '+htmlText(item.unit||'회')):'항목명·금액은 아래 상세내역에서 직접 입력')+'</small></span><input type="number" min="0" max="20" value="0" inputmode="numeric">';
      row.querySelector('input').oninput=syncReviewFromManual;list.appendChild(row)
    })
  }

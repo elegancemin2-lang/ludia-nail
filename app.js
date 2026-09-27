@@ -953,7 +953,7 @@ function renderPricingCalculator(){
 function setPricingPhotoPreview(src){
  const box=$('#pricingPhotoPreview');if(!box)return;
  if(src){box.classList.add('has-image');box.innerHTML='<img src="'+htmlText(src)+'" alt="견적 참고사진"><span><b>사진 선택됨</b><small>다른 사진을 누르면 교체</small></span>'}
- else{box.classList.remove('has-image');box.innerHTML='<i>＋</i><b>네일 사진 올리기</b><small>사진 기준으로 1차 견적 · 세부내역 생성</small>'}
+ else{box.classList.remove('has-image');box.innerHTML='<i>＋</i><b>네일 사진 올리기</b><small>무료 로컬 견적 · API 비용 없음</small>'}
 }
 async function compressImageToDataUrl(source){
  let blob=source;
@@ -993,7 +993,7 @@ function localPricePhotoDraft(){
  // 사진은 화면에 그대로 두고 원장/직원이 보이는 요소만 빠르게 체크해 최종 확정한다.
  const base=$('#pricingBaseSelect');
  const baseKey=base&&PRICING_BASE_KEYS.includes(base.value)?base.value:'oneColor';
- return {baseKey,addons:[],simpleChangeQty:0,pointChangeQty:0,unpricedObservations:[],summary:'무료 로컬 견적 · 사진을 보고 아래 항목만 확인해 주세요.',confidence:100}
+ return {baseKey,addons:[],simpleChangeQty:0,pointChangeQty:0,unpricedObservations:[],summary:'무료 로컬 견적 · 사진을 크게 보면서 시술 항목을 탭해 주세요. 선택 즉시 샵 기준가로 계산됩니다.',confidence:100}
 }
 async function analyzePricingPhoto(){
  const source=pricingContextImageSource();if(!source)return toast('먼저 네일 사진을 올려 주세요');
@@ -1015,7 +1015,7 @@ async function analyzePricingPhoto(){
    console.error('[LUDIA local price]',error);
    if(stateBox){stateBox.classList.remove('hidden');stateBox.textContent='무료 견적 준비 중 오류가 발생했습니다.'}
    toast('무료 견적 준비에 실패했어요')
- }finally{if(btn){btn.disabled=false;btn.textContent='무료 견적'}}
+ }finally{if(btn){btn.disabled=false;btn.textContent='무료 견적 열기'}}
 }
 function openPricingSheet(context='standalone',mode='custom',{autoAnalyze=false}={}){
  pricingContext=context;pricingMode=mode==='monthly'?'monthly':'custom';pricingPhotoFile=null;pricingAiMeta=null;

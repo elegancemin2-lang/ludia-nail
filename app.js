@@ -1015,7 +1015,7 @@ function applyAiEstimateToManual(analysis){
  $$('#pricingAddonList .pricing-addon-row').forEach(row=>{row.querySelector('input').value=qtyMap.get(row.dataset.priceKey)||0})
 }
 async function analyzePricingPhoto(){
- if(salonCloudMode!=='cloud'||!window.LudiaSalonCloud?.isConnected?.())return toast('AI 사진 견적은 샵 로그인 후 사용할 수 있어요');
+ if(salonCloudMode!=='cloud'||!window.LudiaSalonCloud?.isConnected?.())return toast('사진 가격 분석은 샵 로그인 후 사용할 수 있어요');
  const source=pricingContextImageSource();if(!source)return toast('먼저 네일 사진을 올려 주세요');
  const btn=$('#pricingAiAnalyzeBtn'),stateBox=$('#pricingAiState');if(btn){btn.disabled=true;btn.textContent='사진 분석 중…'}if(stateBox){stateBox.classList.remove('hidden');stateBox.textContent='AI가 디자인 요소를 확인하고 샵 기준가에 맞추는 중입니다.'}
  try{
@@ -1034,9 +1034,9 @@ async function analyzePricingPhoto(){
    if(stateBox){stateBox.classList.remove('hidden');stateBox.textContent='AI 1차 견적 완료 · 아래 내역을 사람이 검수해 주세요.'}
  }catch(error){
    console.error('[LUDIA AI price]',error);
-   if(stateBox){stateBox.classList.remove('hidden');stateBox.textContent=error.message==='AI_API_NOT_CONFIGURED'?'AI 사진 견적 서버 설정이 아직 필요합니다. 수동 계산은 바로 사용할 수 있어요.':'사진 분석에 실패했어요. 사진을 바꾸거나 기준표로 직접 계산해 주세요.'}
-   toast(error.message==='AI_API_NOT_CONFIGURED'?'AI 사진 견적 설정이 필요해요':'사진 견적에 실패했어요')
- }finally{if(btn){btn.disabled=false;btn.textContent='AI 사진 견적'}}
+   if(stateBox){stateBox.classList.remove('hidden');stateBox.textContent=error.message==='AI_API_NOT_CONFIGURED'?'사진 분석 서버 설정이 아직 필요합니다. 기준표 직접 계산은 바로 사용할 수 있어요.':'사진 분석에 실패했어요. 사진을 바꾸거나 기준표로 직접 계산해 주세요.'}
+   toast(error.message==='AI_API_NOT_CONFIGURED'?'사진 분석 서버 설정이 필요해요':'사진 견적에 실패했어요')
+ }finally{if(btn){btn.disabled=false;btn.textContent='사진 분석'}}
 }
 function openPricingSheet(context='standalone',mode='custom',{autoAnalyze=false}={}){
  pricingContext=context;pricingMode=mode==='monthly'?'monthly':'custom';pricingPhotoFile=null;pricingAiMeta=null;

@@ -431,7 +431,7 @@ function setView(v){
    x.classList.toggle('active',active);
  });
  $$('.art-tabs [data-nav]').forEach(x=>x.classList.toggle('active',x.dataset.nav===v));
- const titles={opsHome:'오늘, 필요한 것만.',booking:'예약',customers:'고객',more:'더보기',home:'ART STUDIO',create:'디자인 스튜디오',library:'ART 보관함',collection:'이달의 아트',settings:'DNA · 재료'};
+ const titles={opsHome:'오늘, 필요한 것만.',booking:'예약',customers:'고객',more:'더보기',home:'ART STUDIO',create:'디자인 스튜디오',library:'ART 보관함',collection:'이달의 아트',settings:'가격 · 설정'};
  $('#pageTitle').textContent=titles[v]||'LUDIA NAIL';
  if(v==='create'){state.start=Date.now();renderDirectStudioPreview();setTimeout(()=>openDirectStudio(),40)}
  if(v==='booking')renderBooking();

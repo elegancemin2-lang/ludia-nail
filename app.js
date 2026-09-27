@@ -433,9 +433,9 @@ function setView(v){
    x.classList.toggle('active',active);
  });
  $$('.art-tabs [data-nav]').forEach(x=>x.classList.toggle('active',x.dataset.nav===v));
- const titles={opsHome:'오늘, 필요한 것만.',booking:'예약',customers:'고객',more:'더보기',home:'ART STUDIO',create:'디자인 스튜디오',library:'ART 보관함',collection:'이달의 아트',settings:'가격 · 설정'};
+ const titles={opsHome:'오늘, 필요한 것만.',booking:'예약',customers:'고객',more:'더보기',home:'가격 분석',create:'사진 견적',library:'ART 보관함',collection:'이달의 아트',settings:'가격 · 설정'};
  $('#pageTitle').textContent=titles[v]||'LUDIA NAIL';
- if(v==='create'){state.start=Date.now();renderDirectStudioPreview();setTimeout(()=>openDirectStudio(),40)}
+ if(v==='create'){state.start=Date.now();closeSheet();}
  if(v==='booking')renderBooking();
  if(v==='customers')renderCustomers();
  if(v==='library')syncCloudArtLibrary();
@@ -449,12 +449,33 @@ const savedTheme=localStorage.getItem('ludiaTheme');applyTheme(savedTheme==='dar
 const toggleTheme=()=>applyTheme(document.documentElement.dataset.theme==='dark'?'light':'dark');
 $('#themeBtn')?.addEventListener('click',toggleTheme);$('#bookingThemeBtn')?.addEventListener('click',toggleTheme);$('#homeThemeBtn')?.addEventListener('click',toggleTheme);window.__ludiaThemeBound=true;
 
-const homeChipTexts=['가을 자석','성수 미니멀','웨딩 여리','강남 글리터','숏네일 심플'];
-homeChipTexts.forEach(t=>{const b=document.createElement('button');b.textContent=t;b.onclick=()=>{$('#homePrompt').value=t+' 느낌으로 6개';startFromHome()};$('#homePromptChips').appendChild(b)});
-function startFromHome(){const v=$('#homePrompt').value.trim();state.draft.homePrompt=v;if(v){state.draft.concept=v;if($('#conceptInput'))$('#conceptInput').value=v}state.active=null;setView('create');updateBrief();schedulePersist()}
-$('#homePrompt').oninput=()=>{state.draft.homePrompt=$('#homePrompt').value;schedulePersist()};$('#homeGenerate').onclick=startFromHome;$('#quickReference').onclick=()=>{setView('create');setTimeout(()=>$('#pickRef').click(),180)};
-const trendData=[['Rose Smoke Magnet','누드핑크 · 실버 캣아이'],['Clear Chrome Point','클리어 · 미러 포인트'],['Soft Wedding Glass','오팔 · 여리한 광']];
-trendData.forEach((x,i)=>{const d=document.createElement('div');d.className='trend-item';d.innerHTML=`<div class="trend-main"><span class="trend-swatch" style="filter:hue-rotate(${i*25}deg)"></span><div><b>${x[0]}</b><small>${x[1]}</small></div></div><span>→</span>`;d.onclick=()=>{$('#homePrompt').value=x[0]+' '+x[1];startFromHome()};$('#trendList').appendChild(d)});
+let photoEstimatePageUrl=null;
+function setPhotoEstimatePagePreview(src){
+ const box=$('#photoEstimatePreview');if(!box)return;
+ if(src){
+   box.classList.add('has-image');
+   box.innerHTML='<img src="'+htmlText(src)+'" alt="가격 분석 네일 사진"><span><b>사진 선택됨</b><small>사진을 누르면 다른 이미지로 교체</small></span><em>변경</em>'
+ }else{
+   box.classList.remove('has-image');
+   box.innerHTML='<span>＋</span><b>네일 사진을 선택하세요</b><small>JPG · PNG · WEBP · 고객 참고사진도 가능</small><em>사진 선택</em>'
+ }
+}
+function openPhotoEstimatePicker(){
+ setView('create');setTimeout(()=>$('#photoEstimateInput')?.click(),120)
+}
+function analyzePhotoEstimateFile(file){
+ if(!file)return;
+ if(!/^image\/(jpeg|png|webp)$/i.test(file.type||''))return toast('JPG · PNG · WEBP 사진을 선택해 주세요');
+ if(file.size>12*1024*1024)return toast('사진은 12MB 이하로 선택해 주세요');
+ if(photoEstimatePageUrl)URL.revokeObjectURL(photoEstimatePageUrl);
+ photoEstimatePageUrl=URL.createObjectURL(file);setPhotoEstimatePagePreview(photoEstimatePageUrl);
+ openPricingSheet('standalone','custom');
+ pricingPhotoFile=file;setPricingPhotoPreview(photoEstimatePageUrl);
+ setTimeout(analyzePricingPhoto,120)
+}
+$('#homePhotoEstimateBtn')?.addEventListener('click',openPhotoEstimatePicker);
+$('#photoEstimateStartBtn')?.addEventListener('click',()=>$('#photoEstimateInput')?.click());
+$('#photoEstimateInput')?.addEventListener('change',e=>{const file=e.target.files?.[0];if(file)analyzePhotoEstimateFile(file);e.target.value=''});
 function recentCard(d){const a=document.createElement('article');a.className='recent-card';a.innerHTML=`${designPreviewHTML(d,'recent')}<div class="card-copy"><b>${htmlText(d.name)}</b><small>${htmlText(d.tags.slice(0,2).join(' · '))}</small></div>`;a.onclick=()=>openSheet(d);return a}
 function renderRecent(){$('#recentStrip').replaceChildren(...state.library.slice(0,4).map(recentCard))}
 

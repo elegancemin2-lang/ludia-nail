@@ -988,34 +988,34 @@ function applyAiEstimateToManual(analysis){
  const qtyMap=new Map((analysis.addons||[]).map(x=>[x.key,Math.max(0,Number(x.qty)||0)]));
  $$('#pricingAddonList .pricing-addon-row').forEach(row=>{row.querySelector('input').value=qtyMap.get(row.dataset.priceKey)||0})
 }
+function localPricePhotoDraft(){
+ // 무료 모드: 외부 AI/API 호출 없이 샵 가격표를 기준으로 시작한다.
+ // 사진은 화면에 그대로 두고 원장/직원이 보이는 요소만 빠르게 체크해 최종 확정한다.
+ const base=$('#pricingBaseSelect');
+ const baseKey=base&&PRICING_BASE_KEYS.includes(base.value)?base.value:'oneColor';
+ return {baseKey,addons:[],simpleChangeQty:0,pointChangeQty:0,unpricedObservations:[],summary:'무료 로컬 견적 · 사진을 보고 아래 항목만 확인해 주세요.',confidence:100}
+}
 async function analyzePricingPhoto(){
  const source=pricingContextImageSource();if(!source)return toast('먼저 네일 사진을 올려 주세요');
- const btn=$('#pricingAiAnalyzeBtn'),stateBox=$('#pricingAiState');if(btn){btn.disabled=true;btn.textContent='사진 분석 중…'}if(stateBox){stateBox.classList.remove('hidden');stateBox.textContent='AI가 디자인 요소를 확인하고 샵 기준가에 맞추는 중입니다.'}
+ const btn=$('#pricingAiAnalyzeBtn'),stateBox=$('#pricingAiState');
+ if(btn){btn.disabled=true;btn.textContent='무료 견적 준비 중…'}
  try{
-   const imageDataUrl=await compressImageToDataUrl(source);
-   const token=window.LudiaSalonCloud?.isConnected?.()?await window.LudiaSalonCloud.getAccessToken():null;
-   const headers={'content-type':'application/json'};if(token)headers.authorization='Bearer '+token;
-   const response=await fetch('/api/price-estimate',{method:'POST',headers,body:JSON.stringify({imageDataUrl,mode:pricingMode})});
-   const data=await response.json().catch(()=>({}));
-   if(!response.ok){
-     if(data.error==='ai_not_configured')throw new Error('AI_API_NOT_CONFIGURED');
-     const parts=[data.error,data.detail,data.upstreamStatus,data.message].filter(Boolean);
-     const err=new Error(parts.join(' · ')||('HTTP '+response.status));
-     err.serverData=data;err.httpStatus=response.status;throw err
-   }
-   applyAiEstimateToManual(data.analysis||{});
-   pricingAiMeta=data.analysis||null;
-   pricingReviewLines=(data.estimate?.lines||[]).map(x=>({...x,id:'ai-'+(++pricingReviewSeq)+'-'+(x.key||'line')}));
+   const analysis=localPricePhotoDraft();
+   applyAiEstimateToManual(analysis);
+   pricingAiMeta=analysis;
+   syncReviewFromManual();
    if($('#pricingFinalOverride'))$('#pricingFinalOverride').value='';
    renderPricingAiSummary();renderPricingReviewLines();recalculatePricingReview();
-   if(stateBox){stateBox.classList.remove('hidden');stateBox.textContent='AI 1차 견적 완료 · 아래 내역을 사람이 검수해 주세요.'}
+   if(stateBox){
+     stateBox.classList.remove('hidden');
+     stateBox.textContent='무료 모드 · API 비용 0원 · 사진을 보며 기본 시술/추가 항목만 확인하면 가격이 바로 계산됩니다.'
+   }
+   toast('무료 견적 모드로 열었어요 · 항목만 확인해 주세요')
  }catch(error){
-   console.error('[LUDIA AI price]',error);
-   const isConfig=error.message==='AI_API_NOT_CONFIGURED';
-   const detail=isConfig?'OPENAI_API_KEY 설정 필요':String(error.message||'알 수 없는 서버 오류');
-   if(stateBox){stateBox.classList.remove('hidden');stateBox.textContent=isConfig?'사진 분석 서버 설정이 아직 필요합니다.':'분석 실패 · '+detail}
-   toast(isConfig?'사진 분석 서버 설정이 필요해요':'분석 실패 · '+detail.slice(0,120))
- }finally{if(btn){btn.disabled=false;btn.textContent='사진 분석'}}
+   console.error('[LUDIA local price]',error);
+   if(stateBox){stateBox.classList.remove('hidden');stateBox.textContent='무료 견적 준비 중 오류가 발생했습니다.'}
+   toast('무료 견적 준비에 실패했어요')
+ }finally{if(btn){btn.disabled=false;btn.textContent='무료 견적'}}
 }
 function openPricingSheet(context='standalone',mode='custom',{autoAnalyze=false}={}){
  pricingContext=context;pricingMode=mode==='monthly'?'monthly':'custom';pricingPhotoFile=null;pricingAiMeta=null;
@@ -1051,7 +1051,7 @@ $('#pricingAiAnalyzeBtn')?.addEventListener('click',analyzePricingPhoto);
 $('#pricingPhotoInput')?.addEventListener('change',e=>{const file=e.target.files?.[0];if(!file)return;pricingPhotoFile=file;setPricingPhotoPreview(URL.createObjectURL(file));pricingAiMeta=null;renderPricingAiSummary();setTimeout(analyzePricingPhoto,100)});
 $('#qbCustomPhotoInput')?.addEventListener('change',e=>{
  const file=e.target.files?.[0];if(!file)return;if(qbCustomPhotoUrl)URL.revokeObjectURL(qbCustomPhotoUrl);qbCustomPhotoFile=file;qbCustomPhotoUrl=URL.createObjectURL(file);
- const box=$('#qbCustomPhotoPreview');if(box){box.classList.add('has-image');box.innerHTML='<img src="'+htmlText(qbCustomPhotoUrl)+'" alt="수제디자인 참고사진"><span><b>참고사진 선택됨</b><small>AI가 1차 견적을 시작합니다</small></span>'}
+ const box=$('#qbCustomPhotoPreview');if(box){box.classList.add('has-image');box.innerHTML='<img src="'+htmlText(qbCustomPhotoUrl)+'" alt="수제디자인 참고사진"><span><b>참고사진 선택됨</b><small>무료 견적을 시작합니다</small></span>'}
  setTimeout(()=>openPricingSheet('booking','custom',{autoAnalyze:true}),150)
 });
 $$('#pricingModeSwitch [data-price-mode]').forEach(b=>b.addEventListener('click',()=>{setPricingMode(b.dataset.priceMode);syncReviewFromManual()}));

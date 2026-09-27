@@ -264,9 +264,8 @@
           <span>사진 판독이 임의로 가격을 만드는 것이 아니라, 사진에서 항목을 찾은 뒤 원장이 저장한 단가표를 적용합니다.</span>
         </div>
 
-        <!-- legacy editor compatibility fields: generation UI removed -->
+        <!-- internal compatibility state only: no design-generation UI -->
         <div class="studio-compat-fields" aria-hidden="true">
-          <textarea id="homePrompt"></textarea><button id="homeGenerate"></button><div id="homePromptChips"></div><div id="trendList"></div><button id="quickReference"></button>
           <textarea id="conceptInput"></textarea>
           <select id="maxTime"><option value="90" selected>90</option></select>
           <select id="targetPrice"><option value="69000" selected>69000</option></select>
@@ -274,7 +273,6 @@
           <input id="refFile" type="file" accept="image/*" />
           <div id="refUpload"></div><div id="refEmpty"></div><div id="refPreview"></div><img id="refPreviewImg" alt=""/><button id="pickRef"></button><button id="removeRef"></button>
           <div id="dnaChips"></div><div id="conditionChips"></div><span id="briefCount"></span><h3 id="briefTitle"></h3><p id="briefCopy"></p><div id="nailPreview"></div><b id="fitScore"></b><i id="fitMeter"></i><div id="briefList"></div><b id="createTimer"></b>
-          <div id="directStudioPreview"></div><button id="openStudioBtn"></button><button id="newStudioBtn"></button>
         </div>
       </section>
 

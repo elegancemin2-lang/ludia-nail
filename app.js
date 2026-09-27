@@ -281,7 +281,20 @@ function renderQuickMonthlyArts(){
    const b=document.createElement('button');b.type='button';b.className='qb-art-option'+(quickSelectedMonthlyArt&&String(quickSelectedMonthlyArt.id)===String(d.id)?' selected':'');
    const sale=Number(d.salePrice)||0,list=Number(d.listPrice??d.price)||0;
    b.innerHTML='<img src="'+htmlText(d.img||'assets/nail_5.jpg')+'" alt=""><span><b>'+htmlText(d.name)+'</b><small>'+(sale?'<s>'+money(list)+'</s> '+money(sale):money(list))+(d.time?' · '+d.time+'분':'')+'</small></span>';
-   b.onclick=()=>{quickSelectedMonthlyArt=d;ensureQuickDuration(d.time||90);renderQuickMonthlyArts()};grid.appendChild(b)
+   b.onclick=()=>{
+    quickSelectedMonthlyArt=d;ensureQuickDuration(d.time||90);renderQuickMonthlyArts();
+    const registered=Number(d.salePrice)||Number(d.listPrice)||Number(d.price)||0;
+    if($('#qbCustomPrice'))$('#qbCustomPrice').value=registered||'';
+    openPricingSheet('booking','monthly',{autoAnalyze:false});
+    pricingContext='booking';pricingMode='monthly';
+    if($('#pricingFinalOverride'))$('#pricingFinalOverride').value=registered||'';
+    const src=d.img||'';setPricingPhotoPreview(src);
+    const baseItem=mergePricing(state.pricing).base.fullDesign;
+    pricingReviewLines=[{id:'monthly-'+String(d.id||Date.now()),kind:'monthly',key:'monthly',label:'이달의 아트 · '+d.name,qty:1,unitPrice:registered||Number(baseItem.price)||90000}];
+    pricingAiMeta={confidence:100,summary:'이달의 아트 등록가격을 우선 적용했습니다. 상세내역에서 수정하면 즉시 다시 계산됩니다.',unpricedObservations:[]};
+    const detailHost=$('#pricingReviewLines')?.parentElement;if(detailHost)detailHost.classList.add('pricing-detail-open');
+    renderPricingAiSummary();renderPricingReviewLines();recalculatePricingReview();
+   };grid.appendChild(b)
  })
 }
 function handleQuickServiceChange(){
@@ -295,7 +308,7 @@ function openQuickBooking(time='13:00',staff='루디아'){
  syncQuickBookingOptions();const safeStaff=salonStaffNames.includes(staff)?staff:(salonStaffNames[0]||staff);quickBookingDraft={time,staff:safeStaff};quickSelectedMonthlyArt=null;
  delete $('#qbCustomer').dataset.cloudCustomerId;delete $('#qbCustomer').dataset.cloudCustomerName;
  $('#qbTime').value=time;$('#qbStaff').value=safeStaff;$('#qbCustomer').value='';if($('#qbPhone'))$('#qbPhone').value='';if($('#qbCustomDesignNote'))$('#qbCustomDesignNote').value='';if($('#qbCustomPrice'))$('#qbCustomPrice').value=Number(state.pricing?.base?.fullDesign?.price)||90000;
- if(qbCustomPhotoUrl){URL.revokeObjectURL(qbCustomPhotoUrl);qbCustomPhotoUrl=null}qbCustomPhotoFile=null;const customPhoto=$('#qbCustomPhotoPreview');if(customPhoto){customPhoto.classList.remove('has-image');customPhoto.innerHTML='<b>＋ 참고사진</b><small>사진을 올리면 AI가 1차 견적을 잡아요</small>'}
+ if(qbCustomPhotoUrl){URL.revokeObjectURL(qbCustomPhotoUrl);qbCustomPhotoUrl=null}qbCustomPhotoFile=null;const customPhoto=$('#qbCustomPhotoPreview');if(customPhoto){customPhoto.classList.remove('has-image');customPhoto.innerHTML='<b>＋ 참고사진</b><small>사진을 올리면 자동으로 1차 견적을 계산해요</small>'}
  ensureQuickDuration(90);
  if($('#qbService')?.options.length){const preferred=[...$('#qbService').options].find(o=>o.value==='젤 아트')||$('#qbService').options[0];$('#qbService').value=preferred?.value||'젤 아트'}
  handleQuickServiceChange();
@@ -314,7 +327,7 @@ async function saveQuickBooking(){
  const duration=Number($('#qbDuration')?.value)||selectedArt?.time||serviceRecord?.duration_minutes||90;
  const priceMap={'젤 원컬러':45000,'젤 아트':79000,'오마카세 아트':99000,'제거 + 젤 아트':89000,'수제디자인':89000};
  const customCalculated=rawService==='수제디자인'?(Number($('#qbCustomPrice')?.value)||Number(state.pricing?.base?.fullDesign?.price)||90000):0;
- const amount=selectedArt?(Number(selectedArt.salePrice)||Number(selectedArt.listPrice)||Number(selectedArt.price)||79000):(customCalculated||serviceRecord?.price||priceMap[rawService]||69000);
+ const amount=selectedArt?(Number(selectedArt._bookingPrice)||Number($('#qbCustomPrice')?.value)||Number(selectedArt.salePrice)||Number(selectedArt.listPrice)||Number(selectedArt.price)||79000):(customCalculated||serviceRecord?.price||priceMap[rawService]||69000);
  const payload={customer,phone,service,time,staff,duration,amount,date:bookingDateFromOffset(bookingDayOffset),note:customNote||'빠른 예약',artId:selectedArt?.id||null,artName:selectedArt?.name||null,designType:selectedArt?'monthly':rawService==='수제디자인'?'custom':null};
  const btn=$('#qbSaveBtn');if(btn)btn.disabled=true;
  try{
@@ -1093,7 +1106,8 @@ function applyPricingResult(){
    toast('검수한 정상가와 이벤트가를 적용했어요')
  }else if(pricingContext==='booking'){
    if($('#qbCustomPrice'))$('#qbCustomPrice').value=pricingLastResult.regular;
-   toast('검수한 수제디자인 가격을 적용했어요')
+   if(quickSelectedMonthlyArt)quickSelectedMonthlyArt={...quickSelectedMonthlyArt,_bookingPrice:pricingLastResult.regular};
+   toast(quickSelectedMonthlyArt?'이달의 아트 견적을 예약에 적용했어요':'검수한 수제디자인 가격을 적용했어요')
  }else toast('최종 견적 '+priceWon(pricingLastResult.regular));
  closePricingSheet()
 }

@@ -871,7 +871,7 @@ function closePricingSheet(){
 }
 function setPricingMode(mode){
  pricingMode=mode==='monthly'?'monthly':'custom';
- $('#pricingModeSwitch [data-price-mode]').forEach(b=>b.classList.toggle('active',b.dataset.priceMode===pricingMode));
+ $$('#pricingModeSwitch [data-price-mode]').forEach(b=>b.classList.toggle('active',b.dataset.priceMode===pricingMode));
  updatePricingCalculator()
 }
 function renderPricingCalculator(){
@@ -900,7 +900,7 @@ function updatePricingCalculator(){
  let raw=Number(base.price)||0,parts=[base.label+' '+priceWon(base.price)];
  if(simpleQty){const n=simpleQty*(Number(p.fingerChange.simple.price)||0);raw+=n;parts.push('단순변경 '+simpleQty+'개 +'+priceWon(n))}
  if(pointQty){const n=pointQty*(Number(p.fingerChange.point.price)||0);raw+=n;parts.push('포인트변경 '+pointQty+'개 +'+priceWon(n))}
- $('#pricingAddonList .pricing-addon-row').forEach(row=>{
+ $$('#pricingAddonList .pricing-addon-row').forEach(row=>{
    const key=row.dataset.priceKey,item=p.addons[key],qty=Math.max(0,Number(row.querySelector('input')?.value)||0);if(!item||!qty)return;
    const n=qty*(Number(item.price)||0);raw+=n;parts.push(item.label+' '+qty+(item.unit||'')+' +'+priceWon(n))
  });
@@ -934,8 +934,8 @@ $('#pricingCalculatorBtn')?.addEventListener('click',()=>openPricingSheet('stand
 $('#monthlyPriceRecommendBtn')?.addEventListener('click',()=>openPricingSheet('monthly','monthly'));
 $('#qbCustomPriceBtn')?.addEventListener('click',()=>openPricingSheet('booking','custom'));
 $('#pricingApplyBtn')?.addEventListener('click',applyPricingResult);
-$('#pricingModeSwitch [data-price-mode]').forEach(b=>b.addEventListener('click',()=>setPricingMode(b.dataset.priceMode)));
-$('[data-close-pricing]').forEach(b=>b.addEventListener('click',closePricingSheet));
+$$('#pricingModeSwitch [data-price-mode]').forEach(b=>b.addEventListener('click',()=>setPricingMode(b.dataset.priceMode)));
+$$('[data-close-pricing]').forEach(b=>b.addEventListener('click',closePricingSheet));
 
 function renderSettings(){renderPricingSettings();$('#dnaList').replaceChildren(...DNA.map(d=>{const r=document.createElement('div');r.className='dna-row';r.innerHTML=`<div class="dna-info"><b>${htmlText(d.name)}</b><small>${d.desc}</small></div><span class="dna-score">${d.score}%</span>`;return r}));$('#inventoryList').replaceChildren(...inventory.map(x=>{const r=document.createElement('div');r.className='inventory-row';r.innerHTML=`<div class="inventory-info"><b>${x.name}</b><small>${x.state} · ${x.qty}</small></div><span class="stock-dot ${x.state==='부족'?'low':x.state==='품절'?'out':''}"></span>`;return r}))}
 function hydrateFromState(){if($('#homePrompt'))$('#homePrompt').value=state.draft.homePrompt||'';if($('#conceptInput'))$('#conceptInput').value=state.draft.concept||'';if($('#maxTime'))$('#maxTime').value=String(state.draft.maxTime||'90');if($('#targetPrice'))$('#targetPrice').value=String(state.draft.targetPrice||'69000');if($('#stockFirst'))$('#stockFirst').checked=state.draft.stockFirst!==false;if(state.draft.refDataUrl){$('#refPreviewImg').src=state.draft.refDataUrl;$('#refEmpty').classList.add('hidden');$('#refPreview').classList.remove('hidden')}else{$('#refPreview').classList.add('hidden');$('#refEmpty').classList.remove('hidden')}}

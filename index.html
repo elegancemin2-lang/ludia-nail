@@ -253,7 +253,7 @@
               <div><i>1</i><span><b>기본 시술</b><small>원컬러 · 그라데이션 · 자석젤 · 전체디자인</small></span></div>
               <div><i>2</i><span><b>추가 옵션</b><small>도트 · 프렌치 · 리본 · 파츠 · 컬러 추가</small></span></div>
               <div><i>3</i><span><b>손가락 변경</b><small>단순 변경 / 포인트 변경 개수 반영</small></span></div>
-              <div><i>4</i><span><b>최종 검수</b><small>AI 판독을 직원이 수정한 뒤 최종가격 확정</small></span></div>
+              <div><i>4</i><span><b>최종 검수</b><small>사진 판독을 직원이 수정한 뒤 최종가격 확정</small></span></div>
             </div>
             <button class="primary-btn wide" id="photoEstimateStartBtn" type="button">사진 선택하고 견적 시작</button>
           </div>
@@ -261,7 +261,7 @@
 
         <div class="photo-estimate-note">
           <b>가격 기준은 샵마다 다르게 설정됩니다.</b>
-          <span>AI가 임의로 가격을 만드는 것이 아니라, 사진에서 항목을 찾은 뒤 원장이 저장한 단가표를 적용합니다.</span>
+          <span>사진 판독이 임의로 가격을 만드는 것이 아니라, 사진에서 항목을 찾은 뒤 원장이 저장한 단가표를 적용합니다.</span>
         </div>
 
         <!-- legacy editor compatibility fields: generation UI removed -->
@@ -680,7 +680,7 @@
         </div>
 
         <div class="pricing-ai-summary hidden" id="pricingAiSummary">
-          <div><span>AI 판독</span><b id="pricingAiConfidence">-</b></div>
+          <div><span>사진 판독</span><b id="pricingAiConfidence">-</b></div>
           <p id="pricingAiSummaryText"></p>
           <ul id="pricingAiObservations"></ul>
         </div>
@@ -697,7 +697,7 @@
         </label>
 
         <details class="pricing-manual-details">
-          <summary>기준표로 직접 계산 / AI 결과 다시 조정</summary>
+          <summary>기준표로 직접 계산 / 판독 결과 다시 조정</summary>
 
         <div class="pricing-mode-switch" id="pricingModeSwitch">
           <button type="button" data-price-mode="monthly">이달의 아트</button>

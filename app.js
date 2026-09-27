@@ -998,19 +998,44 @@ function applyAiEstimateToManual(analysis){
  const qtyMap=new Map((analysis.addons||[]).map(x=>[x.key,Math.max(0,Number(x.qty)||0)]));
  $$('#pricingAddonList .pricing-addon-row').forEach(row=>{row.querySelector('input').value=qtyMap.get(row.dataset.priceKey)||0})
 }
-function localPricePhotoDraft(){
- // 무료 모드: 외부 AI/API 호출 없이 샵 가격표를 기준으로 시작한다.
- // 사진은 화면에 그대로 두고 원장/직원이 보이는 요소만 빠르게 체크해 최종 확정한다.
- const base=$('#pricingBaseSelect');
- const baseKey=base&&PRICING_BASE_KEYS.includes(base.value)?base.value:'oneColor';
- return {baseKey,addons:[],simpleChangeQty:0,pointChangeQty:0,unpricedObservations:[],summary:'무료 로컬 견적 · 사진을 크게 보면서 시술 항목을 탭해 주세요. 선택 즉시 샵 기준가로 계산됩니다.',confidence:100}
+async function localPricePhotoDraft(source){
+ // 비용 0원 휴리스틱: 사진의 색/밝기/채도/엣지/하이라이트를 기기 안에서 읽어
+ // 가장 가까운 샵 기준 항목을 먼저 제안한다. 결과는 원장이 즉시 수정할 수 있다.
+ let blob=source;
+ if(typeof source==='string'){const r=await fetch(source);blob=await r.blob()}
+ const url=URL.createObjectURL(blob);
+ try{
+  const im=await new Promise((resolve,reject)=>{const x=new Image();x.onload=()=>resolve(x);x.onerror=reject;x.src=url});
+  const size=192,cv=document.createElement('canvas'),ctx=cv.getContext('2d',{willReadFrequently:true});
+  cv.width=size;cv.height=size;ctx.drawImage(im,0,0,size,size);
+  const d=ctx.getImageData(0,0,size,size).data;
+  let n=0,sat=0,bright=0,highlight=0,colorful=0,dark=0,edge=0,prev=0;
+  for(let i=0;i<d.length;i+=4){
+   const r=d[i],g=d[i+1],b=d[i+2],mx=Math.max(r,g,b),mn=Math.min(r,g,b),v=(r+g+b)/3;
+   n++;bright+=v;sat+=mx-mn;if(mx-mn>45)colorful++;if(v>205)highlight++;if(v<75)dark++;
+   if(prev)edge+=Math.abs(v-prev);prev=v
+  }
+  sat/=n;bright/=n;highlight/=n;colorful/=n;dark/=n;edge/=n;
+  let baseKey='oneColor',addons=[],simpleChangeQty=0,pointChangeQty=0,notes=[];
+  // 펄/반사 하이라이트가 많으면 자석/펄 계열, 부드러운 밝기 변화는 그라데이션 후보.
+  if(highlight>.28&&sat<48){baseKey='magnetic';addons.push({key:'gradationAdd',qty:1});notes.push('광택·펄 반사가 많아 자석젤/그라데이션 계열로 우선 분류')}
+  else if(sat<38&&bright>135){baseKey='gradation';notes.push('누드·시럽 계열의 부드러운 명암으로 그라데이션 우선 분류')}
+  else {baseKey='oneColor';notes.push('컬러 베이스 중심으로 원컬러 우선 분류')}
+  if(colorful>.22)addons.push({key:'colorAdd',qty:1});
+  // 작은 고대비 디테일이 많으면 포인트 아트 후보를 자동 추가.
+  if(edge>24||dark>.20){const qty=edge>34?4:2;addons.push({key:'smallPoint',qty});pointChangeQty=qty;notes.push('고대비 포인트가 보여 포인트 손가락 '+qty+'개 후보')}
+  if(highlight>.36&&edge>22){addons.push({key:'stone',qty:2});notes.push('강한 작은 반사 영역이 있어 스톤/큐빅 후보')}
+  const p=mergePricing(state.pricing),raw=(p.base[baseKey]?.price||0)+addons.reduce((s,x)=>s+(p.addons[x.key]?.price||0)*x.qty,0)+(p.fingerChange.point.price||0)*pointChangeQty;
+  if(raw>=100000){baseKey='fullDesign';addons=[];pointChangeQty=0;notes.push('세부 합산이 높아 전체 디자인 패키지 기준으로 보정')}
+  return {baseKey,addons,simpleChangeQty,pointChangeQty,unpricedObservations:notes,summary:'무료 자동판독 초안 · 사진 특징을 샵 기준표에 매칭했습니다. 틀린 항목만 수정해 주세요.',confidence:62}
+ }finally{URL.revokeObjectURL(url)}
 }
 async function analyzePricingPhoto(){
  const source=pricingContextImageSource();if(!source)return toast('먼저 네일 사진을 올려 주세요');
  const btn=$('#pricingAiAnalyzeBtn'),stateBox=$('#pricingAiState');
  if(btn){btn.disabled=true;btn.textContent='무료 견적 준비 중…'}
  try{
-   const analysis=localPricePhotoDraft();
+   const analysis=await localPricePhotoDraft(source);
    applyAiEstimateToManual(analysis);
    pricingAiMeta=analysis;
    syncReviewFromManual();

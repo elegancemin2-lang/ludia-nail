@@ -131,12 +131,17 @@ export default async function handler(req,res){
         max_output_tokens:1800
       })
     });
-    const raw=await response.json();
-    if(!response.ok){console.error('[LUDIA price AI]',raw?.error||raw);return json(res,502,{ok:false,error:'ai_unavailable',detail:raw?.error?.code||raw?.error?.type||'openai_request_failed'})}
+    const rawText=await response.text();
+    let raw={};try{raw=rawText?JSON.parse(rawText):{}}catch(_){raw={raw:rawText.slice(0,500)}}
+    if(!response.ok){
+      const aiError=raw?.error||{};
+      console.error('[LUDIA price AI]',{status:response.status,type:aiError.type,code:aiError.code,message:aiError.message});
+      return json(res,502,{ok:false,error:'ai_unavailable',upstreamStatus:response.status,detail:aiError.code||aiError.type||'openai_request_failed',message:String(aiError.message||'').slice(0,300)})
+    }
     const text=outputText(raw);if(!text)throw new Error('empty AI output');
     const analysis=JSON.parse(text),estimate=buildEstimate(analysis,pricing);
     return json(res,200,{ok:true,analysis,estimate});
   }catch(error){
-    console.error('[LUDIA price estimate]',error);return json(res,502,{ok:false,error:'estimate_failed'});
+    console.error('[LUDIA price estimate]',error);return json(res,502,{ok:false,error:'estimate_failed',detail:error?.name||'runtime_error',message:String(error?.message||'').slice(0,300)});
   }
 }

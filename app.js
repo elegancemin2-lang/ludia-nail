@@ -25,14 +25,46 @@ const baseDesigns=[
  {id:5,name:'Mini Dot Jelly',desc:'시럽 핑크에 잔도트와 글리터를 넣어 귀엽지만 담백하게.',img:img(5),diff:'쉬움',time:65,price:65000,fit:97,stock:'보유재료 100%',tags:['시럽','도트','데일리'],status:'이달의아트',materials:['핑크 시럽','미니 도트','잔글리터'],tech:'시럽 2코트 → 도트 배치 → 글리터 얇게 → 탑'},
  {id:6,name:'Aurora Glass',desc:'클리어 핑크와 오로라 필름, 초소형 스톤으로 유리알 느낌.',img:img(2),diff:'보통',time:80,price:79000,fit:91,stock:'보유재료 88%',tags:['오로라','웨딩','글라스'],status:'후보',materials:['클리어 핑크','오로라 필름','미니 스톤'],tech:'클리어 컬러 → 필름 조각 → 볼륨젤 → 미니 스톤 → 탑'}
 ];
-let state={view:'opsHome',dna:'성수 무드',conditions:new Set(['더 심플','파츠 2개 이하','실물시술 쉽게']),designs:[...baseDesigns],library:baseDesigns.slice(0,5),collection:new Set(),monthlyMenuMonth:'',active:null,fingers:new Set(['전체']),filter:'전체',start:Date.now(),draft:{concept:'',homePrompt:'',maxTime:'90',targetPrice:'69000',stockFirst:true,refDataUrl:null},outputMode:'feed'};
+const DEFAULT_PRICING={
+ version:1,
+ eventDiscount:10,
+ base:{
+  oneColor:{label:'원컬러',price:45000},
+  gradation:{label:'그라데이션',price:60000},
+  magnetic:{label:'자석젤',price:70000},
+  fullDesign:{label:'전체 디자인',price:90000}
+ },
+ addons:{
+  colorAdd:{label:'컬러 추가',price:5000,unit:'개'},
+  gradationAdd:{label:'그라데이션 추가',price:10000,unit:'회'},
+  dot:{label:'도트',price:3000,unit:'개'},
+  clearRibbon:{label:'투명 리본 파츠',price:4000,unit:'개'},
+  thinFrench:{label:'씬프렌치',price:10000,unit:'회'},
+  ribbonPoint:{label:'리본/스와 포인트',price:5000,unit:'개'},
+  smallPoint:{label:'하트/스팽글 소포인트',price:3000,unit:'개'}
+ },
+ fingerChange:{
+  simple:{label:'단순 변경',price:3000},
+  point:{label:'포인트 변경',price:5000}
+ }
+};
+const clonePricing=value=>JSON.parse(JSON.stringify(value||DEFAULT_PRICING));
+const mergePricing=value=>{
+ const v=value||{};return{
+  ...clonePricing(DEFAULT_PRICING),...v,
+  base:{...clonePricing(DEFAULT_PRICING.base),...(v.base||{})},
+  addons:{...clonePricing(DEFAULT_PRICING.addons),...(v.addons||{})},
+  fingerChange:{...clonePricing(DEFAULT_PRICING.fingerChange),...(v.fingerChange||{})}
+ }
+};
+let state={view:'opsHome',dna:'성수 무드',conditions:new Set(['더 심플','파츠 2개 이하','실물시술 쉽게']),designs:[...baseDesigns],library:baseDesigns.slice(0,5),collection:new Set(),monthlyMenuMonth:'',pricing:clonePricing(DEFAULT_PRICING),active:null,fingers:new Set(['전체']),filter:'전체',start:Date.now(),draft:{concept:'',homePrompt:'',maxTime:'90',targetPrice:'69000',stockFirst:true,refDataUrl:null},outputMode:'feed'};
 const DB_NAME='ludia-art-studio';const DB_VERSION=1;const DB_STORE='app';const BACKUP_MAGIC='LUDIA_ART_STUDIO_BACKUP';let storageMode='IndexedDB';let saveTimer=null;let lastSavedAt=null;
 function openDB(){return new Promise((resolve,reject)=>{if(!('indexedDB'in window))return reject(new Error('IndexedDB unavailable'));const req=indexedDB.open(DB_NAME,DB_VERSION);req.onupgradeneeded=()=>{const db=req.result;if(!db.objectStoreNames.contains(DB_STORE))db.createObjectStore(DB_STORE)};req.onsuccess=()=>resolve(req.result);req.onerror=()=>reject(req.error)})}
 async function idbGet(key){const db=await openDB();return new Promise((resolve,reject)=>{const tx=db.transaction(DB_STORE,'readonly');const req=tx.objectStore(DB_STORE).get(key);req.onsuccess=()=>resolve(req.result);req.onerror=()=>reject(req.error)})}
 async function idbSet(key,value){const db=await openDB();return new Promise((resolve,reject)=>{const tx=db.transaction(DB_STORE,'readwrite');tx.objectStore(DB_STORE).put(value,key);tx.oncomplete=()=>resolve();tx.onerror=()=>reject(tx.error)})}
 function localDateKey(d=new Date()){return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0')}
-function snapshot(){return{magic:BACKUP_MAGIC,schema:4,savedAt:new Date().toISOString(),data:{salonLocal:salonCloudMode==='demo'?{date:localDateKey(),appointments:salonAppointments,customers:salonCustomers}:null,dna:state.dna,conditions:[...state.conditions],designs:state.designs,library:state.library,collection:[...state.collection],monthlyMenuMonth:state.monthlyMenuMonth,draft:state.draft,outputMode:state.outputMode}}}
-function applySnapshot(snap){if(!snap?.data)return false;const d=snap.data;state.dna=d.dna||state.dna;state.conditions=new Set(Array.isArray(d.conditions)?d.conditions:[...state.conditions]);state.designs=Array.isArray(d.designs)&&d.designs.length?d.designs:[...baseDesigns];state.library=Array.isArray(d.library)?d.library.filter(x=>!x.cloudArt):baseDesigns.slice(0,5);state.collection=new Set(Array.isArray(d.collection)?d.collection:[]);state.monthlyMenuMonth=d.monthlyMenuMonth||'';state.draft={...state.draft,...(d.draft||{})};state.outputMode=d.outputMode||'feed';lastSavedAt=snap.savedAt?new Date(snap.savedAt):null;if(d.salonLocal&&salonCloudMode==='demo'){const old=d.salonLocal,shift=Math.round((Date.parse(old.date+'T12:00:00Z')-Date.parse(localDateKey()+'T12:00:00Z'))/86400000);if(Number.isFinite(shift)&&Array.isArray(old.appointments))salonAppointments=old.appointments.filter(x=>!x.cloudId).map(x=>({...x,dayOffset:Number(x.dayOffset||0)+shift}));if(Array.isArray(old.customers))salonCustomers=old.customers.filter(x=>!x.cloudId)}return true}
+function snapshot(){return{magic:BACKUP_MAGIC,schema:4,savedAt:new Date().toISOString(),data:{salonLocal:salonCloudMode==='demo'?{date:localDateKey(),appointments:salonAppointments,customers:salonCustomers}:null,pricing:state.pricing,dna:state.dna,conditions:[...state.conditions],designs:state.designs,library:state.library,collection:[...state.collection],monthlyMenuMonth:state.monthlyMenuMonth,draft:state.draft,outputMode:state.outputMode}}}
+function applySnapshot(snap){if(!snap?.data)return false;const d=snap.data;state.pricing=mergePricing(d.pricing||state.pricing);state.dna=d.dna||state.dna;state.conditions=new Set(Array.isArray(d.conditions)?d.conditions:[...state.conditions]);state.designs=Array.isArray(d.designs)&&d.designs.length?d.designs:[...baseDesigns];state.library=Array.isArray(d.library)?d.library.filter(x=>!x.cloudArt):baseDesigns.slice(0,5);state.collection=new Set(Array.isArray(d.collection)?d.collection:[]);state.monthlyMenuMonth=d.monthlyMenuMonth||'';state.draft={...state.draft,...(d.draft||{})};state.outputMode=d.outputMode||'feed';lastSavedAt=snap.savedAt?new Date(snap.savedAt):null;if(d.salonLocal&&salonCloudMode==='demo'){const old=d.salonLocal,shift=Math.round((Date.parse(old.date+'T12:00:00Z')-Date.parse(localDateKey()+'T12:00:00Z'))/86400000);if(Number.isFinite(shift)&&Array.isArray(old.appointments))salonAppointments=old.appointments.filter(x=>!x.cloudId).map(x=>({...x,dayOffset:Number(x.dayOffset||0)+shift}));if(Array.isArray(old.customers))salonCustomers=old.customers.filter(x=>!x.cloudId)}return true}
 function setSaveStatus(mode,text){const el=$('#saveStatus');if(!el)return;el.classList.remove('saving','saved','error');if(mode)el.classList.add(mode);$('#saveStatusText').textContent=text}
 function schedulePersist(){if(salonCloudMode!=='demo'){setSaveStatus('saved','샵 연결 · 저장 버튼 사용');return}setSaveStatus('saving','저장 중…');clearTimeout(saveTimer);saveTimer=setTimeout(()=>persistNow(),650)}
 async function persistNow(){if(salonCloudMode!=='demo')return;const snap=snapshot();try{await idbSet('snapshot',snap);storageMode='IndexedDB';localStorage.removeItem('ludiaLibrary');lastSavedAt=new Date(snap.savedAt);setSaveStatus('saved','자동저장됨')}catch(err){storageMode='localStorage';try{const fallback={...snap,data:{...snap.data,draft:{...snap.data.draft,refDataUrl:null}}};localStorage.setItem('ludiaStudioFallback',JSON.stringify(fallback));lastSavedAt=new Date();setSaveStatus('saved','기기저장됨')}catch(e){setSaveStatus('error','저장 오류')}}updateStorageStats()}
@@ -69,7 +101,7 @@ const DEMO_CUSTOMERS=[
  {name:'한소희',phone:'010-••••-5317',visit:9,last:'8/27',tags:['자석','베스트'],membership:'금액권 5.0만',note:'자석 강도는 은은하게',img:img(5)}
 ]; 
 let salonCustomers=DEMO_CUSTOMERS.map(x=>({...x}));
-let salonStaffNames=['루디아','지안'],salonServices=[],salonCloudMode='demo';
+let salonStaffNames=['루디아','지안'],salonServices=[],salonCloudMode='demo',salonRole='owner';
 let localSalonSession=null,activeSalonId=null,artLoadSequence=0;
 let bookingStaff='전체', bookingDayOffset=0, activeAppointment=null;
 let customerPage=1;const CUSTOMER_PAGE_SIZE=8;
@@ -304,18 +336,18 @@ function renderCustomers(){
 }
 
 function applyCloudSalonData(payload){
- activeSalonId=payload.salonId||null;salonCloudMode='cloud';salonAppointments=payload.appointments||[];salonCustomers=payload.customers||[];customerPage=1;salonStaffNames=payload.staffNames?.length?payload.staffNames:['미지정'];salonServices=payload.services||[];
+ activeSalonId=payload.salonId||null;salonCloudMode='cloud';salonAppointments=payload.appointments||[];salonCustomers=payload.customers||[];customerPage=1;salonStaffNames=payload.staffNames?.length?payload.staffNames:['미지정'];salonServices=payload.services||[];salonRole=payload.role||'staff';state.pricing=mergePricing(payload.pricingConfig||DEFAULT_PRICING);
  if(bookingStaff!=='전체'&&!salonStaffNames.includes(bookingStaff))bookingStaff='전체';
- syncQuickBookingOptions();renderOpsToday();renderBooking();renderCustomers();updateCloudAccountStatus({configured:true,connected:true,salonName:payload.salonName,email:payload.email,realtime:'live'});syncCloudArtLibrary();syncProfilePhoto();
+ syncQuickBookingOptions();renderPricingSettings();renderOpsToday();renderBooking();renderCustomers();updateCloudAccountStatus({configured:true,connected:true,salonName:payload.salonName,email:payload.email,realtime:'live'});syncCloudArtLibrary();syncProfilePhoto();
 }
 function prepareCloudSalonData(){
- if(salonCloudMode==='demo')localSalonSession=structuredClone({library:state.library,designs:state.designs,appointments:salonAppointments,customers:salonCustomers,draft:state.draft});
+ if(salonCloudMode==='demo')localSalonSession=structuredClone({library:state.library,designs:state.designs,appointments:salonAppointments,customers:salonCustomers,draft:state.draft,pricing:state.pricing});
  salonCloudMode='connecting';activeSalonId=null;artLoadSequence++;salonAppointments=[];salonCustomers=[];state.library=[];state.designs=[];state.active=null;state.collection=new Set();
  closeSheet();closeFinalView();closeOpsDetail();closeQuickBooking();closeDesignRegister();setProfilePhoto(null);renderLibrary();renderRecent();renderMonthlyMenu();renderOpsToday();renderBooking();renderCustomers();
 }
 function resetCloudSalonData(){
  artLoadSequence++;activeSalonId=null;salonCloudMode='demo';
- state.library=localSalonSession?.library||baseDesigns.slice(0,5);state.designs=localSalonSession?.designs||[...baseDesigns];state.draft=localSalonSession?.draft||state.draft;state.active=null;
+ state.library=localSalonSession?.library||baseDesigns.slice(0,5);state.designs=localSalonSession?.designs||[...baseDesigns];state.draft=localSalonSession?.draft||state.draft;state.pricing=mergePricing(localSalonSession?.pricing||state.pricing);salonRole='owner';state.active=null;
  salonAppointments=localSalonSession?.appointments||DEMO_APPOINTMENTS.map(x=>({...x}));salonCustomers=localSalonSession?.customers||DEMO_CUSTOMERS.map(x=>({...x}));customerPage=1;salonStaffNames=['루디아','지안'];salonServices=[];bookingStaff='전체';
  closeSheet();closeFinalView();closeOpsDetail();closeQuickBooking();closeDesignRegister();renderLibrary();renderRecent();renderMonthlyMenu();renderOpsToday();renderBooking();renderCustomers();syncProfilePhoto();
 }

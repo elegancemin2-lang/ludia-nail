@@ -39,17 +39,17 @@ const DEFAULT_PRICING={
   gradationAdd:{label:'그라데이션 추가',price:10000,unit:'회'},
   thinFrench:{label:'씬프렌치',price:10000,unit:'세트'},
   dot:{label:'도트',price:3000,unit:'손가락'},
-  lineArt:{label:'라인/체크 아트',price:3000,unit:'손가락'},
-  glitter:{label:'글리터/펄 포인트',price:3000,unit:'손가락'},
-  foilFilm:{label:'호일/필름 포인트',price:3000,unit:'손가락'},
+  lineArt:{label:'라인/체크 아트',price:4000,unit:'손가락'},
+  glitter:{label:'글리터/펄 포인트',price:4000,unit:'손가락'},
+  foilFilm:{label:'호일/필름 포인트',price:4000,unit:'손가락'},
   smallPoint:{label:'하트/스팽글 소포인트',price:3000,unit:'손가락'},
   ribbonPoint:{label:'리본/스와 포인트',price:5000,unit:'손가락'},
   clearRibbon:{label:'투명 리본 파츠',price:4000,unit:'개'},
-  stone:{label:'스톤/큐빅 포인트',price:3000,unit:'손가락'},
-  pearl:{label:'진주/메탈 파츠',price:3000,unit:'손가락'},
+  stone:{label:'스톤/큐빅 포인트',price:5000,unit:'손가락'},
+  pearl:{label:'진주/메탈 파츠',price:5000,unit:'손가락'},
   chromePowder:{label:'미러/크롬 파우더',price:10000,unit:'세트'},
-  marble:{label:'마블/뉘앙스 아트',price:5000,unit:'손가락'},
-  characterArt:{label:'캐릭터/드로잉 아트',price:7000,unit:'손가락'},
+  marble:{label:'마블/뉘앙스 아트',price:6000,unit:'손가락'},
+  characterArt:{label:'캐릭터/드로잉 아트',price:10000,unit:'손가락'},
   extensionRepair:{label:'연장/보수',price:5000,unit:'손가락'},
   other:{label:'기타 · 직접 입력',price:0,unit:'항목'}
  },
@@ -903,7 +903,18 @@ function syncReviewFromManual(){
  pricingAiMeta=null;pricingReviewLines=manualPricingLines();renderPricingAiSummary();renderPricingReviewLines();recalculatePricingReview()
 }
 function renderPricingReviewLines(){
- const box=$('#pricingReviewLines');if(!box)return;box.innerHTML='';
+ const box=$('#pricingReviewLines');if(!box)return;
+ const host=box.parentElement;
+ if(host&&!host.dataset.detailToggle){
+  host.dataset.detailToggle='1';host.classList.add('pricing-detail-collapsible');
+  const heading=host.querySelector('h3,h4,.pricing-section-title');
+  if(heading){heading.style.cursor='pointer';heading.setAttribute('role','button');heading.setAttribute('tabindex','0');
+   const toggle=()=>{host.classList.toggle('pricing-detail-open');box.classList.toggle('hidden',!host.classList.contains('pricing-detail-open'))};
+   heading.onclick=toggle;heading.onkeydown=e=>{if(e.key==='Enter'||e.key===' '){e.preventDefault();toggle()}};
+  }
+ }
+ box.classList.toggle('hidden',host&&!host.classList.contains('pricing-detail-open'));
+ box.innerHTML='';
  if(!pricingReviewLines.length){
    box.innerHTML='<div class="pricing-review-empty">사진 분석 또는 기준표 계산을 하면 상세내역이 여기에 표시됩니다.</div>';return
  }
@@ -1050,6 +1061,7 @@ async function analyzePricingPhoto(){
    pricingAiMeta=analysis;
    pricingReviewLines=manualPricingLines();
    if($('#pricingFinalOverride'))$('#pricingFinalOverride').value='';
+   const detailHost=$('#pricingReviewLines')?.parentElement;if(detailHost)detailHost.classList.add('pricing-detail-open');
    renderPricingAiSummary();renderPricingReviewLines();recalculatePricingReview();
    if(stateBox){
      stateBox.classList.remove('hidden');

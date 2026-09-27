@@ -989,12 +989,13 @@ function applyAiEstimateToManual(analysis){
  $$('#pricingAddonList .pricing-addon-row').forEach(row=>{row.querySelector('input').value=qtyMap.get(row.dataset.priceKey)||0})
 }
 async function analyzePricingPhoto(){
- if(salonCloudMode!=='cloud'||!window.LudiaSalonCloud?.isConnected?.())return toast('사진 가격 분석은 샵 로그인 후 사용할 수 있어요');
  const source=pricingContextImageSource();if(!source)return toast('먼저 네일 사진을 올려 주세요');
  const btn=$('#pricingAiAnalyzeBtn'),stateBox=$('#pricingAiState');if(btn){btn.disabled=true;btn.textContent='사진 분석 중…'}if(stateBox){stateBox.classList.remove('hidden');stateBox.textContent='AI가 디자인 요소를 확인하고 샵 기준가에 맞추는 중입니다.'}
  try{
-   const imageDataUrl=await compressImageToDataUrl(source),token=await window.LudiaSalonCloud.getAccessToken();if(!token)throw new Error('login token missing');
-   const response=await fetch('/api/price-estimate',{method:'POST',headers:{'content-type':'application/json',authorization:'Bearer '+token},body:JSON.stringify({imageDataUrl,mode:pricingMode})});
+   const imageDataUrl=await compressImageToDataUrl(source);
+   const token=window.LudiaSalonCloud?.isConnected?.()?await window.LudiaSalonCloud.getAccessToken():null;
+   const headers={'content-type':'application/json'};if(token)headers.authorization='Bearer '+token;
+   const response=await fetch('/api/price-estimate',{method:'POST',headers,body:JSON.stringify({imageDataUrl,mode:pricingMode})});
    const data=await response.json().catch(()=>({}));
    if(!response.ok){
      if(data.error==='ai_not_configured')throw new Error('AI_API_NOT_CONFIGURED');

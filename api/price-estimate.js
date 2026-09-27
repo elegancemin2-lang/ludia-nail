@@ -75,9 +75,8 @@ function buildEstimate(analysis,pricing){
 export default async function handler(req,res){
   if(req.method!=='POST')return json(res,405,{ok:false,error:'method_not_allowed'});
   const cfg=serverConfig();if(!cfg)return json(res,503,{ok:false,error:'server_not_configured'});
-  let access;
-  try{access=await resolveSalon(req,cfg)}catch(error){console.error('[LUDIA price auth]',error);return json(res,502,{ok:false,error:'auth_unavailable'})}
-  if(!access)return json(res,401,{ok:false,error:'unauthorized'});
+  let access=null;
+  try{access=await resolveSalon(req,cfg)}catch(error){console.warn('[LUDIA price optional auth]',error)}
   if(!process.env.OPENAI_API_KEY)return json(res,503,{ok:false,error:'ai_not_configured'});
 
   let body=req.body||{};if(typeof body==='string'){try{body=JSON.parse(body)}catch(_){return json(res,400,{ok:false,error:'invalid_json'})}}
@@ -86,8 +85,11 @@ export default async function handler(req,res){
   if(imageDataUrl.length>4_000_000)return json(res,413,{ok:false,error:'image_too_large'});
 
   try{
-    const rows=await readJson(`${cfg.url}/rest/v1/ludia_pricing_settings?salon_id=eq.${encodeURIComponent(access.salonId)}&select=config&limit=1`,cfg.headers);
-    const pricing=mergePricing(rows?.[0]?.config||DEFAULT_PRICING);
+    let pricing=mergePricing(DEFAULT_PRICING);
+    if(access?.salonId){
+      const rows=await readJson(`${cfg.url}/rest/v1/ludia_pricing_settings?salon_id=eq.${encodeURIComponent(access.salonId)}&select=config&limit=1`,cfg.headers);
+      pricing=mergePricing(rows?.[0]?.config||DEFAULT_PRICING);
+    }
     const baseOptions=Object.entries(pricing.base).map(([key,v])=>`${key}=${v.label}`).join(', ');
     const addonOptions=Object.entries(pricing.addons).map(([key,v])=>`${key}=${v.label}`).join(', ');
 

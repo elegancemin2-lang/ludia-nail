@@ -319,6 +319,19 @@
         </div>
         <div class="settings-head"><span class="mini-label">SETTINGS</span><h2>LUDIA DNA & 재료 설정</h2><p>자주 저장한 디자인, 실시술 디자인, 즐겨찾기 패턴을 프리셋처럼 관리합니다.</p></div>
         <div class="settings-grid">
+          <article class="panel pricing-standard-panel">
+            <div class="pricing-standard-head">
+              <div><span class="mini-label">PRICE STANDARD</span><h3>가격 표준화</h3><p>원장이 기준가를 정하면 직원은 같은 계산식으로 견적을 냅니다.</p></div>
+              <span class="pricing-sync-badge" id="pricingSyncBadge">기준 준비</span>
+            </div>
+            <div class="pricing-rule-grid" id="pricingRuleList"></div>
+            <div class="pricing-standard-actions">
+              <label><span>이달의 아트 이벤트 할인 추천</span><div><input id="pricingEventDiscount" type="number" min="0" max="50" step="1" inputmode="numeric" /><em>%</em></div></label>
+              <button class="soft-btn" id="pricingCalculatorBtn" type="button">가격 계산기 열기</button>
+              <button class="primary-btn" id="pricingSaveBtn" type="button">기준 저장</button>
+            </div>
+            <p class="pricing-standard-note">초기값은 기존 LUDIA 가격표를 기준으로 세팅했습니다. 손가락 변경 단가는 샵 운영 방식에 맞게 수정하세요.</p>
+          </article>
           <article class="panel storage-panel">
             <div class="storage-head">
               <div><span class="mini-label">LOCAL STORAGE</span><h3>기기 저장 & 백업</h3><p>서버 없이 이 기기에 자동 저장합니다. 브라우저를 닫아도 작업을 이어갈 수 있어요.</p></div>
@@ -505,6 +518,10 @@
           </div>
           <div class="qb-custom-design hidden" id="qbCustomDesignWrap">
             <label><span>수제디자인 요청 <small>고객 참고사진·원하는 스타일</small></span><input id="qbCustomDesignNote" maxlength="80" placeholder="예: 고객 사진 참고 · 핑크 리본 느낌" /></label>
+            <div class="qb-custom-price-row">
+              <label><span>표준 계산가</span><input id="qbCustomPrice" type="number" min="0" step="1000" inputmode="numeric" placeholder="90000" /></label>
+              <button class="soft-btn" id="qbCustomPriceBtn" type="button">가격 계산</button>
+            </div>
           </div>
           <div class="quick-booking-two">
             <label><span>시간</span><input id="qbTime" type="time" step="1800" /></label>
@@ -602,6 +619,7 @@
           <div class="monthly-design-fields hidden" id="monthlyDesignFields">
             <label><span>노출 월</span><input id="designMonthInput" type="month" /></label>
             <label><span>할인가 <small>없으면 정가 적용</small></span><input id="designSalePriceInput" type="number" min="0" step="1000" inputmode="numeric" placeholder="69000" /></label>
+            <button class="monthly-price-helper" id="monthlyPriceRecommendBtn" type="button"><span>₩</span><b>적정가격 추천</b><small>기준가 + 옵션 + 변경 손가락으로 계산</small></button>
           </div>
           <button class="design-detail-toggle" id="designDetailToggle" type="button"><span>상세 설정</span><em>선택사항</em><i>⌄</i></button>
           <div class="design-detail-fields hidden" id="designDetailFields">
@@ -621,6 +639,48 @@
         <button class="primary-btn" id="saveRegisteredDesignBtn" type="button">디자인 저장</button>
       </footer>
     </section>
+  </div>
+
+  <div class="sheet" id="pricingSheet" aria-hidden="true">
+    <div class="sheet-backdrop" data-close-pricing></div>
+    <div class="sheet-card pricing-sheet-card">
+      <div class="sheet-handle"></div>
+      <button class="sheet-close" type="button" data-close-pricing>×</button>
+      <div class="sheet-body">
+        <span class="mini-label">STANDARD PRICE CALCULATOR</span>
+        <h2>가격 계산</h2>
+        <p class="pricing-sheet-intro">사진을 보고 항목만 체크하면 누구나 같은 기준으로 계산됩니다.</p>
+
+        <div class="pricing-mode-switch" id="pricingModeSwitch">
+          <button type="button" data-price-mode="monthly">이달의 아트</button>
+          <button type="button" data-price-mode="custom">수제디자인</button>
+        </div>
+
+        <label class="pricing-base-field"><span>기본 시술</span><select id="pricingBaseSelect"></select></label>
+
+        <div class="pricing-change-grid">
+          <label><span>단순 변경 손가락</span><input id="pricingChangeSimpleQty" type="number" min="0" max="10" value="0" inputmode="numeric" /></label>
+          <label><span>포인트 변경 손가락</span><input id="pricingChangePointQty" type="number" min="0" max="10" value="0" inputmode="numeric" /></label>
+        </div>
+
+        <div class="pricing-addon-head"><b>추가 옵션</b><small>개수만 입력</small></div>
+        <div class="pricing-addon-list" id="pricingAddonList"></div>
+
+        <label class="pricing-flat-toggle"><input id="pricingUseFullDesign" type="checkbox" /><span><b>전체 디자인가 적용</b><small>세부 합산 대신 샵의 전체 디자인 기준가 사용</small></span></label>
+
+        <div class="pricing-result-card">
+          <div><span>항목 합계</span><b id="pricingRawTotal">0원</b></div>
+          <div class="main"><span>추천 정상가</span><b id="pricingRegularPrice">0원</b></div>
+          <div><span>추천 이벤트가</span><b id="pricingEventPrice">0원</b></div>
+          <p id="pricingBreakdown"></p>
+        </div>
+
+        <div class="sheet-actions">
+          <button class="soft-btn wide" data-close-pricing>취소</button>
+          <button class="primary-btn wide" id="pricingApplyBtn" type="button">이 가격 적용</button>
+        </div>
+      </div>
+    </div>
   </div>
 
   <input id="profilePhotoInput" type="file" accept="image/jpeg,image/png,image/webp,image/avif" hidden />

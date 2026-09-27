@@ -772,7 +772,8 @@ $('#designDetailToggle')?.addEventListener('click',()=>{$('#designDetailFields')
 $('#designPhotoInput')?.addEventListener('change',e=>{
  const file=e.target.files?.[0];if(!file)return;if(!/^image\/(jpeg|png|webp|avif)$/i.test(file.type||'')){e.target.value='';return toast('JPG · PNG · WEBP · AVIF 사진을 선택해 주세요')}if(file.size>6*1024*1024){e.target.value='';return toast('사진은 6MB 이하로 등록해 주세요')}
  designRegisterFile=file;if(designRegisterObjectUrl)URL.revokeObjectURL(designRegisterObjectUrl);designRegisterObjectUrl=URL.createObjectURL(file);
- const img=$('#designPhotoPreview');if(img){img.src=designRegisterObjectUrl;img.classList.add('visible')}$('#designPhotoEmpty')?.classList.add('hidden')
+ const img=$('#designPhotoPreview');if(img){img.src=designRegisterObjectUrl;img.classList.add('visible')}$('#designPhotoEmpty')?.classList.add('hidden');
+ if(designRegisterMonthlyMode)setTimeout(()=>openPricingSheet('monthly','monthly',{autoAnalyze:true}),180)
 });
 $('#saveRegisteredDesignBtn')?.addEventListener('click',async()=>{
  if(salonCloudMode!=='demo'&&!window.LudiaSalonCloud?.isConnected?.())return toast('클라우드 연결 후 다시 저장해 주세요');
@@ -1047,10 +1048,11 @@ $('#pricingApplyBtn')?.addEventListener('click',applyPricingResult);
 $('#pricingAddLineBtn')?.addEventListener('click',addPricingReviewLine);
 $('#pricingFinalOverride')?.addEventListener('input',recalculatePricingReview);
 $('#pricingAiAnalyzeBtn')?.addEventListener('click',analyzePricingPhoto);
-$('#pricingPhotoInput')?.addEventListener('change',e=>{const file=e.target.files?.[0];if(!file)return;pricingPhotoFile=file;setPricingPhotoPreview(URL.createObjectURL(file));pricingAiMeta=null;renderPricingAiSummary()});
+$('#pricingPhotoInput')?.addEventListener('change',e=>{const file=e.target.files?.[0];if(!file)return;pricingPhotoFile=file;setPricingPhotoPreview(URL.createObjectURL(file));pricingAiMeta=null;renderPricingAiSummary();setTimeout(analyzePricingPhoto,100)});
 $('#qbCustomPhotoInput')?.addEventListener('change',e=>{
  const file=e.target.files?.[0];if(!file)return;if(qbCustomPhotoUrl)URL.revokeObjectURL(qbCustomPhotoUrl);qbCustomPhotoFile=file;qbCustomPhotoUrl=URL.createObjectURL(file);
- const box=$('#qbCustomPhotoPreview');if(box){box.classList.add('has-image');box.innerHTML='<img src="'+htmlText(qbCustomPhotoUrl)+'" alt="수제디자인 참고사진"><span><b>참고사진 선택됨</b><small>사진 견적 버튼으로 AI 분석</small></span>'}
+ const box=$('#qbCustomPhotoPreview');if(box){box.classList.add('has-image');box.innerHTML='<img src="'+htmlText(qbCustomPhotoUrl)+'" alt="수제디자인 참고사진"><span><b>참고사진 선택됨</b><small>AI가 1차 견적을 시작합니다</small></span>'}
+ setTimeout(()=>openPricingSheet('booking','custom',{autoAnalyze:true}),150)
 });
 $$('#pricingModeSwitch [data-price-mode]').forEach(b=>b.addEventListener('click',()=>{setPricingMode(b.dataset.priceMode);syncReviewFromManual()}));
 $$('[data-close-pricing]').forEach(b=>b.addEventListener('click',closePricingSheet));

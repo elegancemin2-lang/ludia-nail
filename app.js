@@ -1025,7 +1025,7 @@ async function localPricePhotoDraft(source){
   // 작은 고대비 디테일이 많으면 포인트 아트 후보를 자동 추가.
   if(edge>24||dark>.20){const qty=edge>34?4:2;addons.push({key:'smallPoint',qty});pointChangeQty=qty;notes.push('고대비 포인트가 보여 포인트 손가락 '+qty+'개 후보')}
   if(highlight>.36&&edge>22){addons.push({key:'stone',qty:2});notes.push('강한 작은 반사 영역이 있어 스톤/큐빅 후보')}
-  const p=mergePricing(state.pricing),raw=(p.base[baseKey]?.price||0)+addons.reduce((s,x)=>s+(p.addons[x.key]?.price||0)*x.qty,0)+(p.fingerChange.point.price||0)*pointChangeQty;
+  const p=mergePricing(state.pricing),raw=(p.base[baseKey]?.price||0)+addons.reduce((s,x)=>s+(p.addons[x.key]?.price||0)*x.qty,0);
   if(raw>=100000){baseKey='fullDesign';addons=[];pointChangeQty=0;notes.push('세부 합산이 높아 전체 디자인 패키지 기준으로 보정')}
   return {baseKey,addons,simpleChangeQty,pointChangeQty,unpricedObservations:notes,summary:'무료 자동판독 초안 · 사진 특징을 샵 기준표에 매칭했습니다. 틀린 항목만 수정해 주세요.',confidence:62}
  }finally{URL.revokeObjectURL(url)}
@@ -1038,7 +1038,7 @@ async function analyzePricingPhoto(){
    const analysis=await localPricePhotoDraft(source);
    applyAiEstimateToManual(analysis);
    pricingAiMeta=analysis;
-   syncReviewFromManual();
+   pricingReviewLines=manualPricingLines();
    if($('#pricingFinalOverride'))$('#pricingFinalOverride').value='';
    renderPricingAiSummary();renderPricingReviewLines();recalculatePricingReview();
    if(stateBox){

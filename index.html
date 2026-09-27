@@ -511,13 +511,13 @@
         <div class="quick-booking-form">
           <label><span>고객</span><input id="qbCustomer" autocomplete="off" placeholder="고객 이름" /></label>
           <label><span>연락처 <small>선택 · 기존 고객 자동 연결</small></span><input id="qbPhone" inputmode="tel" autocomplete="tel" placeholder="010-0000-0000" /></label>
-          <label><span>시술</span><select id="qbService"><option>젤 원컬러</option><option>젤 아트</option><option>이달의 아트</option><option>수제디자인</option><option>오마카세 아트</option><option>제거 + 젤 아트</option></select></label>
+          <label><span>시술</span><select id="qbService"><option>젤 원컬러</option><option>젤 아트</option><option>이달의 아트</option><option value="수제디자인">디자인 아트 · 고객사진</option><option>오마카세 아트</option><option>제거 + 젤 아트</option></select></label>
           <div class="qb-monthly-art hidden" id="qbMonthlyArtWrap">
             <div class="qb-special-head"><b>이달의 아트 선택</b><small id="qbMonthlyArtMonth"></small></div>
             <div class="qb-monthly-art-grid" id="qbMonthlyArtGrid"></div>
           </div>
           <div class="qb-custom-design hidden" id="qbCustomDesignWrap">
-            <label><span>수제디자인 요청 <small>고객 참고사진·원하는 스타일</small></span><input id="qbCustomDesignNote" maxlength="80" placeholder="예: 고객 사진 참고 · 핑크 리본 느낌" /></label>
+            <label><span>디자인 아트 요청 <small>고객이 가져온 사진·원하는 스타일</small></span><input id="qbCustomDesignNote" maxlength="80" placeholder="예: 고객 사진 참고 · 핑크 리본 느낌" /></label>
             <label class="qb-custom-photo">
               <input id="qbCustomPhotoInput" type="file" accept="image/jpeg,image/png,image/webp" hidden />
               <span class="qb-custom-photo-preview" id="qbCustomPhotoPreview"><b>＋ 참고사진</b><small>사진을 올리면 AI가 1차 견적을 잡아요</small></span>
@@ -688,7 +688,7 @@
 
         <div class="pricing-mode-switch" id="pricingModeSwitch">
           <button type="button" data-price-mode="monthly">이달의 아트</button>
-          <button type="button" data-price-mode="custom">수제디자인</button>
+          <button type="button" data-price-mode="custom">디자인 아트</button>
         </div>
 
         <label class="pricing-base-field"><span>기본 시술</span><select id="pricingBaseSelect"></select></label>

@@ -176,47 +176,47 @@
 
       <section class="screen" id="homeScreen">
         <div class="art-tabs panel" aria-label="ART STUDIO 메뉴">
-          <div class="art-tabs-brand"><span>✦</span><div><b>ART STUDIO</b><small>5–10 min workflow</small></div></div>
+          <div class="art-tabs-brand"><span>₩</span><div><b>LUDIA PRICE LAB</b><small>PHOTO → STANDARD PRICE</small></div></div>
           <div class="art-tabs-scroll">
-            <button data-nav="home">홈</button><button data-nav="create">디자인</button><button data-nav="library">보관함</button><button data-nav="collection">이달의 아트</button><button data-nav="settings">가격 · 설정</button>
+            <button data-nav="home">홈</button><button data-nav="create">사진견적</button><button data-nav="library">보관함</button><button data-nav="collection">이달의 아트</button><button data-nav="settings">가격 · 설정</button>
           </div>
         </div>
-        <div class="hero">
-          <div class="hero-copy">
-            <span class="hero-kicker">5–10 MINUTE WORKFLOW</span>
-            <h2>생각난 무드를<br/>바로 <i>내 네일</i>로.</h2>
-            <p>손가락을 직접 고르고 컬러·쉐입·길이·질감·파츠를 즉시 바꿔보세요.</p>
+
+        <div class="photo-price-hero">
+          <div class="photo-price-hero-copy">
+            <span class="hero-kicker">PHOTO PRICE STANDARD</span>
+            <h2>네일 사진 한 장으로<br/><i>가격 기준</i>을 맞추세요.</h2>
+            <p>사진에서 시술 요소를 읽고, 샵이 정한 기준 단가에 맞춰 예상가격과 계산 근거를 보여줍니다.</p>
             <div class="hero-actions">
-              <button class="primary-btn" data-nav="create">✦ 네일 디자인 시작</button>
-              <button class="soft-btn" id="quickReference">사진으로 시작</button>
+              <button class="primary-btn" id="homePhotoEstimateBtn" type="button">＋ 사진으로 견적</button>
+              <button class="soft-btn" data-nav="settings" type="button">기준 단가 관리</button>
             </div>
           </div>
-          <div class="hero-stack" aria-hidden="true">
-            <div class="stack-card s1"><img src="assets/nail_1.jpg" alt=""/></div>
-            <div class="stack-card s2"><img src="assets/nail_3.jpg" alt=""/></div>
-            <div class="stack-card s3"><img src="assets/nail_5.jpg" alt=""/></div>
-            <div class="stack-badge">LUDIA DNA<br/><b>78%</b></div>
+          <div class="photo-price-hero-visual" aria-hidden="true">
+            <div class="photo-price-sample"><img src="assets/nail_2.jpg" alt=""/></div>
+            <div class="photo-price-result">
+              <span>예상 정상가</span><b>80,000원</b>
+              <small>자석젤 70,000 + 그라데이션 10,000</small>
+            </div>
           </div>
         </div>
 
-        <div class="home-grid">
-          <article class="panel quick-start">
-            <div class="panel-head"><div><span class="mini-label">QUICK START</span><h3>원하는 방향만 한 줄로</h3></div><span class="time-pill">약 5분</span></div>
-            <div class="home-prompt">
-              <textarea id="homePrompt" placeholder="예: 밀키핑크 자석, 성수 느낌, 파츠는 2개 이하"></textarea>
-              <button class="round-go" id="homeGenerate" aria-label="생성 시작">→</button>
-            </div>
-            <div class="prompt-chips" id="homePromptChips"></div>
-          </article>
+        <div class="price-flow-grid">
+          <article class="panel"><span>01</span><b>사진 업로드</b><small>고객이 가져온 사진 또는 시술 참고사진</small></article>
+          <article class="panel"><span>02</span><b>디자인 요소 판독</b><small>베이스 · 파츠 · 포인트 · 손가락 변경</small></article>
+          <article class="panel"><span>03</span><b>샵 기준가 적용</b><small>원장님이 정한 단가표로 동일하게 계산</small></article>
+        </div>
 
-          <article class="panel trend-panel">
-            <div class="panel-head"><div><span class="mini-label">LUDIA PICKS</span><h3>이번 주 바로 쓰기 좋은 무드</h3></div></div>
-            <div class="trend-list" id="trendList"></div>
-          </article>
+        <div class="price-reference-strip panel">
+          <div><span>원컬러</span><b>45,000</b></div>
+          <div><span>그라데이션</span><b>60,000</b></div>
+          <div><span>자석젤</span><b>70,000</b></div>
+          <div><span>전체 디자인</span><b>90,000</b></div>
+          <button class="text-action" data-nav="settings" type="button">기준 수정 →</button>
         </div>
 
         <div class="section-title-row">
-          <div><span class="mini-label">RECENT</span><h3>최근 작업</h3></div>
+          <div><span class="mini-label">RECENT</span><h3>최근 등록 디자인</h3></div>
           <button class="text-action" data-nav="library">보관함 전체 보기 →</button>
         </div>
         <div class="recent-strip" id="recentStrip"></div>
@@ -224,37 +224,49 @@
 
       <section class="screen" id="createScreen">
         <div class="art-tabs panel" aria-label="ART STUDIO 메뉴">
-          <div class="art-tabs-brand"><span>✦</span><div><b>ART STUDIO</b><small>LIVE NAIL EDITOR</small></div></div>
+          <div class="art-tabs-brand"><span>₩</span><div><b>LUDIA PRICE LAB</b><small>PHOTO ESTIMATE</small></div></div>
           <div class="art-tabs-scroll">
-            <button data-nav="home">홈</button><button data-nav="create">디자인</button><button data-nav="library">보관함</button><button data-nav="collection">이달의 아트</button><button data-nav="settings">가격 · 설정</button>
+            <button data-nav="home">홈</button><button data-nav="create">사진견적</button><button data-nav="library">보관함</button><button data-nav="collection">이달의 아트</button><button data-nav="settings">가격 · 설정</button>
           </div>
         </div>
 
-        <div class="direct-studio-home">
-          <div class="direct-studio-copy">
-            <span class="mini-label">LIVE DESIGN STUDIO</span>
-            <h2>시안 고르지 말고<br/>바로 손톱을 수정하세요.</h2>
-            <p>정적인 사진 시안은 사용하지 않습니다. 손가락을 선택하면 컬러·쉐입·길이·질감·파츠가 LIVE 모델에 즉시 반영됩니다.</p>
-            <div class="direct-studio-actions">
-              <button class="primary-btn" id="openStudioBtn">✦ 디자인 편집 시작</button>
-              <button class="soft-btn" id="newStudioBtn">새 디자인</button>
+        <div class="photo-estimate-head">
+          <div><span class="mini-label">PHOTO PRICE CHECK</span><h2>사진 넣고 가격 확인</h2><p>사진을 올리면 디자인을 항목별로 분해하고, 현재 샵 기준표로 예상가를 계산합니다.</p></div>
+          <span class="photo-estimate-badge">직원·원장 동일 기준</span>
+        </div>
+
+        <div class="photo-estimate-layout">
+          <label class="photo-estimate-drop panel" id="photoEstimateDrop">
+            <input id="photoEstimateInput" type="file" accept="image/jpeg,image/png,image/webp" hidden />
+            <div class="photo-estimate-preview" id="photoEstimatePreview">
+              <span>＋</span>
+              <b>네일 사진을 선택하세요</b>
+              <small>JPG · PNG · WEBP · 고객 참고사진도 가능</small>
+              <em>사진 선택</em>
             </div>
+          </label>
+
+          <div class="photo-estimate-guide panel">
+            <span class="mini-label">WHAT YOU GET</span>
+            <h3>가격만 보여주는 게 아니라<br/>왜 그 가격인지 같이 보여줍니다.</h3>
+            <div class="photo-estimate-guide-list">
+              <div><i>1</i><span><b>기본 시술</b><small>원컬러 · 그라데이션 · 자석젤 · 전체디자인</small></span></div>
+              <div><i>2</i><span><b>추가 옵션</b><small>도트 · 프렌치 · 리본 · 파츠 · 컬러 추가</small></span></div>
+              <div><i>3</i><span><b>손가락 변경</b><small>단순 변경 / 포인트 변경 개수 반영</small></span></div>
+              <div><i>4</i><span><b>최종 검수</b><small>AI 판독을 직원이 수정한 뒤 최종가격 확정</small></span></div>
+            </div>
+            <button class="primary-btn wide" id="photoEstimateStartBtn" type="button">사진 선택하고 견적 시작</button>
           </div>
-          <div class="direct-studio-demo" id="directStudioPreview" aria-label="실시간 네일 모델 미리보기"></div>
         </div>
 
-        <div class="studio-hints panel">
-          <div><b>01</b><span>손가락 선택</span></div>
-          <i>›</i>
-          <div><b>02</b><span>컬러·쉐입·질감</span></div>
-          <i>›</i>
-          <div><b>03</b><span>LIVE 확인</span></div>
-          <i>›</i>
-          <div><b>04</b><span>저장</span></div>
+        <div class="photo-estimate-note">
+          <b>가격 기준은 샵마다 다르게 설정됩니다.</b>
+          <span>AI가 임의로 가격을 만드는 것이 아니라, 사진에서 항목을 찾은 뒤 원장이 저장한 단가표를 적용합니다.</span>
         </div>
 
-        <!-- compatibility state fields: no 6-concept UI is rendered -->
+        <!-- legacy editor compatibility fields: generation UI removed -->
         <div class="studio-compat-fields" aria-hidden="true">
+          <textarea id="homePrompt"></textarea><button id="homeGenerate"></button><div id="homePromptChips"></div><div id="trendList"></div><button id="quickReference"></button>
           <textarea id="conceptInput"></textarea>
           <select id="maxTime"><option value="90" selected>90</option></select>
           <select id="targetPrice"><option value="69000" selected>69000</option></select>
@@ -262,6 +274,7 @@
           <input id="refFile" type="file" accept="image/*" />
           <div id="refUpload"></div><div id="refEmpty"></div><div id="refPreview"></div><img id="refPreviewImg" alt=""/><button id="pickRef"></button><button id="removeRef"></button>
           <div id="dnaChips"></div><div id="conditionChips"></div><span id="briefCount"></span><h3 id="briefTitle"></h3><p id="briefCopy"></p><div id="nailPreview"></div><b id="fitScore"></b><i id="fitMeter"></i><div id="briefList"></div><b id="createTimer"></b>
+          <div id="directStudioPreview"></div><button id="openStudioBtn"></button><button id="newStudioBtn"></button>
         </div>
       </section>
 
@@ -269,13 +282,13 @@
         <div class="art-tabs panel" aria-label="ART STUDIO 메뉴">
           <div class="art-tabs-brand"><span>✦</span><div><b>ART STUDIO</b><small>5–10 min workflow</small></div></div>
           <div class="art-tabs-scroll">
-            <button data-nav="home">홈</button><button data-nav="create">디자인</button><button data-nav="library">보관함</button><button data-nav="collection">이달의 아트</button><button data-nav="settings">가격 · 설정</button>
+            <button data-nav="home">홈</button><button data-nav="create">사진견적</button><button data-nav="library">보관함</button><button data-nav="collection">이달의 아트</button><button data-nav="settings">가격 · 설정</button>
           </div>
         </div>
         <div class="library-head">
           <div><span class="mini-label">LIBRARY</span><h2>디자인 보관함</h2><p>샵에서 만든 디자인을 사진과 함께 저장하고, 필요할 때 바로 다시 꺼내 쓰세요.</p></div>
           <div class="library-head-actions">
-            <button class="soft-btn" data-nav="create">직접 만들기</button>
+            <button class="soft-btn" data-nav="create">사진 견적</button>
             <button class="primary-btn" id="openDesignRegisterBtn">＋ 디자인 등록</button>
           </div>
         </div>
@@ -291,7 +304,7 @@
         <div class="art-tabs panel" aria-label="ART STUDIO 메뉴">
           <div class="art-tabs-brand"><span>✦</span><div><b>ART STUDIO</b><small>SALON MENU</small></div></div>
           <div class="art-tabs-scroll">
-            <button data-nav="home">홈</button><button data-nav="create">디자인</button><button data-nav="library">보관함</button><button data-nav="collection">이달의 아트</button><button data-nav="settings">가격 · 설정</button>
+            <button data-nav="home">홈</button><button data-nav="create">사진견적</button><button data-nav="library">보관함</button><button data-nav="collection">이달의 아트</button><button data-nav="settings">가격 · 설정</button>
           </div>
         </div>
         <div class="monthly-menu-head">
@@ -314,7 +327,7 @@
         <div class="art-tabs panel" aria-label="ART STUDIO 메뉴">
           <div class="art-tabs-brand"><span>✦</span><div><b>ART STUDIO</b><small>5–10 min workflow</small></div></div>
           <div class="art-tabs-scroll">
-            <button data-nav="home">홈</button><button data-nav="create">디자인</button><button data-nav="library">보관함</button><button data-nav="collection">이달의 아트</button><button data-nav="settings">가격 · 설정</button>
+            <button data-nav="home">홈</button><button data-nav="create">사진견적</button><button data-nav="library">보관함</button><button data-nav="collection">이달의 아트</button><button data-nav="settings">가격 · 설정</button>
           </div>
         </div>
         <div class="settings-head"><span class="mini-label">SALON STANDARD</span><h2>가격 · 운영 기준</h2><p>샵 공통 가격표와 디자인 기준을 한 곳에서 관리합니다.</p></div>
@@ -653,7 +666,7 @@
       <div class="sheet-body">
         <span class="mini-label">STANDARD PRICE CALCULATOR</span>
         <h2>가격 계산</h2>
-        <p class="pricing-sheet-intro">사진을 올리면 AI가 시술 요소를 먼저 읽고, 샵 기준 단가로 계산합니다. 마지막 결정은 사람이 합니다.</p>
+        <p class="pricing-sheet-intro">사진에서 시술 요소를 판독하고 샵 기준 단가로 계산합니다. 항목별 근거를 확인한 뒤 최종가격을 확정하세요.</p>
 
         <div class="pricing-ai-panel">
           <label class="pricing-ai-upload">
@@ -662,7 +675,7 @@
               <i>＋</i><b>네일 사진 올리기</b><small>사진 기준으로 1차 견적 · 세부내역 생성</small>
             </span>
           </label>
-          <button class="primary-btn pricing-ai-run" id="pricingAiAnalyzeBtn" type="button">AI 사진 견적</button>
+          <button class="primary-btn pricing-ai-run" id="pricingAiAnalyzeBtn" type="button">사진 분석</button>
           <div class="pricing-ai-state hidden" id="pricingAiState"></div>
         </div>
 

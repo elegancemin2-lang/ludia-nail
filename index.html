@@ -518,9 +518,13 @@
           </div>
           <div class="qb-custom-design hidden" id="qbCustomDesignWrap">
             <label><span>수제디자인 요청 <small>고객 참고사진·원하는 스타일</small></span><input id="qbCustomDesignNote" maxlength="80" placeholder="예: 고객 사진 참고 · 핑크 리본 느낌" /></label>
+            <label class="qb-custom-photo">
+              <input id="qbCustomPhotoInput" type="file" accept="image/jpeg,image/png,image/webp" hidden />
+              <span class="qb-custom-photo-preview" id="qbCustomPhotoPreview"><b>＋ 참고사진</b><small>사진을 올리면 AI가 1차 견적을 잡아요</small></span>
+            </label>
             <div class="qb-custom-price-row">
               <label><span>표준 계산가</span><input id="qbCustomPrice" type="number" min="0" step="1000" inputmode="numeric" placeholder="90000" /></label>
-              <button class="soft-btn" id="qbCustomPriceBtn" type="button">가격 계산</button>
+              <button class="soft-btn" id="qbCustomPriceBtn" type="button">사진 견적</button>
             </div>
           </div>
           <div class="quick-booking-two">
@@ -649,7 +653,38 @@
       <div class="sheet-body">
         <span class="mini-label">STANDARD PRICE CALCULATOR</span>
         <h2>가격 계산</h2>
-        <p class="pricing-sheet-intro">사진을 보고 항목만 체크하면 누구나 같은 기준으로 계산됩니다.</p>
+        <p class="pricing-sheet-intro">사진을 올리면 AI가 시술 요소를 먼저 읽고, 샵 기준 단가로 계산합니다. 마지막 결정은 사람이 합니다.</p>
+
+        <div class="pricing-ai-panel">
+          <label class="pricing-ai-upload">
+            <input id="pricingPhotoInput" type="file" accept="image/jpeg,image/png,image/webp" hidden />
+            <span class="pricing-ai-preview" id="pricingPhotoPreview">
+              <i>＋</i><b>네일 사진 올리기</b><small>사진 기준으로 1차 견적 · 세부내역 생성</small>
+            </span>
+          </label>
+          <button class="primary-btn pricing-ai-run" id="pricingAiAnalyzeBtn" type="button">AI 사진 견적</button>
+          <div class="pricing-ai-state hidden" id="pricingAiState"></div>
+        </div>
+
+        <div class="pricing-ai-summary hidden" id="pricingAiSummary">
+          <div><span>AI 판독</span><b id="pricingAiConfidence">-</b></div>
+          <p id="pricingAiSummaryText"></p>
+          <ul id="pricingAiObservations"></ul>
+        </div>
+
+        <div class="pricing-review-head">
+          <div><b>견적 상세내역</b><small>수량·단가를 바꾸거나 잘못 잡힌 항목은 지우세요.</small></div>
+          <button type="button" id="pricingAddLineBtn">＋ 항목 추가</button>
+        </div>
+        <div class="pricing-review-lines" id="pricingReviewLines"></div>
+
+        <label class="pricing-final-override">
+          <span><b>최종금액 직접 입력</b><small>비워두면 상세내역 합계 사용</small></span>
+          <div><input id="pricingFinalOverride" type="number" min="0" step="1000" inputmode="numeric" placeholder="예: 90000" /><em>원</em></div>
+        </label>
+
+        <details class="pricing-manual-details">
+          <summary>기준표로 직접 계산 / AI 결과 다시 조정</summary>
 
         <div class="pricing-mode-switch" id="pricingModeSwitch">
           <button type="button" data-price-mode="monthly">이달의 아트</button>
@@ -667,6 +702,7 @@
         <div class="pricing-addon-list" id="pricingAddonList"></div>
 
         <label class="pricing-flat-toggle"><input id="pricingUseFullDesign" type="checkbox" /><span><b>전체 디자인가 적용</b><small>세부 합산 대신 샵의 전체 디자인 기준가 사용</small></span></label>
+        </details>
 
         <div class="pricing-result-card">
           <div><span>항목 합계</span><b id="pricingRawTotal">0원</b></div>

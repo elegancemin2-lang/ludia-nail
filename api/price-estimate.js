@@ -75,13 +75,13 @@ function buildEstimate(analysis,pricing){
 export default async function handler(req,res){
   if(req.method!=='POST')return json(res,405,{ok:false,error:'method_not_allowed'});
   const cfg=serverConfig();if(!cfg)return json(res,503,{ok:false,error:'server_not_configured'});
-  if(!process.env.OPENAI_API_KEY)return json(res,503,{ok:false,error:'ai_not_configured'});
-
   let access;
   try{access=await resolveSalon(req,cfg)}catch(error){console.error('[LUDIA price auth]',error);return json(res,502,{ok:false,error:'auth_unavailable'})}
   if(!access)return json(res,401,{ok:false,error:'unauthorized'});
+  if(!process.env.OPENAI_API_KEY)return json(res,503,{ok:false,error:'ai_not_configured'});
 
-  const imageDataUrl=String(req.body?.imageDataUrl||'');
+  let body=req.body||{};if(typeof body==='string'){try{body=JSON.parse(body)}catch(_){return json(res,400,{ok:false,error:'invalid_json'})}}
+  const imageDataUrl=String(body?.imageDataUrl||'');
   if(!/^data:image\/(jpeg|jpg|png|webp);base64,/i.test(imageDataUrl))return json(res,400,{ok:false,error:'invalid_image'});
   if(imageDataUrl.length>4_000_000)return json(res,413,{ok:false,error:'image_too_large'});
 

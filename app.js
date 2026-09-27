@@ -999,7 +999,9 @@ async function analyzePricingPhoto(){
    const data=await response.json().catch(()=>({}));
    if(!response.ok){
      if(data.error==='ai_not_configured')throw new Error('AI_API_NOT_CONFIGURED');
-     throw new Error(data.error||'AI estimate failed')
+     const parts=[data.error,data.detail,data.upstreamStatus,data.message].filter(Boolean);
+     const err=new Error(parts.join(' · ')||('HTTP '+response.status));
+     err.serverData=data;err.httpStatus=response.status;throw err
    }
    applyAiEstimateToManual(data.analysis||{});
    pricingAiMeta=data.analysis||null;
@@ -1009,8 +1011,10 @@ async function analyzePricingPhoto(){
    if(stateBox){stateBox.classList.remove('hidden');stateBox.textContent='AI 1차 견적 완료 · 아래 내역을 사람이 검수해 주세요.'}
  }catch(error){
    console.error('[LUDIA AI price]',error);
-   if(stateBox){stateBox.classList.remove('hidden');stateBox.textContent=error.message==='AI_API_NOT_CONFIGURED'?'사진 분석 서버 설정이 아직 필요합니다. 기준표 직접 계산은 바로 사용할 수 있어요.':'사진 분석에 실패했어요. 사진을 바꾸거나 기준표로 직접 계산해 주세요.'}
-   toast(error.message==='AI_API_NOT_CONFIGURED'?'사진 분석 서버 설정이 필요해요':'사진 견적에 실패했어요')
+   const isConfig=error.message==='AI_API_NOT_CONFIGURED';
+   const detail=isConfig?'OPENAI_API_KEY 설정 필요':String(error.message||'알 수 없는 서버 오류');
+   if(stateBox){stateBox.classList.remove('hidden');stateBox.textContent=isConfig?'사진 분석 서버 설정이 아직 필요합니다.':'분석 실패 · '+detail}
+   toast(isConfig?'사진 분석 서버 설정이 필요해요':'분석 실패 · '+detail.slice(0,120))
  }finally{if(btn){btn.disabled=false;btn.textContent='사진 분석'}}
 }
 function openPricingSheet(context='standalone',mode='custom',{autoAnalyze=false}={}){

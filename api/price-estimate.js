@@ -122,8 +122,7 @@ export default async function handler(req,res){
       method:'POST',
       headers:{'content-type':'application/json',authorization:`Bearer ${process.env.OPENAI_API_KEY}`},
       body:JSON.stringify({
-        model:process.env.OPENAI_PRICE_MODEL||'gpt-5.6-luna',
-        reasoning:{effort:'low'},
+        model:process.env.OPENAI_PRICE_MODEL||'gpt-4.1-mini',
         input:[{role:'user',content:[
           {type:'input_text',text:prompt},
           {type:'input_image',image_url:imageDataUrl}
@@ -133,7 +132,7 @@ export default async function handler(req,res){
       })
     });
     const raw=await response.json();
-    if(!response.ok){console.error('[LUDIA price AI]',raw?.error||raw);return json(res,502,{ok:false,error:'ai_unavailable'})}
+    if(!response.ok){console.error('[LUDIA price AI]',raw?.error||raw);return json(res,502,{ok:false,error:'ai_unavailable',detail:raw?.error?.code||raw?.error?.type||'openai_request_failed'})}
     const text=outputText(raw);if(!text)throw new Error('empty AI output');
     const analysis=JSON.parse(text),estimate=buildEstimate(analysis,pricing);
     return json(res,200,{ok:true,analysis,estimate});

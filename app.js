@@ -290,9 +290,11 @@ function renderBooking(){
    dayData.forEach(a=>{
      const sp=bookingAppointmentSpan(a);if(!sp)return;
      const ev=document.createElement('button');ev.type='button';
-     ev.className='booking-grid-event '+(a.status==='완료'?'done ':a.status==='진행중'?'progress ':a.status==='노쇼'?'noshow ':'waiting ');
+     ev.className='booking-grid-event '+(a.status==='완료'?'done ':a.status==='진행중'?'progress ':a.status==='노쇼'?'noshow ':'waiting ')+(sp.span>=3?' long ':sp.span===1?' short ':' medium ');
      ev.style.gridColumn=String(dayIndex+2);ev.style.gridRow=(sp.row+2)+' / span '+sp.span;
      ev.dataset.dayOffset=String(offset);
+     ev.dataset.duration=String(a.duration||sp.span*cfg.step);
+     ev.setAttribute('aria-label',htmlText(a.time)+' '+htmlText(a.customer)+' '+htmlText(a.service)+' '+htmlText(a.status));
      const staffChip=bookingStaff==='전체'?'<span>'+htmlText(a.staff||'미지정')+'</span>':'';
      ev.innerHTML='<div class="booking-grid-event-top"><time>'+htmlText(a.time)+'</time>'+staffChip+'</div><b>'+htmlText(a.customer)+'</b><small>'+htmlText(a.service)+'</small><em>'+htmlText(a.status)+' · '+won(a.amount)+'원</em>';
      ev.onclick=e=>{e.stopPropagation();bookingDayOffset=offset;openOpsDetail(a)};board.appendChild(ev)

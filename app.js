@@ -295,6 +295,22 @@ function bookingAppointmentSpan(a){
  const span=Math.max(1,Math.ceil((to-from)/cfg.step));
  return {start,from,to,row,span}
 }
+
+function bookingRoleShort(name){return bookingIsOwner(name)?'원':'직'}
+function closeConcurrentBookingSheet(){
+ document.querySelector('#concurrentBookingSheet')?.remove();document.body.classList.remove('concurrent-sheet-open')
+}
+function openConcurrentBookingSheet(items,offset){
+ closeConcurrentBookingSheet();if(!Array.isArray(items)||!items.length)return;
+ const root=document.createElement('div');root.id='concurrentBookingSheet';root.className='concurrent-booking-sheet-root';
+ const rows=items.map((a,index)=>'<button type="button" data-concurrent-index="'+index+'"><span class="concurrent-role '+(bookingIsOwner(a.staff)?'owner':'staff')+'">'+bookingRoleShort(a.staff)+'</span><div><b>'+htmlText(a.time)+' · '+htmlText(a.customer)+'</b><small>'+htmlText(a.staff)+' · '+htmlText(a.service)+'</small></div><i>›</i></button>').join('');
+ root.innerHTML='<button class="concurrent-booking-backdrop" type="button" aria-label="닫기"></button><section class="concurrent-booking-sheet" role="dialog" aria-modal="true"><div class="concurrent-booking-grabber"></div><header><div><span>'+htmlText(bookingDateText(offset))+'</span><h3>'+htmlText(items[0]?.time||'')+' 동시 시술 '+items.length+'건</h3></div><button class="concurrent-booking-close" type="button">완료</button></header><div class="concurrent-booking-list">'+rows+'</div></section>';
+ document.body.appendChild(root);document.body.classList.add('concurrent-sheet-open');
+ root.querySelector('.concurrent-booking-backdrop')?.addEventListener('click',closeConcurrentBookingSheet);
+ root.querySelector('.concurrent-booking-close')?.addEventListener('click',closeConcurrentBookingSheet);
+ root.querySelectorAll('[data-concurrent-index]').forEach(btn=>btn.addEventListener('click',()=>{const a=items[Number(btn.dataset.concurrentIndex)];closeConcurrentBookingSheet();bookingDayOffset=offset;openOpsDetail(a)}));
+ requestAnimationFrame(()=>root.classList.add('open'))
+}
 function renderBooking(){
  const offsets=bookingWeekOffsets(),startDate=bookingDateFromOffset(offsets[0]),endDate=bookingDateFromOffset(offsets[6]);
  const monthLabel=startDate.getMonth()===endDate.getMonth()?(startDate.getFullYear()+'년 '+(startDate.getMonth()+1)+'월'):(startDate.getFullYear()+'년 '+(startDate.getMonth()+1)+'월 · '+(endDate.getMonth()+1)+'월');
@@ -346,7 +362,26 @@ function renderBooking(){
  offsets.forEach((offset,dayIndex)=>{
    const dayData=activeData.filter(a=>Number(a.dayOffset||0)===offset).sort((a,b)=>String(a.time).localeCompare(String(b.time)));
    const eventLayouts=bookingEventLayouts(dayData);
+   const sameTimeGroups=new Map();
+   if(bookingIsGroupView()){
+     dayData.forEach(a=>{const key=String(a.time||'');if(!sameTimeGroups.has(key))sameTimeGroups.set(key,[]);sameTimeGroups.get(key).push(a)});
+   }
+   const renderedConcurrent=new Set();
    dayData.forEach(a=>{
+     const exactGroup=(sameTimeGroups.get(String(a.time||''))||[]).filter(x=>x.status!=='취소');
+     const differentStaff=new Set(exactGroup.map(x=>x.staff||'미지정')).size>1;
+     if(bookingIsGroupView()&&exactGroup.length>1&&differentStaff){
+       const key=String(a.time||'');if(renderedConcurrent.has(key))return;renderedConcurrent.add(key);
+       const spans=exactGroup.map(bookingAppointmentSpan).filter(Boolean);if(!spans.length)return;
+       const first=spans.reduce((x,y)=>x.row<=y.row?x:y),maxSpan=Math.max(...spans.map(x=>x.span));
+       const ev=document.createElement('button');ev.type='button';ev.className='booking-grid-event concurrent-booking';
+       ev.style.gridColumn=String(dayIndex+2);ev.style.gridRow=(first.row+2)+' / span '+maxSpan;
+       ev.dataset.dayOffset=String(offset);
+       ev.setAttribute('aria-label',htmlText(a.time)+' 동시 시술 '+exactGroup.length+'건');
+       const people=exactGroup.slice(0,3).map(x=>'<div class="concurrent-mini-row"><span class="'+(bookingIsOwner(x.staff)?'owner':'staff')+'">'+bookingRoleShort(x.staff)+'</span><b>'+htmlText(x.customer)+'</b></div>').join('');
+       ev.innerHTML='<div class="booking-grid-event-top concurrent-top"><time>'+htmlText(a.time)+'</time><span>'+exactGroup.length+'명</span></div><div class="concurrent-mini-list">'+people+'</div>';
+       ev.onclick=e=>{e.stopPropagation();bookingDayOffset=offset;openConcurrentBookingSheet(exactGroup,offset)};board.appendChild(ev);return
+     }
      const sp=bookingAppointmentSpan(a);if(!sp)return;
      const ev=document.createElement('button');ev.type='button';
      const layout=eventLayouts.get(a)||{lane:0,lanes:1};

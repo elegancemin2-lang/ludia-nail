@@ -3005,3 +3005,107 @@ html[data-theme="dark"] .booking-week-board-shell{box-shadow:0 10px 28px rgba(0,
   }
   .booking-grid-event.multi>small{display:none!important}
 }
+
+
+/* v2.60.6 · larger booking text + readable exact-time concurrent bookings */
+.booking-grid-event.concurrent-booking{
+  padding:5px 6px!important;background:#f3eee8!important;border-left:3px solid #b48267!important;
+  color:#2d2926!important;box-shadow:0 2px 8px rgba(0,0,0,.06)!important
+}
+.booking-grid-event.concurrent-booking .concurrent-top{
+  display:flex!important;align-items:center!important;justify-content:space-between!important;width:100%!important;gap:4px!important
+}
+.booking-grid-event.concurrent-booking .concurrent-top time{
+  font-size:9px!important;font-weight:900!important;color:#7b583e!important
+}
+.booking-grid-event.concurrent-booking .concurrent-top span{
+  max-width:none!important;padding:2px 5px!important;background:rgba(180,130,103,.12)!important;
+  font-size:7px!important;font-weight:900!important;color:#7b583e!important
+}
+.concurrent-mini-list{display:grid;gap:3px;width:100%;margin-top:4px}
+.concurrent-mini-row{
+  display:grid;grid-template-columns:16px minmax(0,1fr);gap:3px;align-items:center;min-width:0
+}
+.concurrent-mini-row span{
+  display:grid!important;place-items:center!important;width:16px!important;height:16px!important;
+  padding:0!important;border-radius:5px!important;font-size:7px!important;font-weight:900!important
+}
+.concurrent-mini-row span.owner{background:#ead8cb!important;color:#6b4933!important}
+.concurrent-mini-row span.staff{background:#dce7f2!important;color:#47637d!important}
+.concurrent-mini-row b{
+  min-width:0;font-size:8.5px!important;line-height:1.05!important;font-weight:900!important;
+  white-space:nowrap!important;overflow:hidden!important;text-overflow:ellipsis!important;color:inherit!important
+}
+
+.concurrent-booking-sheet-root{position:fixed;inset:0;z-index:10060;display:flex;align-items:flex-end;pointer-events:none}
+.concurrent-booking-sheet-root.open{pointer-events:auto}
+.concurrent-booking-backdrop{position:absolute;inset:0;border:0;background:rgba(0,0,0,.28);opacity:0;transition:opacity .18s ease}
+.concurrent-booking-sheet-root.open .concurrent-booking-backdrop{opacity:1}
+.concurrent-booking-sheet{
+  position:relative;width:min(100%,520px);margin:0 auto;padding:8px 16px calc(18px + env(safe-area-inset-bottom));
+  background:#f7f7f9;border-radius:24px 24px 0 0;transform:translateY(22px);transition:transform .2s ease;
+  box-shadow:0 -10px 32px rgba(0,0,0,.14)
+}
+.concurrent-booking-sheet-root.open .concurrent-booking-sheet{transform:none}
+.concurrent-booking-grabber{width:36px;height:5px;margin:0 auto 12px;border-radius:999px;background:#d1d1d6}
+.concurrent-booking-sheet header{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:12px}
+.concurrent-booking-sheet header span{display:block;font-size:10px;color:#8e8e93;font-weight:750}
+.concurrent-booking-sheet header h3{margin:3px 0 0;font-size:20px;line-height:1.1;letter-spacing:-.035em}
+.concurrent-booking-close{border:0;background:transparent;color:#007aff;font:700 14px inherit;padding:8px}
+.concurrent-booking-list{overflow:hidden;border-radius:16px;background:#fff;border:1px solid rgba(60,60,67,.08)}
+.concurrent-booking-list>button{
+  width:100%;min-height:64px;display:grid;grid-template-columns:30px minmax(0,1fr) 14px;gap:10px;align-items:center;
+  padding:10px 13px;border:0;background:transparent;text-align:left;font:inherit
+}
+.concurrent-booking-list>button+button{border-top:1px solid rgba(60,60,67,.09)}
+.concurrent-role{display:grid;place-items:center;width:28px;height:28px;border-radius:9px;font-size:11px;font-weight:900}
+.concurrent-role.owner{background:#ead8cb;color:#6b4933}
+.concurrent-role.staff{background:#dce7f2;color:#47637d}
+.concurrent-booking-list b{display:block;font-size:14px;line-height:1.15;color:#1d1d1f}
+.concurrent-booking-list small{display:block;margin-top:4px;font-size:11px;line-height:1.2;color:#8e8e93}
+.concurrent-booking-list i{font-style:normal;color:#c7c7cc;font-size:20px}
+.concurrent-sheet-open{overflow:hidden}
+
+html[data-theme="dark"] .booking-grid-event.concurrent-booking{background:#3a302a!important;color:#fff!important;border-left-color:#c69a79!important}
+html[data-theme="dark"] .booking-grid-event.concurrent-booking .concurrent-top time,
+html[data-theme="dark"] .booking-grid-event.concurrent-booking .concurrent-top span{color:#f0c7aa!important}
+html[data-theme="dark"] .concurrent-booking-sheet{background:#1c1c1e}
+html[data-theme="dark"] .concurrent-booking-list{background:#2c2c2e;border-color:rgba(255,255,255,.08)}
+html[data-theme="dark"] .concurrent-booking-list>button+button{border-color:rgba(255,255,255,.08)}
+html[data-theme="dark"] .concurrent-booking-list b{color:#fff}
+
+@media(max-width:760px){
+  .booking-time-grid{
+    --booking-row-h:25px!important;
+    --booking-head-h:50px!important
+  }
+  .booking-grid-day-head b{font-size:13px!important}
+  .booking-grid-day-head span{font-size:7.2px!important}
+  .booking-grid-day-head small{font-size:5.4px!important}
+  .booking-grid-time b{font-size:7.6px!important}
+  .booking-grid-event-top time{font-size:7.4px!important}
+  .booking-grid-event>b{font-size:8.2px!important;line-height:1.08!important}
+  .booking-grid-event.long>small{font-size:6.6px!important}
+  .booking-group-view .booking-grid-event .booking-grid-event-top span{font-size:5.8px!important;max-width:30px!important}
+
+  .booking-grid-event.concurrent-booking{
+    width:auto!important;transform:none!important;margin:1px!important;padding:2px!important;
+    border-left-width:2px!important;border-radius:4px!important
+  }
+  .booking-grid-event.concurrent-booking .concurrent-top time{font-size:6.5px!important}
+  .booking-grid-event.concurrent-booking .concurrent-top span{
+    display:inline-flex!important;font-size:5.5px!important;padding:1px 2px!important
+  }
+  .concurrent-mini-list{gap:1px!important;margin-top:1px!important}
+  .concurrent-mini-row{grid-template-columns:10px minmax(0,1fr)!important;gap:1px!important}
+  .concurrent-mini-row span{
+    width:10px!important;height:10px!important;border-radius:3px!important;font-size:5.5px!important
+  }
+  .concurrent-mini-row b{font-size:6.8px!important;letter-spacing:-.07em!important}
+}
+@media(min-width:391px) and (max-width:760px){
+  .booking-grid-event>b{font-size:8.7px!important}
+  .booking-grid-event-top time{font-size:7.8px!important}
+  .concurrent-mini-row b{font-size:7.2px!important}
+  .booking-grid-event.concurrent-booking .concurrent-top time{font-size:6.9px!important}
+}

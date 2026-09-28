@@ -1,11 +1,12 @@
 {
   "schema": "ludia-nail-reference-regression/v1",
   "testedAt": "2026-09-28",
-  "classifierCommit": "52fa0b4c5ac90b546170d3bbff775953f7510749",
+  "classifierCommit": "f34d382242fdf25464826957b42fc5ca796727c5",
   "referenceSet": {
     "golden": 6,
     "ludiaStyle": 12,
-    "total": 18
+    "sampleBoard": 30,
+    "total": 48
   },
   "variants": [
     "original",
@@ -69,5 +70,6 @@
       "passed": 5
     }
   ],
-  "note": "회귀시험은 제공된 6개 정답 사진과 경미한 이미지 변형에 대한 테스트다. 새로운 디자인 일반화 정확도는 레퍼런스 에셋 확장과 실샵 피드백으로 계속 검증한다."
+  "note": "48개 레퍼런스와 5-view 앙상블 적용 후에도 6개 정답사진을 원본/리사이즈/밝기±3%/JPEG72로 총 30회 재검증해 30/30 통과. 샘플보드 30개는 약지도라 golden/LUDIA 레퍼런스보다 낮은 가중치로 사용한다.",
+  "classifier": "5-view ensemble (original, brightness -3%, brightness +3%, center crop, mirror)"
 }

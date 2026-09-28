@@ -1056,8 +1056,8 @@ async function loadPricingVisualRefs(){
  try{
   const r=await fetch('data/nail-reference-features.json',{cache:'no-cache'});
   if(!r.ok)throw new Error('reference '+r.status);
-  const d=await r.json(),gold=Array.isArray(d.goldenPricingRefs)?d.goldenPricingRefs:[],style=Array.isArray(d.ludiaStyleRefs)?d.ludiaStyleRefs:[];
-  const refs=[...gold.map(x=>({...x,source:'golden'})),...style.map(x=>({...x,source:'ludia'}))].filter(x=>Array.isArray(x.f)&&x.f.length>=11);
+  const d=await r.json(),gold=Array.isArray(d.goldenPricingRefs)?d.goldenPricingRefs:[],style=Array.isArray(d.ludiaStyleRefs)?d.ludiaStyleRefs:[],board=Array.isArray(d.sampleBoardRefs)?d.sampleBoardRefs:[];
+  const refs=[...gold.map(x=>({...x,source:'golden',qualityWeight:1.35})),...style.map(x=>({...x,source:'ludia',qualityWeight:1})),...board.map(x=>({...x,source:'board',qualityWeight:Number(x.qualityWeight)||.72}))].filter(x=>Array.isArray(x.f)&&x.f.length>=11);
   if(refs.length<6)throw new Error('reference set too small');
   pricingVisualRefCache=refs;pricingVisualScaleCache=pricingVisualScales(refs);return refs
  }catch(error){
@@ -1069,25 +1069,51 @@ async function loadPricingVisualRefs(){
 function rankedPricingVisualRefs(f,refs,limit=3){
  const scale=pricingVisualScaleCache||pricingVisualScales(refs);
  return refs.map(ref=>{
-  const dist=Math.sqrt(f.reduce((s,x,i)=>s+Math.pow((x-(Number(ref.f?.[i])||0))/(scale[i]||1),2),0)/f.length);
-  return {ref,dist}
+  const rawDist=Math.sqrt(f.reduce((s,x,i)=>s+Math.pow((x-(Number(ref.f?.[i])||0))/(scale[i]||1),2),0)/f.length);
+  const dist=rawDist/Math.max(.5,Number(ref.qualityWeight)||1);
+  return {ref,dist,rawDist}
  }).sort((a,b)=>a.dist-b.dist).slice(0,Math.max(1,limit))
 }
 function pricingRefAmount(ref){
  const p=mergePricing(state.pricing),base=Number(p.base?.[ref.baseKey]?.price)||0;
  return base+(ref.addons||[]).reduce((sum,x)=>sum+(Number(p.addons?.[x.key]?.price)||0)*(Number(x.qty)||0),0)
 }
+function pricingPhotoViews(im,size=192){
+ const views=[];
+ const make=(sx,sy,sw,sh,brightness=1)=>{
+  const cv=document.createElement('canvas'),ctx=cv.getContext('2d',{willReadFrequently:true});cv.width=size;cv.height=size;
+  ctx.drawImage(im,sx,sy,sw,sh,0,0,size,size);
+  if(brightness!==1){const id=ctx.getImageData(0,0,size,size),d=id.data;for(let i=0;i<d.length;i+=4){d[i]=Math.min(255,d[i]*brightness);d[i+1]=Math.min(255,d[i+1]*brightness);d[i+2]=Math.min(255,d[i+2]*brightness)}ctx.putImageData(id,0,0)}
+  return pricingVisualFeatures(ctx.getImageData(0,0,size,size).data)
+ };
+ views.push(make(0,0,im.width,im.height,1));
+ views.push(make(0,0,im.width,im.height,.97));
+ views.push(make(0,0,im.width,im.height,1.03));
+ const crop=.88,cw=im.width*crop,ch=im.height*crop;views.push(make((im.width-cw)/2,(im.height-ch)/2,cw,ch,1));
+ const cv=document.createElement('canvas'),ctx=cv.getContext('2d',{willReadFrequently:true});cv.width=size;cv.height=size;ctx.translate(size,0);ctx.scale(-1,1);ctx.drawImage(im,0,0,size,size);views.push(pricingVisualFeatures(ctx.getImageData(0,0,size,size).data));
+ return views
+}
+function ensemblePricingVisualRefs(features,refs,limit=3){
+ const score=new Map();
+ features.forEach(f=>{
+  rankedPricingVisualRefs(f,refs,Math.min(8,refs.length)).forEach((hit,i)=>{
+   const key=hit.ref.id,weight=(1/(1+hit.dist))*(1/(i+1));
+   const prev=score.get(key)||{ref:hit.ref,score:0,dist:0,count:0};
+   prev.score+=weight;prev.dist+=hit.dist;prev.count++;score.set(key,prev)
+  })
+ });
+ return [...score.values()].map(x=>({ref:x.ref,score:x.score,dist:x.dist/Math.max(1,x.count),votes:x.count}))
+  .sort((a,b)=>b.score-a.score||a.dist-b.dist).slice(0,Math.max(1,limit))
+}
 async function localPricePhotoDraft(source){
  let blob=source;if(typeof source==='string'){const r=await fetch(source);blob=await r.blob()}
  const url=URL.createObjectURL(blob);
  try{
   const im=await new Promise((resolve,reject)=>{const x=new Image();x.onload=()=>resolve(x);x.onerror=reject;x.src=url});
-  const size=192,cv=document.createElement('canvas'),ctx=cv.getContext('2d',{willReadFrequently:true});
-  cv.width=size;cv.height=size;ctx.drawImage(im,0,0,size,size);
-  const refs=await loadPricingVisualRefs(),feature=pricingVisualFeatures(ctx.getImageData(0,0,size,size).data),ranked=rankedPricingVisualRefs(feature,refs,3),hit=ranked[0],ref=hit.ref;
-  const margin=ranked[1]?Math.max(0,ranked[1].dist-hit.dist):.5;
+  const refs=await loadPricingVisualRefs(),features=pricingPhotoViews(im,192),ranked=ensemblePricingVisualRefs(features,refs,3),hit=ranked[0],ref=hit.ref;
+  const margin=ranked[1]?Math.max(0,ranked[1].score-hit.score)*-1+.5:.5;
   const confidence=Math.max(42,Math.min(97,Math.round(96-hit.dist*24+Math.min(8,margin*10))));
-  const candidates=ranked.map((x,i)=>(i+1)+'순위 '+x.ref.label).join(' · ');
+  const candidates=ranked.map((x,i)=>(i+1)+'순위 '+x.ref.label+(x.votes?' · '+x.votes+'/5뷰':'')).join(' · ');
   const expected=pricingRefAmount(ref)||(Number(ref.target)||0);
   return {baseKey:ref.baseKey,addons:(ref.addons||[]).map(x=>({...x})),simpleChangeQty:0,pointChangeQty:0,
    unpricedObservations:[
@@ -1095,8 +1121,8 @@ async function localPricePhotoDraft(source){
     '유사 후보 · '+candidates,
     expected?'현재 LUDIA 가격표 적용 시 '+priceWon(expected):'최종 항목은 원장이 수정 가능'
    ],
-   summary:'무료 에셋 분류 · 6개 가격 정답셋 + LUDIA 스타일 레퍼런스를 함께 비교해 1차 견적을 만들었습니다.',confidence,referenceId:ref.id,
-   referenceCandidates:ranked.map(x=>({id:x.ref.id,label:x.ref.label,distance:Number(x.dist.toFixed(3))}))}
+   summary:'무료 에셋 분류 · 6개 가격 정답셋 + LUDIA 룩북 + 30개 네일팁 샘플을 5뷰 앙상블로 비교해 1차 견적을 만들었습니다.',confidence,referenceId:ref.id,
+   referenceCandidates:ranked.map(x=>({id:x.ref.id,label:x.ref.label,distance:Number(x.dist.toFixed(3)),votes:x.votes||0,source:x.ref.source||''}))}
  }finally{URL.revokeObjectURL(url)}
 }
 async function analyzePricingPhoto(){

@@ -1111,7 +1111,7 @@ async function localPricePhotoDraft(source){
  try{
   const im=await new Promise((resolve,reject)=>{const x=new Image();x.onload=()=>resolve(x);x.onerror=reject;x.src=url});
   const refs=await loadPricingVisualRefs(),features=pricingPhotoViews(im,192),ranked=ensemblePricingVisualRefs(features,refs,3),hit=ranked[0],ref=hit.ref;
-  const margin=ranked[1]?Math.max(0,ranked[1].score-hit.score)*-1+.5:.5;
+  const margin=ranked[1]?Math.max(0,hit.score-ranked[1].score):.5;
   const confidence=Math.max(42,Math.min(97,Math.round(96-hit.dist*24+Math.min(8,margin*10))));
   const candidates=ranked.map((x,i)=>(i+1)+'순위 '+x.ref.label+(x.votes?' · '+x.votes+'/5뷰':'')).join(' · ');
   const expected=pricingRefAmount(ref)||(Number(ref.target)||0);

@@ -1,0 +1,558 @@
+{
+  "schema": "ludia-nail-reference-features/v1",
+  "generatedAt": "2026-09-28",
+  "purpose": "무료 자동견적용 분류 기준. 사용자 제공 기준사진/룩북의 시각 특징 벡터와 공개 참고 소스 링크를 함께 관리한다.",
+  "policy": {
+    "embeddedImages": "이미지는 저장소에 복제하지 않고, 사용자 제공 원본은 특징 벡터만 저장한다.",
+    "webSources": "공개 웹 자료는 분류 근거 링크만 저장하며 이미지 자체는 복제하지 않는다.",
+    "pricingPriority": [
+      "LUDIA 실제 가격표",
+      "6개 정답셋",
+      "LUDIA 스타일 유사 에셋",
+      "시세 fallback"
+    ]
+  },
+  "featureOrder": [
+    "saturationMean",
+    "brightnessMean",
+    "highlightPct",
+    "colorfulPct",
+    "darkPct",
+    "edgeMean",
+    "rMinusG",
+    "gMinusB",
+    "rMinusB",
+    "brightnessStd",
+    "saturationStd"
+  ],
+  "goldenPricingRefs": [
+    {
+      "id": "G01",
+      "label": "원컬러 + 컬러추가",
+      "baseKey": "oneColor",
+      "addons": [
+        {
+          "key": "colorAdd",
+          "qty": 1
+        }
+      ],
+      "target": 50000,
+      "f": [
+        43.360758,
+        115.584229,
+        10.734049,
+        40.947808,
+        37.068685,
+        5.448553,
+        21.589274,
+        13.971924,
+        35.561198,
+        72.284328,
+        44.37562
+      ]
+    },
+    {
+      "id": "G02",
+      "label": "자석젤 + 그라데이션",
+      "baseKey": "magnetic",
+      "addons": [
+        {
+          "key": "gradationAdd",
+          "qty": 1
+        }
+      ],
+      "target": 80000,
+      "f": [
+        60.226535,
+        150.598624,
+        15.041775,
+        65.470378,
+        2.275933,
+        3.507546,
+        31.635145,
+        20.855713,
+        52.490858,
+        41.73326,
+        34.331782
+      ]
+    },
+    {
+      "id": "G03",
+      "label": "원컬러 + 도트 4개",
+      "baseKey": "oneColor",
+      "addons": [
+        {
+          "key": "dot",
+          "qty": 4
+        }
+      ],
+      "target": 57000,
+      "f": [
+        54.036784,
+        93.028718,
+        0.992839,
+        53.133138,
+        44.558377,
+        3.779562,
+        36.315294,
+        16.322483,
+        52.637777,
+        71.977006,
+        48.610165
+      ]
+    },
+    {
+      "id": "G04",
+      "label": "자석젤 + 그라데이션 + 투명 리본 파츠 2개",
+      "baseKey": "magnetic",
+      "addons": [
+        {
+          "key": "gradationAdd",
+          "qty": 1
+        },
+        {
+          "key": "clearRibbon",
+          "qty": 2
+        }
+      ],
+      "target": 88000,
+      "f": [
+        38.763211,
+        104.709825,
+        6.814236,
+        39.360894,
+        48.071289,
+        4.565472,
+        24.428304,
+        11.272705,
+        35.701009,
+        67.244993,
+        42.176548
+      ]
+    },
+    {
+      "id": "G05",
+      "label": "그라데이션 + 씬프렌치 + 리본/하트 포인트",
+      "baseKey": "gradation",
+      "addons": [
+        {
+          "key": "thinFrench",
+          "qty": 1
+        },
+        {
+          "key": "ribbonPoint",
+          "qty": 2
+        },
+        {
+          "key": "smallPoint",
+          "qty": 4
+        }
+      ],
+      "target": 92000,
+      "f": [
+        65.683675,
+        135.419009,
+        3.285048,
+        60.26747,
+        7.733832,
+        4.827144,
+        33.091743,
+        29.546468,
+        62.638211,
+        40.255846,
+        36.47981
+      ]
+    },
+    {
+      "id": "G06",
+      "label": "복합 아트 디자인",
+      "baseKey": "fullDesign",
+      "addons": [],
+      "target": 90000,
+      "f": [
+        36.683811,
+        90.618435,
+        7.383898,
+        32.082791,
+        60.842556,
+        6.468473,
+        18.81071,
+        10.234701,
+        29.04541,
+        74.808919,
+        42.531744
+      ]
+    }
+  ],
+  "ludiaStyleRefs": [
+    {
+      "id": "LB01",
+      "label": "시럽 그라데이션",
+      "baseKey": "gradation",
+      "addons": [],
+      "description": "맑고 청순한 시럽 그라데이션",
+      "f": [
+        55.724908,
+        161.179914,
+        2.924262,
+        68.489583,
+        1.448568,
+        3.249943,
+        42.813449,
+        12.860704,
+        55.674154,
+        28.109083,
+        30.748238
+      ]
+    },
+    {
+      "id": "LB02",
+      "label": "미니 도트 포인트",
+      "baseKey": "oneColor",
+      "addons": [
+        {
+          "key": "dot",
+          "qty": 4
+        }
+      ],
+      "description": "잔잔한 도트 포인트",
+      "f": [
+        53.157145,
+        163.073025,
+        11.102973,
+        64.29579,
+        0.225152,
+        3.990668,
+        43.853651,
+        8.118544,
+        51.972195,
+        33.63836,
+        25.894052
+      ]
+    },
+    {
+      "id": "LB03",
+      "label": "플라워 리본 네일",
+      "baseKey": "oneColor",
+      "addons": [
+        {
+          "key": "ribbonPoint",
+          "qty": 2
+        }
+      ],
+      "description": "화이트 플라워와 리본 포인트",
+      "f": [
+        53.337592,
+        138.299922,
+        8.813477,
+        65.738932,
+        21.381293,
+        6.955846,
+        43.424859,
+        9.398709,
+        52.823568,
+        62.996558,
+        33.661795
+      ]
+    },
+    {
+      "id": "LB04",
+      "label": "뉘앙스 마블 네일",
+      "baseKey": "oneColor",
+      "addons": [
+        {
+          "key": "marble",
+          "qty": 4
+        }
+      ],
+      "description": "은은한 마블/뉘앙스",
+      "f": [
+        39.30108,
+        157.503337,
+        4.248047,
+        49.915907,
+        4.402669,
+        4.967935,
+        28.166504,
+        10.931722,
+        39.098226,
+        37.269052,
+        24.118378
+      ]
+    },
+    {
+      "id": "LB05",
+      "label": "오로라 자개 네일",
+      "baseKey": "magnetic",
+      "addons": [],
+      "description": "오로라/자개 계열 영롱한 빛감",
+      "f": [
+        45.973036,
+        156.673213,
+        5.734592,
+        54.440647,
+        0.005425,
+        4.481097,
+        33.900635,
+        11.983778,
+        45.884413,
+        34.561379,
+        34.243462
+      ]
+    },
+    {
+      "id": "LB06",
+      "label": "하트 라인 네일",
+      "baseKey": "oneColor",
+      "addons": [
+        {
+          "key": "lineArt",
+          "qty": 4
+        },
+        {
+          "key": "smallPoint",
+          "qty": 4
+        }
+      ],
+      "description": "미니 하트와 라인워크",
+      "f": [
+        41.266303,
+        169.324662,
+        19.151476,
+        58.306207,
+        0.043403,
+        3.71357,
+        33.952989,
+        6.989176,
+        40.942166,
+        35.607799,
+        28.551815
+      ]
+    },
+    {
+      "id": "LB07",
+      "label": "글리터 포인트",
+      "baseKey": "oneColor",
+      "addons": [
+        {
+          "key": "glitter",
+          "qty": 4
+        }
+      ],
+      "description": "글리터/펄 포인트",
+      "f": [
+        43.308919,
+        151.258039,
+        6.941732,
+        59.724935,
+        0.444878,
+        4.501026,
+        34.910346,
+        8.250488,
+        43.160834,
+        32.402872,
+        19.000537
+      ]
+    },
+    {
+      "id": "LB08",
+      "label": "프렌치 변형 네일",
+      "baseKey": "oneColor",
+      "addons": [
+        {
+          "key": "thinFrench",
+          "qty": 1
+        }
+      ],
+      "description": "프렌치 라인 변형",
+      "f": [
+        38.235162,
+        148.317012,
+        7.522244,
+        56.217448,
+        5.886502,
+        5.163497,
+        30.242079,
+        7.61046,
+        37.852539,
+        40.390513,
+        26.000944
+      ]
+    },
+    {
+      "id": "LB09",
+      "label": "베이비핑크 네일",
+      "baseKey": "oneColor",
+      "addons": [],
+      "description": "베이비핑크 원컬러",
+      "f": [
+        59.007731,
+        167.133002,
+        9.752062,
+        84.120009,
+        2.777778,
+        3.483601,
+        46.583903,
+        11.30485,
+        57.888753,
+        37.755853,
+        22.572963
+      ]
+    },
+    {
+      "id": "LB10",
+      "label": "라인 포인트 네일",
+      "baseKey": "oneColor",
+      "addons": [
+        {
+          "key": "lineArt",
+          "qty": 4
+        }
+      ],
+      "description": "얇은 라인 포인트",
+      "f": [
+        61.54636,
+        162.975767,
+        9.903971,
+        87.763129,
+        0.035265,
+        3.653573,
+        47.772841,
+        13.741374,
+        61.514214,
+        33.041581,
+        21.350731
+      ]
+    },
+    {
+      "id": "LB11",
+      "label": "글라스 네일",
+      "baseKey": "oneColor",
+      "addons": [
+        {
+          "key": "other",
+          "qty": 1
+        }
+      ],
+      "description": "투명감 있는 글라스/오로라 계열",
+      "f": [
+        42.881429,
+        160.659433,
+        10.11556,
+        50.599501,
+        0,
+        3.40533,
+        31.658936,
+        11.139621,
+        42.798557,
+        32.797855,
+        18.652449
+      ]
+    },
+    {
+      "id": "LB12",
+      "label": "스톤 포인트 네일",
+      "baseKey": "oneColor",
+      "addons": [
+        {
+          "key": "stone",
+          "qty": 4
+        }
+      ],
+      "description": "스톤/큐빅 포인트",
+      "f": [
+        43.56486,
+        161.869041,
+        9.901259,
+        48.415799,
+        0,
+        3.761531,
+        30.318902,
+        13.189562,
+        43.508464,
+        33.133683,
+        19.853659
+      ]
+    }
+  ],
+  "publicReferencePages": [
+    {
+      "category": "magnetic",
+      "label": "자석젤/캣아이",
+      "url": "https://www.canni.com/products/hema-free-cat-eye-gel-9ml-starry-sky-miracle-series",
+      "frames": "5+ product/application frames"
+    },
+    {
+      "category": "gradation",
+      "label": "그라데이션/옴브레",
+      "url": "https://www.opi.com/professionals/dipping-powder-ombre-tutorial",
+      "frames": "5+ step frames"
+    },
+    {
+      "category": "french",
+      "label": "프렌치/씬프렌치",
+      "url": "https://www.opi.com/professionals/gel-nail-polish-french-manicure-tutorial",
+      "frames": "5+ step frames"
+    },
+    {
+      "category": "dot",
+      "label": "도트",
+      "url": "https://www.opi.com/nail-art/dotticure",
+      "frames": "5+ step frames"
+    },
+    {
+      "category": "glitter",
+      "label": "글리터/펄",
+      "url": "https://www.opi.com/nail-art/glitter-n-up",
+      "frames": "5+ step frames"
+    },
+    {
+      "category": "chrome",
+      "label": "크롬/미러",
+      "url": "https://www.opi.com/products/chrome-powders-chrome-to-mama",
+      "frames": "product/application frames"
+    },
+    {
+      "category": "stone",
+      "label": "스톤/큐빅",
+      "url": "https://www.opi.com/nail-art/make-it-reign",
+      "frames": "charm/rhinestone frames"
+    },
+    {
+      "category": "pearl",
+      "label": "진주/메탈",
+      "url": "https://www.opi.com/en-GB/nail-art/out-of-the-goodness-of-my-heart",
+      "frames": "pearl placement frames"
+    },
+    {
+      "category": "ribbon3d",
+      "label": "리본/3D 파츠",
+      "url": "https://www.nailsmag.com/articles/flexing-3-d-gel-polish",
+      "frames": "5+ 3D bow construction frames"
+    },
+    {
+      "category": "marble",
+      "label": "마블/뉘앙스",
+      "url": "https://www.nailsmag.com/articles/behind-the-scenes-matte-marble-nail-art",
+      "frames": "5+ step frames"
+    },
+    {
+      "category": "foil",
+      "label": "호일/필름",
+      "url": "https://www.nailsmag.com/articles/midnight-swim-mosaic-foil-art",
+      "frames": "foil application frames"
+    },
+    {
+      "category": "line",
+      "label": "라인/체크",
+      "url": "https://www.opi.com/en-GB/nail-art/get-in-line",
+      "frames": "5+ linework frames"
+    },
+    {
+      "category": "character",
+      "label": "캐릭터/드로잉",
+      "url": "https://www.nailsmag.com/articles/charisma-nail-innovations-nail-art-tutorial",
+      "frames": "hand-painted character frames"
+    }
+  ]
+}

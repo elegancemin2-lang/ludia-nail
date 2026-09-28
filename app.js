@@ -202,9 +202,31 @@ function bookingArtImage(a,cardIndex=0){
  }
  return match?.img||'assets/nail_5.jpg';
 }
+
+const BOOKING_GRID_START=11*60,BOOKING_GRID_END=21*60,BOOKING_GRID_STEP=30;
+function bookingTimeMinutes(value){
+ const m=String(value||'').match(/(\d{1,2}):(\d{2})/);if(!m)return null;
+ return Number(m[1])*60+Number(m[2])
+}
+function bookingTimeLabel(minutes){
+ const h=Math.floor(minutes/60),m=minutes%60;
+ return String(h).padStart(2,'0')+':'+String(m).padStart(2,'0')
+}
+function bookingGridSlots(){
+ const out=[];for(let m=BOOKING_GRID_START;m<BOOKING_GRID_END;m+=BOOKING_GRID_STEP)out.push(m);return out
+}
+function bookingAppointmentSpan(a){
+ const start=bookingTimeMinutes(a.time);if(start===null)return null;
+ const duration=Math.max(BOOKING_GRID_STEP,Number(a.duration)||90);
+ const from=Math.max(BOOKING_GRID_START,start),to=Math.min(BOOKING_GRID_END,start+duration);
+ if(to<=BOOKING_GRID_START||from>=BOOKING_GRID_END)return null;
+ const row=Math.floor((from-BOOKING_GRID_START)/BOOKING_GRID_STEP);
+ const span=Math.max(1,Math.ceil((to-from)/BOOKING_GRID_STEP));
+ return {start,from,to,row,span}
+}
 function renderBooking(){
  const offsets=bookingWeekOffsets(),startDate=bookingDateFromOffset(offsets[0]),endDate=bookingDateFromOffset(offsets[6]);
- const monthLabel=startDate.getMonth()===endDate.getMonth()?`${startDate.getFullYear()}년 ${startDate.getMonth()+1}월`:`${startDate.getFullYear()}년 ${startDate.getMonth()+1}월 · ${endDate.getMonth()+1}월`;
+ const monthLabel=startDate.getMonth()===endDate.getMonth()?(startDate.getFullYear()+'년 '+(startDate.getMonth()+1)+'월'):(startDate.getFullYear()+'년 '+(startDate.getMonth()+1)+'월 · '+(endDate.getMonth()+1)+'월');
  if($('#bookingMonthLabel'))$('#bookingMonthLabel').textContent=monthLabel;
  if($('#bookingWeekRange'))$('#bookingWeekRange').textContent=bookingWeekRangeText();
  renderBookingWeek();
@@ -218,29 +240,56 @@ function renderBooking(){
    })
  }
  const data=bookingDataForWeek();
- if($('#bookingCountLabel'))$('#bookingCountLabel').textContent=bookingWeekRangeText()+' · '+bookingStaff+' '+data.length+'건';
- const board=$('#bookingWeekBoard');if(!board)return;board.innerHTML='';
+ const activeData=data.filter(a=>a.status!=='취소');
+ if($('#bookingCountLabel'))$('#bookingCountLabel').textContent=bookingWeekRangeText()+' · '+bookingStaff+' '+activeData.length+'건';
+ const board=$('#bookingWeekBoard');if(!board)return;board.innerHTML='';board.className='booking-week-board booking-time-grid';
+ const slots=bookingGridSlots();
+ board.style.setProperty('--booking-slot-count',String(slots.length));
+
+ const corner=document.createElement('div');corner.className='booking-grid-corner';corner.innerHTML='<b>시간</b><small>30분</small>';board.appendChild(corner);
+
  offsets.forEach((offset,dayIndex)=>{
-   const d=bookingDateFromOffset(offset),dayData=data.filter(a=>Number(a.dayOffset||0)===offset).sort((a,b)=>String(a.time).localeCompare(String(b.time)));
-   const col=document.createElement('section');col.className='booking-day-column'+(offset===bookingDayOffset?' selected':'')+(offset===0?' today':'');col.dataset.dayOffset=String(offset);
-   const head=document.createElement('header');head.className='booking-day-head';
-   head.innerHTML=`<button type="button" class="booking-day-select" aria-label="${bookingDateText(offset)} 선택"><span>${['일','월','화','수','목','금','토'][d.getDay()]}</span><b>${d.getDate()}</b><small>${dayData.length}건</small></button><button type="button" class="booking-day-add" aria-label="${bookingDateText(offset)} 예약 추가">＋</button>`;
-   head.querySelector('.booking-day-select').onclick=()=>{bookingDayOffset=offset;renderBooking()};
-   head.querySelector('.booking-day-add').onclick=e=>{e.stopPropagation();bookingDayOffset=offset;openQuickBooking('10:00',bookingStaff==='전체'?(salonStaffNames[0]||'루디아'):bookingStaff)};
-   col.appendChild(head);
-   const list=document.createElement('div');list.className='booking-day-list';
-   if(!dayData.length){
-     const empty=document.createElement('button');empty.type='button';empty.className='booking-day-empty';empty.innerHTML='<span>예약 없음</span><small>＋ 눌러 추가</small>';empty.onclick=()=>{bookingDayOffset=offset;openQuickBooking('10:00',bookingStaff==='전체'?(salonStaffNames[0]||'루디아'):bookingStaff)};list.appendChild(empty)
-   }else{
-     dayData.forEach((a,cardIndex)=>{
-       const b=document.createElement('button');b.type='button';b.className='weekly-booking-card '+(a.status==='완료'?'done ':a.status==='진행중'?'progress ':a.status==='취소'||a.status==='노쇼'?'cancelled ':'waiting ');
-       const staffChip=bookingStaff==='전체'?'<span class="weekly-staff">'+htmlText(a.staff||'미지정')+'</span>':'';
-       b.innerHTML=`<div class="weekly-booking-copy"><div class="weekly-booking-meta"><time>${htmlText(a.time)}</time>${staffChip}</div><b>${htmlText(a.customer)}</b><small>${htmlText(a.service)}</small><em>${htmlText(a.status)} · ${won(a.amount)}원</em></div><span class="weekly-booking-art" aria-hidden="true"><img src="${htmlText(bookingArtImage(a,cardIndex+dayIndex))}" alt="" loading="lazy" decoding="async"></span>`;
-       b.onclick=()=>{bookingDayOffset=offset;openOpsDetail(a)};list.appendChild(b)
-     })
-   }
-   col.appendChild(list);board.appendChild(col)
- })
+   const d=bookingDateFromOffset(offset),dayData=activeData.filter(a=>Number(a.dayOffset||0)===offset);
+   const occupied=new Set();
+   dayData.forEach(a=>{const sp=bookingAppointmentSpan(a);if(!sp)return;for(let i=0;i<sp.span;i++)occupied.add(sp.row+i)});
+   const free=Math.max(0,slots.length-occupied.size);
+   const head=document.createElement('button');head.type='button';head.className='booking-grid-day-head'+(offset===bookingDayOffset?' selected':'')+(offset===0?' today':'');
+   head.style.gridColumn=String(dayIndex+2);head.style.gridRow='1';
+   head.innerHTML='<span>'+['일','월','화','수','목','금','토'][d.getDay()]+'</span><b>'+d.getDate()+'</b><small>예약 '+dayData.length+' · 빈 '+free+'칸</small>';
+   head.onclick=()=>{bookingDayOffset=offset;renderBooking()};board.appendChild(head)
+ });
+
+ slots.forEach((minutes,rowIndex)=>{
+   const time=document.createElement('div');time.className='booking-grid-time';time.style.gridColumn='1';time.style.gridRow=String(rowIndex+2);
+   const label=bookingTimeLabel(minutes);time.innerHTML='<b>'+label+'</b>';board.appendChild(time);
+   offsets.forEach((offset,dayIndex)=>{
+     const cell=document.createElement('button');cell.type='button';cell.className='booking-grid-slot';cell.style.gridColumn=String(dayIndex+2);cell.style.gridRow=String(rowIndex+2);
+     cell.dataset.dayOffset=String(offset);cell.dataset.time=label;cell.setAttribute('aria-label',bookingDateText(offset)+' '+label+' 예약 추가');
+     cell.onclick=()=>{bookingDayOffset=offset;openQuickBooking(label,bookingStaff==='전체'?(salonStaffNames[0]||'루디아'):bookingStaff)};
+     board.appendChild(cell)
+   })
+ });
+
+ offsets.forEach((offset,dayIndex)=>{
+   const dayData=activeData.filter(a=>Number(a.dayOffset||0)===offset).sort((a,b)=>String(a.time).localeCompare(String(b.time)));
+   dayData.forEach(a=>{
+     const sp=bookingAppointmentSpan(a);if(!sp)return;
+     const ev=document.createElement('button');ev.type='button';
+     ev.className='booking-grid-event '+(a.status==='완료'?'done ':a.status==='진행중'?'progress ':a.status==='노쇼'?'noshow ':'waiting ');
+     ev.style.gridColumn=String(dayIndex+2);ev.style.gridRow=(sp.row+2)+' / span '+sp.span;
+     ev.dataset.dayOffset=String(offset);
+     const staffChip=bookingStaff==='전체'?'<span>'+htmlText(a.staff||'미지정')+'</span>':'';
+     ev.innerHTML='<div class="booking-grid-event-top"><time>'+htmlText(a.time)+'</time>'+staffChip+'</div><b>'+htmlText(a.customer)+'</b><small>'+htmlText(a.service)+'</small><em>'+htmlText(a.status)+' · '+won(a.amount)+'원</em>';
+     ev.onclick=e=>{e.stopPropagation();bookingDayOffset=offset;openOpsDetail(a)};board.appendChild(ev)
+   })
+ });
+
+ const now=new Date(),nowMin=now.getHours()*60+now.getMinutes();
+ if(offsets.includes(0)&&nowMin>=BOOKING_GRID_START&&nowMin<BOOKING_GRID_END){
+   const line=document.createElement('div');line.className='booking-now-line';
+   const pos=(nowMin-BOOKING_GRID_START)/BOOKING_GRID_STEP;
+   line.style.setProperty('--now-pos',String(pos));line.innerHTML='<span>'+bookingTimeLabel(nowMin)+'</span>';board.appendChild(line)
+ }
 }
 let quickBookingDraft={time:'13:00',staff:'루디아'};
 function ensureQuickDuration(minutes){

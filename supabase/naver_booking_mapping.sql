@@ -69,6 +69,7 @@ declare
   customer_match uuid;
   rule public.ludia_naver_booking_mappings%rowtype;
   svc public.ludia_services%rowtype;
+  staff_match uuid;
   next_end timestamptz;
   next_price integer;
   next_service_name text;
@@ -116,6 +117,28 @@ begin
     select * into svc from public.ludia_services
     where id=rule.service_id and salon_id=a.salon_id and is_active
     limit 1;
+  elsif a.service_id is null then
+    -- Zero-setup fallback: an exact active LUDIA service name visible in SmartPlace text is safe to match.
+    select s.* into svc
+    from public.ludia_services s
+    where s.salon_id=a.salon_id
+      and s.is_active
+      and length(trim(s.name)) >= 2
+      and strpos(lower(coalesce(ext.raw_text,'')),lower(trim(s.name))) > 0
+    order by length(trim(s.name)) desc, s.sort_order asc
+    limit 1;
+  end if;
+
+  if a.staff_user_id is null and rule.staff_user_id is null then
+    -- Same rule for staff: only an exact active display name match; no fuzzy guessing.
+    select m.user_id into staff_match
+    from public.ludia_salon_members m
+    where m.salon_id=a.salon_id
+      and m.is_active
+      and length(trim(m.display_name)) >= 2
+      and strpos(lower(coalesce(ext.raw_text,'')),lower(trim(m.display_name))) > 0
+    order by length(trim(m.display_name)) desc
+    limit 1;
   end if;
 
   next_end := a.ends_at;
@@ -145,18 +168,18 @@ begin
         else a.customer_name_snapshot end,
       service_id=coalesce(a.service_id,svc.id),
       service_name_snapshot=next_service_name,
-      staff_user_id=coalesce(a.staff_user_id,rule.staff_user_id),
+      staff_user_id=coalesce(a.staff_user_id,rule.staff_user_id,staff_match),
       ends_at=next_end,
       price=next_price
   where id=a.id;
 
   return jsonb_build_object(
     'appointment_id',a.id,
-    'enriched',customer_match is not null or rule.id is not null,
+    'enriched',customer_match is not null or rule.id is not null or svc.id is not null or staff_match is not null,
     'customer_matched',customer_match is not null,
     'mapping_id',rule.id,
     'service_id',coalesce(a.service_id,svc.id),
-    'staff_user_id',coalesce(a.staff_user_id,rule.staff_user_id),
+    'staff_user_id',coalesce(a.staff_user_id,rule.staff_user_id,staff_match),
     'duration_minutes',extract(epoch from (next_end-a.starts_at))/60,
     'price',next_price
   );

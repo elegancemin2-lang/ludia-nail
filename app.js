@@ -58,6 +58,21 @@ const DEFAULT_PRICING={
   point:{label:'포인트 변경',price:5000}
  }
 };
+const DEFAULT_BOOKING_HOURS={open:'11:00',close:'21:00',step:30};
+function timeValueMinutes(value,fallback=0){
+ const m=String(value||'').match(/^(\d{1,2}):(\d{2})$/);if(!m)return fallback;
+ return Math.min(1439,Math.max(0,Number(m[1])*60+Number(m[2])))
+}
+function minutesTimeValue(minutes){
+ const v=Math.min(1439,Math.max(0,Math.round(Number(minutes)||0)));
+ return String(Math.floor(v/60)).padStart(2,'0')+':'+String(v%60).padStart(2,'0')
+}
+function normalizeBookingHours(value){
+ const v=value||{},step=[15,30,60].includes(Number(v.step))?Number(v.step):30;
+ let open=timeValueMinutes(v.open,11*60),close=timeValueMinutes(v.close,21*60);
+ if(close<=open+step){open=11*60;close=21*60}
+ return {open:minutesTimeValue(open),close:minutesTimeValue(close),step}
+}
 const clonePricing=value=>JSON.parse(JSON.stringify(value||DEFAULT_PRICING));
 const mergePricing=value=>{
  const v=value||{};return{
@@ -67,14 +82,14 @@ const mergePricing=value=>{
   fingerChange:{...clonePricing(DEFAULT_PRICING.fingerChange),...(v.fingerChange||{})}
  }
 };
-let state={view:'opsHome',dna:'성수 무드',conditions:new Set(['더 심플','파츠 2개 이하','실물시술 쉽게']),designs:[...baseDesigns],library:baseDesigns.slice(0,5),collection:new Set(),monthlyMenuMonth:'',pricing:clonePricing(DEFAULT_PRICING),active:null,fingers:new Set(['전체']),filter:'전체',start:Date.now(),draft:{concept:'',homePrompt:'',maxTime:'90',targetPrice:'69000',stockFirst:true,refDataUrl:null},outputMode:'feed'};
+let state={view:'opsHome',dna:'성수 무드',conditions:new Set(['더 심플','파츠 2개 이하','실물시술 쉽게']),designs:[...baseDesigns],library:baseDesigns.slice(0,5),collection:new Set(),monthlyMenuMonth:'',pricing:clonePricing(DEFAULT_PRICING),bookingHours:normalizeBookingHours(DEFAULT_BOOKING_HOURS),active:null,fingers:new Set(['전체']),filter:'전체',start:Date.now(),draft:{concept:'',homePrompt:'',maxTime:'90',targetPrice:'69000',stockFirst:true,refDataUrl:null},outputMode:'feed'};
 const DB_NAME='ludia-art-studio';const DB_VERSION=1;const DB_STORE='app';const BACKUP_MAGIC='LUDIA_ART_STUDIO_BACKUP';let storageMode='IndexedDB';let saveTimer=null;let lastSavedAt=null;
 function openDB(){return new Promise((resolve,reject)=>{if(!('indexedDB'in window))return reject(new Error('IndexedDB unavailable'));const req=indexedDB.open(DB_NAME,DB_VERSION);req.onupgradeneeded=()=>{const db=req.result;if(!db.objectStoreNames.contains(DB_STORE))db.createObjectStore(DB_STORE)};req.onsuccess=()=>resolve(req.result);req.onerror=()=>reject(req.error)})}
 async function idbGet(key){const db=await openDB();return new Promise((resolve,reject)=>{const tx=db.transaction(DB_STORE,'readonly');const req=tx.objectStore(DB_STORE).get(key);req.onsuccess=()=>resolve(req.result);req.onerror=()=>reject(req.error)})}
 async function idbSet(key,value){const db=await openDB();return new Promise((resolve,reject)=>{const tx=db.transaction(DB_STORE,'readwrite');tx.objectStore(DB_STORE).put(value,key);tx.oncomplete=()=>resolve();tx.onerror=()=>reject(tx.error)})}
 function localDateKey(d=new Date()){return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0')}
-function snapshot(){return{magic:BACKUP_MAGIC,schema:4,savedAt:new Date().toISOString(),data:{salonLocal:salonCloudMode==='demo'?{date:localDateKey(),appointments:salonAppointments,customers:salonCustomers}:null,pricing:state.pricing,dna:state.dna,conditions:[...state.conditions],designs:state.designs,library:state.library,collection:[...state.collection],monthlyMenuMonth:state.monthlyMenuMonth,draft:state.draft,outputMode:state.outputMode}}}
-function applySnapshot(snap){if(!snap?.data)return false;const d=snap.data;state.pricing=mergePricing(d.pricing||state.pricing);state.dna=d.dna||state.dna;state.conditions=new Set(Array.isArray(d.conditions)?d.conditions:[...state.conditions]);state.designs=Array.isArray(d.designs)&&d.designs.length?d.designs:[...baseDesigns];state.library=Array.isArray(d.library)?d.library.filter(x=>!x.cloudArt):baseDesigns.slice(0,5);state.collection=new Set(Array.isArray(d.collection)?d.collection:[]);state.monthlyMenuMonth=d.monthlyMenuMonth||'';state.draft={...state.draft,...(d.draft||{})};state.outputMode=d.outputMode||'feed';lastSavedAt=snap.savedAt?new Date(snap.savedAt):null;if(d.salonLocal&&salonCloudMode==='demo'){const old=d.salonLocal,shift=Math.round((Date.parse(old.date+'T12:00:00Z')-Date.parse(localDateKey()+'T12:00:00Z'))/86400000);if(Number.isFinite(shift)&&Array.isArray(old.appointments))salonAppointments=old.appointments.filter(x=>!x.cloudId).map(x=>({...x,dayOffset:Number(x.dayOffset||0)+shift}));if(Array.isArray(old.customers))salonCustomers=old.customers.filter(x=>!x.cloudId)}return true}
+function snapshot(){return{magic:BACKUP_MAGIC,schema:5,savedAt:new Date().toISOString(),data:{salonLocal:salonCloudMode==='demo'?{date:localDateKey(),appointments:salonAppointments,customers:salonCustomers}:null,pricing:state.pricing,bookingHours:state.bookingHours,dna:state.dna,conditions:[...state.conditions],designs:state.designs,library:state.library,collection:[...state.collection],monthlyMenuMonth:state.monthlyMenuMonth,draft:state.draft,outputMode:state.outputMode}}}
+function applySnapshot(snap){if(!snap?.data)return false;const d=snap.data;state.pricing=mergePricing(d.pricing||state.pricing);state.bookingHours=normalizeBookingHours(d.bookingHours||d.pricing?.bookingHours||state.bookingHours);state.dna=d.dna||state.dna;state.conditions=new Set(Array.isArray(d.conditions)?d.conditions:[...state.conditions]);state.designs=Array.isArray(d.designs)&&d.designs.length?d.designs:[...baseDesigns];state.library=Array.isArray(d.library)?d.library.filter(x=>!x.cloudArt):baseDesigns.slice(0,5);state.collection=new Set(Array.isArray(d.collection)?d.collection:[]);state.monthlyMenuMonth=d.monthlyMenuMonth||'';state.draft={...state.draft,...(d.draft||{})};state.outputMode=d.outputMode||'feed';lastSavedAt=snap.savedAt?new Date(snap.savedAt):null;if(d.salonLocal&&salonCloudMode==='demo'){const old=d.salonLocal,shift=Math.round((Date.parse(old.date+'T12:00:00Z')-Date.parse(localDateKey()+'T12:00:00Z'))/86400000);if(Number.isFinite(shift)&&Array.isArray(old.appointments))salonAppointments=old.appointments.filter(x=>!x.cloudId).map(x=>({...x,dayOffset:Number(x.dayOffset||0)+shift}));if(Array.isArray(old.customers))salonCustomers=old.customers.filter(x=>!x.cloudId)}return true}
 function setSaveStatus(mode,text){const el=$('#saveStatus');if(!el)return;el.classList.remove('saving','saved','error');if(mode)el.classList.add(mode);$('#saveStatusText').textContent=text}
 function schedulePersist(){if(salonCloudMode!=='demo'){setSaveStatus('saved','샵 연결 · 저장 버튼 사용');return}setSaveStatus('saving','저장 중…');clearTimeout(saveTimer);saveTimer=setTimeout(()=>persistNow(),650)}
 async function persistNow(){if(salonCloudMode!=='demo')return;const snap=snapshot();try{await idbSet('snapshot',snap);storageMode='IndexedDB';localStorage.removeItem('ludiaLibrary');lastSavedAt=new Date(snap.savedAt);setSaveStatus('saved','자동저장됨')}catch(err){storageMode='localStorage';try{const fallback={...snap,data:{...snap.data,draft:{...snap.data.draft,refDataUrl:null}}};localStorage.setItem('ludiaStudioFallback',JSON.stringify(fallback));lastSavedAt=new Date();setSaveStatus('saved','기기저장됨')}catch(e){setSaveStatus('error','저장 오류')}}updateStorageStats()}
@@ -203,25 +218,25 @@ function bookingArtImage(a,cardIndex=0){
  return match?.img||'assets/nail_5.jpg';
 }
 
-const BOOKING_GRID_START=11*60,BOOKING_GRID_END=21*60,BOOKING_GRID_STEP=30;
+function bookingGridConfig(){
+ const hours=normalizeBookingHours(state.bookingHours),start=timeValueMinutes(hours.open,11*60),end=timeValueMinutes(hours.close,21*60),step=hours.step;
+ return {start,end,step,hours}
+}
 function bookingTimeMinutes(value){
  const m=String(value||'').match(/(\d{1,2}):(\d{2})/);if(!m)return null;
  return Number(m[1])*60+Number(m[2])
 }
-function bookingTimeLabel(minutes){
- const h=Math.floor(minutes/60),m=minutes%60;
- return String(h).padStart(2,'0')+':'+String(m).padStart(2,'0')
-}
+function bookingTimeLabel(minutes){return minutesTimeValue(minutes)}
 function bookingGridSlots(){
- const out=[];for(let m=BOOKING_GRID_START;m<BOOKING_GRID_END;m+=BOOKING_GRID_STEP)out.push(m);return out
+ const {start,end,step}=bookingGridConfig(),out=[];for(let m=start;m<end;m+=step)out.push(m);return out
 }
 function bookingAppointmentSpan(a){
  const start=bookingTimeMinutes(a.time);if(start===null)return null;
- const duration=Math.max(BOOKING_GRID_STEP,Number(a.duration)||90);
- const from=Math.max(BOOKING_GRID_START,start),to=Math.min(BOOKING_GRID_END,start+duration);
- if(to<=BOOKING_GRID_START||from>=BOOKING_GRID_END)return null;
- const row=Math.floor((from-BOOKING_GRID_START)/BOOKING_GRID_STEP);
- const span=Math.max(1,Math.ceil((to-from)/BOOKING_GRID_STEP));
+ const cfg=bookingGridConfig(),duration=Math.max(cfg.step,Number(a.duration)||90);
+ const from=Math.max(cfg.start,start),to=Math.min(cfg.end,start+duration);
+ if(to<=cfg.start||from>=cfg.end)return null;
+ const row=Math.floor((from-cfg.start)/cfg.step);
+ const span=Math.max(1,Math.ceil((to-from)/cfg.step));
  return {start,from,to,row,span}
 }
 function renderBooking(){
@@ -241,12 +256,12 @@ function renderBooking(){
  }
  const data=bookingDataForWeek();
  const activeData=data.filter(a=>a.status!=='취소');
- if($('#bookingCountLabel'))$('#bookingCountLabel').textContent=bookingWeekRangeText()+' · '+bookingStaff+' '+activeData.length+'건';
+ if($('#bookingCountLabel'))$('#bookingCountLabel').textContent=normalizeBookingHours(state.bookingHours).open+'–'+normalizeBookingHours(state.bookingHours).close+' · '+activeData.length+'건';
  const board=$('#bookingWeekBoard');if(!board)return;board.innerHTML='';board.className='booking-week-board booking-time-grid';
- const slots=bookingGridSlots();
+ const cfg=bookingGridConfig(),slots=bookingGridSlots();
  board.style.setProperty('--booking-slot-count',String(slots.length));
 
- const corner=document.createElement('div');corner.className='booking-grid-corner';corner.innerHTML='<b>시간</b><small>30분</small>';board.appendChild(corner);
+ const corner=document.createElement('div');corner.className='booking-grid-corner';corner.innerHTML='<b>시간</b><small>'+cfg.step+'분</small>';board.appendChild(corner);
 
  offsets.forEach((offset,dayIndex)=>{
    const d=bookingDateFromOffset(offset),dayData=activeData.filter(a=>Number(a.dayOffset||0)===offset);
@@ -285,9 +300,9 @@ function renderBooking(){
  });
 
  const now=new Date(),nowMin=now.getHours()*60+now.getMinutes();
- if(offsets.includes(0)&&nowMin>=BOOKING_GRID_START&&nowMin<BOOKING_GRID_END){
+ if(offsets.includes(0)&&nowMin>=cfg.start&&nowMin<cfg.end){
    const line=document.createElement('div');line.className='booking-now-line';
-   const pos=(nowMin-BOOKING_GRID_START)/BOOKING_GRID_STEP;
+   const pos=(nowMin-cfg.start)/cfg.step;
    line.style.setProperty('--now-pos',String(pos));line.innerHTML='<span>'+bookingTimeLabel(nowMin)+'</span>';board.appendChild(line)
  }
 }
@@ -411,18 +426,18 @@ function renderCustomers(){
 }
 
 function applyCloudSalonData(payload){
- activeSalonId=payload.salonId||null;salonCloudMode='cloud';salonAppointments=payload.appointments||[];salonCustomers=payload.customers||[];customerPage=1;salonStaffNames=payload.staffNames?.length?payload.staffNames:['미지정'];salonServices=payload.services||[];salonRole=payload.role||'staff';state.pricing=mergePricing(payload.pricingConfig||DEFAULT_PRICING);
+ activeSalonId=payload.salonId||null;salonCloudMode='cloud';salonAppointments=payload.appointments||[];salonCustomers=payload.customers||[];customerPage=1;salonStaffNames=payload.staffNames?.length?payload.staffNames:['미지정'];salonServices=payload.services||[];salonRole=payload.role||'staff';state.pricing=mergePricing(payload.pricingConfig||DEFAULT_PRICING);state.bookingHours=normalizeBookingHours(payload.pricingConfig?.bookingHours||DEFAULT_BOOKING_HOURS);
  if(bookingStaff!=='전체'&&!salonStaffNames.includes(bookingStaff))bookingStaff='전체';
  syncQuickBookingOptions();renderPricingSettings();renderOpsToday();renderBooking();renderCustomers();updateCloudAccountStatus({configured:true,connected:true,salonName:payload.salonName,email:payload.email,realtime:'live'});syncCloudArtLibrary();syncProfilePhoto();
 }
 function prepareCloudSalonData(){
- if(salonCloudMode==='demo')localSalonSession=structuredClone({library:state.library,designs:state.designs,appointments:salonAppointments,customers:salonCustomers,draft:state.draft,pricing:state.pricing});
+ if(salonCloudMode==='demo')localSalonSession=structuredClone({library:state.library,designs:state.designs,appointments:salonAppointments,customers:salonCustomers,draft:state.draft,pricing:state.pricing,bookingHours:state.bookingHours});
  salonCloudMode='connecting';activeSalonId=null;artLoadSequence++;salonAppointments=[];salonCustomers=[];state.library=[];state.designs=[];state.active=null;state.collection=new Set();
  closeSheet();closeFinalView();closeOpsDetail();closeQuickBooking();closeDesignRegister();setProfilePhoto(null);renderLibrary();renderRecent();renderMonthlyMenu();renderPricingSettings();renderOpsToday();renderBooking();renderCustomers();
 }
 function resetCloudSalonData(){
  artLoadSequence++;activeSalonId=null;salonCloudMode='demo';
- state.library=localSalonSession?.library||baseDesigns.slice(0,5);state.designs=localSalonSession?.designs||[...baseDesigns];state.draft=localSalonSession?.draft||state.draft;state.pricing=mergePricing(localSalonSession?.pricing||state.pricing);salonRole='owner';state.active=null;
+ state.library=localSalonSession?.library||baseDesigns.slice(0,5);state.designs=localSalonSession?.designs||[...baseDesigns];state.draft=localSalonSession?.draft||state.draft;state.pricing=mergePricing(localSalonSession?.pricing||state.pricing);state.bookingHours=normalizeBookingHours(localSalonSession?.bookingHours||state.bookingHours);salonRole='owner';state.active=null;
  salonAppointments=localSalonSession?.appointments||DEMO_APPOINTMENTS.map(x=>({...x}));salonCustomers=localSalonSession?.customers||DEMO_CUSTOMERS.map(x=>({...x}));customerPage=1;salonStaffNames=['루디아','지안'];salonServices=[];bookingStaff='전체';
  closeSheet();closeFinalView();closeOpsDetail();closeQuickBooking();closeDesignRegister();renderLibrary();renderRecent();renderMonthlyMenu();renderOpsToday();renderBooking();renderCustomers();syncProfilePhoto();
 }
@@ -932,7 +947,7 @@ async function savePricingStandard(){
    if(salonCloudMode==='cloud'){
      if(!['owner','manager'].includes(salonRole))return toast('가격 기준은 원장/관리자만 변경할 수 있어요');
      if(!window.LudiaSalonCloud?.savePricingSettings)throw new Error('pricing sync unavailable');
-     await window.LudiaSalonCloud.savePricingSettings(state.pricing);toast('샵 공통 가격 기준을 저장했어요')
+     await window.LudiaSalonCloud.savePricingSettings({...state.pricing,bookingHours:state.bookingHours});toast('샵 공통 가격 기준을 저장했어요')
    }else{await persistNow();toast('가격 기준을 이 기기에 저장했어요')}
  }catch(error){console.error('[LUDIA pricing save]',error);toast('가격 기준 저장에 실패했어요')}
  finally{renderPricingSettings()}
@@ -1238,7 +1253,39 @@ $('#qbCustomPhotoInput')?.addEventListener('change',e=>{
 $$('#pricingModeSwitch [data-price-mode]').forEach(b=>b.addEventListener('click',()=>{setPricingMode(b.dataset.priceMode);syncReviewFromManual()}));
 $$('[data-close-pricing]').forEach(b=>b.addEventListener('click',closePricingSheet));
 
-function renderSettings(){renderPricingSettings();$('#dnaList').replaceChildren(...DNA.map(d=>{const r=document.createElement('div');r.className='dna-row';r.innerHTML=`<div class="dna-info"><b>${htmlText(d.name)}</b><small>${d.desc}</small></div><span class="dna-score">${d.score}%</span>`;return r}));$('#inventoryList').replaceChildren(...inventory.map(x=>{const r=document.createElement('div');r.className='inventory-row';r.innerHTML=`<div class="inventory-info"><b>${x.name}</b><small>${x.state} · ${x.qty}</small></div><span class="stock-dot ${x.state==='부족'?'low':x.state==='품절'?'out':''}"></span>`;return r}))}
+function renderBookingHoursSettings(){
+ state.bookingHours=normalizeBookingHours(state.bookingHours);
+ const canManage=salonCloudMode==='demo'||['owner','manager'].includes(salonRole);
+ const open=$('#bookingOpenTime'),close=$('#bookingCloseTime'),step=$('#bookingSlotStep');
+ if(open){open.value=state.bookingHours.open;open.disabled=!canManage}
+ if(close){close.value=state.bookingHours.close;close.disabled=!canManage}
+ if(step){step.value=String(state.bookingHours.step);step.disabled=!canManage}
+ const refresh=()=>{
+  const o=open?.value||state.bookingHours.open,cl=close?.value||state.bookingHours.close,st=Number(step?.value)||state.bookingHours.step;
+  const preview=$('#bookingHoursPreview');if(preview)preview.textContent=o+' → '+cl+' · '+st+'분 단위';
+  const badge=$('#bookingHoursBadge');if(badge)badge.textContent=o+'–'+cl;
+ };
+ [open,close,step].forEach(el=>{if(el)el.oninput=refresh});refresh();
+ const save=$('#bookingHoursSaveBtn');if(save){save.disabled=!canManage;save.textContent=canManage?'영업시간 저장':'관리자만 수정'}
+}
+async function saveBookingHours(){
+ const open=$('#bookingOpenTime')?.value||state.bookingHours.open,close=$('#bookingCloseTime')?.value||state.bookingHours.close,step=Number($('#bookingSlotStep')?.value)||30;
+ const start=timeValueMinutes(open,-1),end=timeValueMinutes(close,-1);
+ if(start<0||end<0||end<=start+step)return toast('마감 시간은 오픈 시간보다 충분히 뒤로 설정해 주세요');
+ state.bookingHours=normalizeBookingHours({open,close,step});
+ state.pricing=mergePricing({...state.pricing,bookingHours:state.bookingHours});
+ const btn=$('#bookingHoursSaveBtn');if(btn){btn.disabled=true;btn.textContent='저장 중…'}
+ try{
+  if(salonCloudMode==='cloud'){
+   if(!['owner','manager'].includes(salonRole))return toast('영업시간은 원장/관리자만 변경할 수 있어요');
+   if(!window.LudiaSalonCloud?.savePricingSettings)throw new Error('settings sync unavailable');
+   await window.LudiaSalonCloud.savePricingSettings({...state.pricing,bookingHours:state.bookingHours});
+  }else await persistNow();
+  renderBooking();toast('영업시간과 예약 간격을 저장했어요')
+ }catch(error){console.error('[LUDIA booking hours save]',error);toast('영업시간 저장에 실패했어요')}
+ finally{renderBookingHoursSettings()}
+}
+function renderSettings(){renderPricingSettings();renderBookingHoursSettings();$('#dnaList').replaceChildren(...DNA.map(d=>{const r=document.createElement('div');r.className='dna-row';r.innerHTML=`<div class="dna-info"><b>${htmlText(d.name)}</b><small>${d.desc}</small></div><span class="dna-score">${d.score}%</span>`;return r}));$('#inventoryList').replaceChildren(...inventory.map(x=>{const r=document.createElement('div');r.className='inventory-row';r.innerHTML=`<div class="inventory-info"><b>${x.name}</b><small>${x.state} · ${x.qty}</small></div><span class="stock-dot ${x.state==='부족'?'low':x.state==='품절'?'out':''}"></span>`;return r}))}
 function hydrateFromState(){if($('#conceptInput'))$('#conceptInput').value=state.draft.concept||'';if($('#maxTime'))$('#maxTime').value=String(state.draft.maxTime||'90');if($('#targetPrice'))$('#targetPrice').value=String(state.draft.targetPrice||'69000');if($('#stockFirst'))$('#stockFirst').checked=state.draft.stockFirst!==false;if(state.draft.refDataUrl){$('#refPreviewImg').src=state.draft.refDataUrl;$('#refEmpty').classList.add('hidden');$('#refPreview').classList.remove('hidden')}else{$('#refPreview').classList.add('hidden');$('#refEmpty').classList.remove('hidden')}}
 function renderAll(){renderLibrary();renderRecent();renderPicker();renderCollectionPreview();renderSettings();updateStorageStats()}
 function installCoreNavigation(){
@@ -1264,6 +1311,7 @@ function installCoreNavigation(){
 }
 installCoreNavigation();
 $('#saveStatus').onclick=()=>{setView('more');toast('저장 상태 · 설정/백업은 더보기에서 관리합니다')};
+$('#bookingHoursSaveBtn')?.addEventListener('click',saveBookingHours);
 $('#exportBackupBtn').onclick=exportBackup;$('#importBackupBtn').onclick=()=>$('#backupFile').click();$('#backupFile').onchange=e=>{const f=e.target.files[0];if(f)importBackupFile(f);e.target.value=''};$('#persistStorageBtn').onclick=requestPersistentStorage;
 
 

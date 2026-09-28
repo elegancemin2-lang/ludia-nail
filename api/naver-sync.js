@@ -4,6 +4,15 @@ const json=(res,status,body)=>res.status(status).setHeader('content-type','appli
 const clean=s=>String(s??'').slice(0,2000);
 const allowedStatus=new Set(['cancelled','completed','no_show','requested','confirmed','unknown']);
 const allowedType=new Set(['created','updated']);
+const allowedBridgeState=new Set(['connected','reauth_required','error','setup_required']);
+const safeDiagnostics=value=>{
+  const v=value&&typeof value==='object'?value:{};
+  return {
+    visible_count:Math.max(0,Math.min(9999,Number(v.visibleCount)||0)),
+    parsed_count:Math.max(0,Math.min(9999,Number(v.parsedCount)||0)),
+    selector_mode:String(v.selectorMode||'unknown').slice(0,40)
+  };
+};
 
 function normalizeEvent(event){
   if(!event||!allowedType.has(event.type)||!event.booking?.externalId)return null;
@@ -28,12 +37,12 @@ function supabaseConfig(){
   return url&&key?{url,key,headers:{apikey:key,authorization:`Bearer ${key}`,'content-type':'application/json'}}:null;
 }
 
-async function updateConnection(cfg,{state='connected',lastError=null,eventCount=0,appointmentCount=0}={}){
+async function updateConnection(cfg,{state='connected',lastError=null,eventCount=0,appointmentCount=0,diagnostics=null}={}){
   if(!cfg)return;
   const now=new Date().toISOString();
   const sid=salonId();
   if(!sid)throw new Error('LUDIA_SALON_ID not configured');
-  const body=[{salon_id:sid,provider:'NAVER',display_name:'네이버 예약',state,last_sync_at:now,last_error:lastError,metadata:{last_event_count:eventCount,last_appointment_count:appointmentCount,bridge:'windows-playwright'},updated_at:now}];
+  const body=[{salon_id:sid,provider:'NAVER',display_name:'네이버 예약',state,last_sync_at:now,last_error:lastError,metadata:{last_event_count:eventCount,last_appointment_count:appointmentCount,bridge:'windows-playwright',diagnostics:safeDiagnostics(diagnostics)},updated_at:now}];
   const r=await fetch(`${cfg.url}/rest/v1/ludia_integration_connections?on_conflict=salon_id,provider`,{method:'POST',headers:{...cfg.headers,prefer:'resolution=merge-duplicates,return=minimal'},body:JSON.stringify(body)});
   if(!r.ok)throw new Error(`integration_connections ${r.status}: ${await r.text()}`);
 }
@@ -89,7 +98,13 @@ async function persist(rows){
 }
 
 export default async function handler(req,res){
-  if(req.method==='GET')return json(res,200,{ok:true,service:'ludia-naver-sync',supabaseConfigured:Boolean(process.env.SUPABASE_URL&&(process.env.SUPABASE_SECRET_KEY||process.env.SUPABASE_SERVICE_ROLE_KEY)),salonConfigured:Boolean(process.env.LUDIA_SALON_ID),calendarProjection:true});
+  if(req.method==='GET'){
+    const supabaseConfigured=Boolean(process.env.SUPABASE_URL&&(process.env.SUPABASE_SECRET_KEY||process.env.SUPABASE_SERVICE_ROLE_KEY));
+    const salonConfigured=Boolean(process.env.LUDIA_SALON_ID);
+    const tokenConfigured=Boolean(process.env.LUDIA_SYNC_TOKEN);
+    const missing=[];if(!tokenConfigured)missing.push('LUDIA_SYNC_TOKEN');if(!supabaseConfigured)missing.push('SUPABASE_URL / SUPABASE_SECRET_KEY');if(!salonConfigured)missing.push('LUDIA_SALON_ID');
+    return json(res,200,{ok:true,service:'ludia-naver-sync',ready:missing.length===0,supabaseConfigured,salonConfigured,tokenConfigured,missing,calendarProjection:true});
+  }
   if(req.method!=='POST')return json(res,405,{ok:false,error:'method_not_allowed'});
   const expected=process.env.LUDIA_SYNC_TOKEN;
   if(!expected)return json(res,503,{ok:false,error:'sync_token_not_configured'});
@@ -97,6 +112,8 @@ export default async function handler(req,res){
   let body;
   try{body=typeof req.body==='string'?JSON.parse(req.body||'{}'):(req.body||{});}catch{return json(res,400,{ok:false,error:'invalid_json'});}
   if(body.source!=='NAVER'||!Array.isArray(body.events)||!(body.reviews===undefined||Array.isArray(body.reviews)))return json(res,400,{ok:false,error:'invalid_payload'});
+  const bridgeState=allowedBridgeState.has(body.bridgeState)?body.bridgeState:'connected';
+  const diagnostics=safeDiagnostics(body.diagnostics);
   if(body.events.length>200)return json(res,413,{ok:false,error:'too_many_events'});
   const rows=body.events.map(normalizeEvent).filter(Boolean);
   const reviews=Array.isArray(body.reviews)?body.reviews:[];
@@ -105,11 +122,12 @@ export default async function handler(req,res){
   if((rows.length||reviews.length)&&!cfg)return json(res,503,{ok:false,error:'supabase_not_configured',retryable:true});
   if((rows.length||reviews.length)&&!sid)return json(res,503,{ok:false,error:'salon_not_configured',retryable:true});
   if(!rows.length&&!reviews.length){
-    try{if(cfg&&sid)await updateConnection(cfg,{eventCount:0,appointmentCount:0});}catch(error){console.error('[LUDIA sync heartbeat]',error);return json(res,502,{ok:false,error:'heartbeat_persistence_failed'});}
-    return json(res,200,{ok:true,accepted:0,persisted:Boolean(cfg&&sid),heartbeat:true});
+    try{if(cfg&&sid)await updateConnection(cfg,{state:bridgeState,lastError:bridgeState==='error'?'bridge_cycle_failed':null,eventCount:0,appointmentCount:0,diagnostics});}catch(error){console.error('[LUDIA sync heartbeat]',error);return json(res,502,{ok:false,error:'heartbeat_persistence_failed'});}
+    return json(res,200,{ok:true,accepted:0,persisted:Boolean(cfg&&sid),heartbeat:true,bridgeState});
   }
   try{
     const result=await persist(rows);
+    if(cfg&&sid&&bridgeState!=='connected')await updateConnection(cfg,{state:bridgeState,lastError:bridgeState==='error'?'bridge_cycle_failed':null,eventCount:rows.length,appointmentCount:result.appointmentSynced||0,diagnostics});
     if(!result.persisted)return json(res,503,{ok:false,error:result.reason||'persistence_unavailable',retryable:true});
     const reviewsSynced=await persistReviews(cfg,sid,reviews);
     return json(res,200,{ok:true,accepted:rows.length,reviewsSynced,...result});

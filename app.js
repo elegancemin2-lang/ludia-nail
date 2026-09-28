@@ -391,7 +391,7 @@ function renderBooking(){
      ev.dataset.dayOffset=String(offset);
      ev.dataset.duration=String(a.duration||sp.span*cfg.step);
      ev.setAttribute('aria-label',htmlText(a.time)+' '+htmlText(a.customer)+' '+htmlText(a.service)+' '+htmlText(a.status));
-     const staffChip=bookingIsGroupView()?'<span title="'+htmlText(a.staff||'미지정')+'">'+htmlText(a.staff||'미지정')+'</span>':'';
+     const staffChip=bookingIsGroupView()?'<span class="booking-staff-chip '+(bookingIsOwner(a.staff)?'owner':'staff')+'" title="'+htmlText(a.staff||'미지정')+'">'+htmlText(a.staff||'미지정')+'</span>':'';
      ev.innerHTML='<div class="booking-grid-event-top"><time>'+htmlText(a.time)+'</time>'+staffChip+'</div><b>'+htmlText(a.customer)+'</b><small>'+htmlText(a.service)+'</small><em>'+htmlText(a.status)+' · '+won(a.amount)+'원</em>';
      ev.onclick=e=>{e.stopPropagation();bookingDayOffset=offset;openOpsDetail(a)};board.appendChild(ev)
    })

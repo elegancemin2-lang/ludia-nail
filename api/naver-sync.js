@@ -85,14 +85,15 @@ async function persist(rows,{bridgeState='connected',diagnostics=null}={}){
   if(!cfg)return {persisted:false,reason:'supabase_not_configured',appointmentSynced:0};
   const sid=salonId();
   if(!sid)return {persisted:false,reason:'salon_not_configured',appointmentSynced:0};
-  const bookings=rows.map(r=>({salon_id:sid,external_id:r.external_id,source:r.source,booking_no:r.booking_no,booking_date:r.booking_date,booking_time:r.booking_time,phone:r.phone,status:r.status,raw_text:r.raw_text,last_synced_at:r.received_at}));
-  const bookingRes=await fetch(`${cfg.url}/rest/v1/ludia_external_bookings?on_conflict=salon_id,source,external_id`,{method:'POST',headers:{...cfg.headers,prefer:'resolution=merge-duplicates,return=minimal'},body:JSON.stringify(bookings)});
-  if(!bookingRes.ok)throw new Error(`external_bookings ${bookingRes.status}: ${await bookingRes.text()}`);
-  const eventRes=await fetch(`${cfg.url}/rest/v1/ludia_booking_sync_events`,{method:'POST',headers:{...cfg.headers,prefer:'return=minimal'},body:JSON.stringify(rows.map(r=>({...r,salon_id:sid})))});
-  if(!eventRes.ok)throw new Error(`booking_sync_events ${eventRes.status}: ${await eventRes.text()}`);
-
   let appointmentSynced=0;
-  for(const row of rows){if(await syncAppointment(cfg,sid,row))appointmentSynced+=1;}
+  if(rows.length){
+    const bookings=rows.map(r=>({salon_id:sid,external_id:r.external_id,source:r.source,booking_no:r.booking_no,booking_date:r.booking_date,booking_time:r.booking_time,phone:r.phone,status:r.status,raw_text:r.raw_text,last_synced_at:r.received_at}));
+    const bookingRes=await fetch(`${cfg.url}/rest/v1/ludia_external_bookings?on_conflict=salon_id,source,external_id`,{method:'POST',headers:{...cfg.headers,prefer:'resolution=merge-duplicates,return=minimal'},body:JSON.stringify(bookings)});
+    if(!bookingRes.ok)throw new Error(`external_bookings ${bookingRes.status}: ${await bookingRes.text()}`);
+    const eventRes=await fetch(`${cfg.url}/rest/v1/ludia_booking_sync_events`,{method:'POST',headers:{...cfg.headers,prefer:'return=minimal'},body:JSON.stringify(rows.map(r=>({...r,salon_id:sid})))});
+    if(!eventRes.ok)throw new Error(`booking_sync_events ${eventRes.status}: ${await eventRes.text()}`);
+    for(const row of rows){if(await syncAppointment(cfg,sid,row))appointmentSynced+=1;}
+  }
   await updateConnection(cfg,{state:bridgeState,lastError:bridgeState==='error'?'bridge_cycle_failed':null,eventCount:rows.length,appointmentCount:appointmentSynced,diagnostics});
   return {persisted:true,appointmentSynced};
 }

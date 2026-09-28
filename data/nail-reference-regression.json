@@ -1,0 +1,73 @@
+{
+  "schema": "ludia-nail-reference-regression/v1",
+  "testedAt": "2026-09-28",
+  "classifierCommit": "52fa0b4c5ac90b546170d3bbff775953f7510749",
+  "referenceSet": {
+    "golden": 6,
+    "ludiaStyle": 12,
+    "total": 18
+  },
+  "variants": [
+    "original",
+    "50% resize",
+    "brightness -3%",
+    "brightness +3%",
+    "JPEG quality 72"
+  ],
+  "summary": {
+    "runs": 30,
+    "passed": 30,
+    "failed": 0
+  },
+  "cases": [
+    {
+      "id": "G01",
+      "sourceFile": "1000065008.jpg",
+      "expectedClass": "원컬러 + 컬러 추가",
+      "expectedPrice": 50000,
+      "runs": 5,
+      "passed": 5
+    },
+    {
+      "id": "G02",
+      "sourceFile": "1000065009.jpg",
+      "expectedClass": "자석젤 + 그라데이션",
+      "expectedPrice": 80000,
+      "runs": 5,
+      "passed": 5
+    },
+    {
+      "id": "G03",
+      "sourceFile": "1000065004.jpg",
+      "expectedClass": "원컬러 + 도트 4개",
+      "expectedPrice": 57000,
+      "runs": 5,
+      "passed": 5
+    },
+    {
+      "id": "G04",
+      "sourceFile": "1000065005.jpg",
+      "expectedClass": "자석젤 + 그라데이션 + 투명 리본 파츠 2개",
+      "expectedPrice": 88000,
+      "runs": 5,
+      "passed": 5
+    },
+    {
+      "id": "G05",
+      "sourceFile": "1000065006.jpg",
+      "expectedClass": "그라데이션 + 씬프렌치 + 리본/하트 포인트",
+      "expectedPrice": 92000,
+      "runs": 5,
+      "passed": 5
+    },
+    {
+      "id": "G06",
+      "sourceFile": "1000065007.jpg",
+      "expectedClass": "복합 아트 디자인",
+      "expectedPrice": 90000,
+      "runs": 5,
+      "passed": 5
+    }
+  ],
+  "note": "회귀시험은 제공된 6개 정답 사진과 경미한 이미지 변형에 대한 테스트다. 새로운 디자인 일반화 정확도는 레퍼런스 에셋 확장과 실샵 피드백으로 계속 검증한다."
+}

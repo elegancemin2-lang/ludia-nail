@@ -3,13 +3,21 @@ import fs from 'node:fs/promises';
 import path from 'node:path';
 import crypto from 'node:crypto';
 
-const PROFILE_DIR = path.resolve(process.env.LUDIA_NAVER_PROFILE || './.naver-profile');
-const STATE_FILE = path.resolve(process.env.LUDIA_BRIDGE_STATE || './.bridge-state.json');
-const SMARTPLACE_URL = process.env.LUDIA_SMARTPLACE_URL || 'https://new.smartplace.naver.com/';
-const SYNC_URL = process.env.LUDIA_SYNC_URL || '';
-const SYNC_TOKEN = process.env.LUDIA_SYNC_TOKEN || '';
-const POLL_MS = Math.max(30000, Number(process.env.LUDIA_POLL_MS || 60000));
-const REVIEW_URL = process.env.LUDIA_NAVER_REVIEW_URL || '';
+async function loadLocalConfig() {
+  const file = path.resolve(process.env.LUDIA_BRIDGE_CONFIG || './config.local.json');
+  try { return JSON.parse(await fs.readFile(file, 'utf8')); }
+  catch { return {}; }
+}
+const LOCAL_CONFIG = await loadLocalConfig();
+const PROFILE_DIR = path.resolve(process.env.LUDIA_NAVER_PROFILE || LOCAL_CONFIG.profileDir || './.naver-profile');
+const STATE_FILE = path.resolve(process.env.LUDIA_BRIDGE_STATE || LOCAL_CONFIG.stateFile || './.bridge-state.json');
+const CONFIGURED_SMARTPLACE_URL = process.env.LUDIA_SMARTPLACE_URL || LOCAL_CONFIG.smartplaceUrl || '';
+const SYNC_URL = process.env.LUDIA_SYNC_URL || LOCAL_CONFIG.syncUrl || '';
+const SYNC_TOKEN = process.env.LUDIA_SYNC_TOKEN || LOCAL_CONFIG.syncToken || '';
+const POLL_MS = Math.max(30000, Number(process.env.LUDIA_POLL_MS || LOCAL_CONFIG.pollMs || 60000));
+const REVIEW_URL = process.env.LUDIA_NAVER_REVIEW_URL || LOCAL_CONFIG.reviewUrl || '';
+const BOOKING_ROW_SELECTOR = process.env.LUDIA_BOOKING_ROW_SELECTOR || LOCAL_CONFIG.bookingRowSelector || '';
+const DEFAULT_SMARTPLACE_URL = 'https://new.smartplace.naver.com/';
 
 const sleep = ms => new Promise(r => setTimeout(r, ms));
 const hash = value => crypto.createHash('sha256').update(JSON.stringify(value)).digest('hex');
@@ -65,13 +73,17 @@ function identityText(text) {
 // Conservative reader: only text already rendered in the authenticated SmartPlace page.
 // It never intercepts private APIs, reads passwords, or bypasses authentication.
 async function extractVisibleBookings(page) {
-  return page.locator('body').evaluate(() => {
+  const selector = BOOKING_ROW_SELECTOR || 'article, li, tr, [role="row"]';
+  return page.locator('body').evaluate(({ selector, strict }) => {
     const clean = v => (v || '').replace(/\s+/g, ' ').trim();
-    const candidates = [...document.querySelectorAll('article, li, tr, [role="row"]')]
+    let nodes = [];
+    try { nodes = [...document.querySelectorAll(selector)]; } catch { nodes = []; }
+    const candidates = nodes
       .map((el, index) => ({ index, text: clean(el.innerText) }))
-      .filter(x => x.text.length >= 12 && /(예약|확정|신청|취소|완료|노쇼)/.test(x.text));
+      .filter(x => x.text.length >= 12)
+      .filter(x => strict || /(예약|확정|신청|취소|완료|노쇼)/.test(x.text));
     return candidates.slice(0, 300);
-  });
+  }, { selector, strict: Boolean(BOOKING_ROW_SELECTOR) });
 }
 
 function parseCandidate(row) {
@@ -87,7 +99,8 @@ function parseCandidate(row) {
   // Status/raw text are deliberately excluded from the fallback identity so a confirmed→cancelled
   // booking remains the same booking even when SmartPlace does not render a booking number.
   const stableKey = bookingNo || hash({ date, time, phone, identity }).slice(0, 24);
-  return { externalId: stableKey, source: 'NAVER', bookingNo, date, time, phone, status, rawText: text };
+  const parseScore = Number(Boolean(date)) + Number(Boolean(time)) + Number(status !== 'unknown') + Number(Boolean(bookingNo || phone));
+  return { externalId: stableKey, source: 'NAVER', bookingNo, date, time, phone, status, rawText: text, parseScore };
 }
 
 async function extractVisibleReviews(page) {
@@ -106,7 +119,7 @@ function parseReview(row){
   return {externalId:hash({author,text}).slice(0,24),authorLabel:author,rating,reviewText:text};
 }
 
-async function pushEvents(events, reviews=[]) {
+async function pushEvents(events, reviews=[], meta={}) {
   if (!SYNC_URL) {
     if (events.length) console.log(`[LUDIA] ${events.length} change(s) detected; LUDIA_SYNC_URL is not configured. Changes stay pending and will retry after setup.`);
     return { uploaded: false, reason: 'sync_url_missing' };
@@ -115,7 +128,7 @@ async function pushEvents(events, reviews=[]) {
   if (SYNC_TOKEN) headers.authorization = `Bearer ${SYNC_TOKEN}`;
   // Empty event batches are intentional heartbeats. The server records last_sync_at without
   // customer data so the salon dashboard can distinguish a healthy idle bridge from a stopped PC.
-  const response = await fetch(SYNC_URL, { method: 'POST', headers, body: JSON.stringify({ source: 'NAVER', events, reviews }) });
+  const response = await fetch(SYNC_URL, { method: 'POST', headers, body: JSON.stringify({ source: 'NAVER', events, reviews, bridgeState: meta.bridgeState || 'connected', diagnostics: meta.diagnostics || null }) });
   if (!response.ok) throw new Error(`sync failed: HTTP ${response.status}`);
   const body = await response.json().catch(() => ({ ok: true }));
   return { ...body, uploaded: true, heartbeat: events.length === 0 };
@@ -124,7 +137,7 @@ async function pushEvents(events, reviews=[]) {
 async function diffAndSync(rows, state) {
   const next = {};
   const events = [];
-  const parsed = rows.map(parseCandidate);
+  const parsed = rows.map(parseCandidate).filter(row => row.date && row.time && row.status !== 'unknown' && row.parseScore >= 3);
   // SmartPlace can render nested rows containing the same reservation. Keep one stable identity.
   for (const row of parsed) {
     const fingerprint = hash(row);
@@ -139,7 +152,7 @@ async function diffAndSync(rows, state) {
   }
   // Missing rows are never auto-cancelled: pagination/filter/UI changes can hide valid bookings.
   // Cancellation is emitted only when SmartPlace visibly renders a cancelled status.
-  const result = await pushEvents(events);
+  const result = await pushEvents(events, [], { bridgeState:'connected', diagnostics:{ visibleCount:rows.length, parsedCount:parsed.length, selectorMode:BOOKING_ROW_SELECTOR?'custom':'safe-fallback' } });
   // Critical durability rule: never acknowledge detected changes locally until the remote endpoint
   // accepted them. This prevents first-run reservations from disappearing when setup is incomplete,
   // the network is down, or the sync endpoint temporarily fails.
@@ -159,17 +172,24 @@ async function main() {
     locale: 'ko-KR'
   });
   const page = context.pages()[0] || await context.newPage();
-  await page.goto(SMARTPLACE_URL, { waitUntil: 'domcontentloaded' });
-  console.log('[LUDIA] If Naver asks you to sign in or verify, complete it yourself in this browser window. CAPTCHA/2FA is never bypassed.');
-
   const state = await readState();
+  const initialUrl = CONFIGURED_SMARTPLACE_URL || state.lastBookingUrl || DEFAULT_SMARTPLACE_URL;
+  await page.goto(initialUrl, { waitUntil: 'domcontentloaded' });
+  console.log('[LUDIA] If Naver asks you to sign in or verify, complete it yourself in this browser window. CAPTCHA/2FA is never bypassed.');
+  if (!BOOKING_ROW_SELECTOR) console.log('[LUDIA] Booking DOM is in safe fallback mode. Only rows with date + time + recognizable status are synced until a real SmartPlace selector is validated.');
   while (true) {
     try {
       const url = page.url();
       if (/nid\.naver\.com|login/i.test(url)) {
         console.log('[LUDIA] Waiting for manual Naver login…');
+        await pushEvents([], [], { bridgeState:'reauth_required', diagnostics:{ visibleCount:0, parsedCount:0, selectorMode:BOOKING_ROW_SELECTOR?'custom':'safe-fallback' } }).catch(()=>{});
       } else {
         const visible = await extractVisibleBookings(page);
+        const parsedPreview = visible.map(parseCandidate).filter(row => row.date && row.time && row.status !== 'unknown' && row.parseScore >= 3);
+        if (parsedPreview.length && /smartplace\.naver\.com/i.test(url)) {
+          state.lastBookingUrl = url;
+          await writeState(state);
+        }
         const result = await diffAndSync(visible, state);
         if (REVIEW_URL) {
           const reviewPage = await context.newPage();
@@ -186,6 +206,7 @@ async function main() {
       }
     } catch (error) {
       console.error('[LUDIA] sync cycle failed:', error.message);
+      await pushEvents([], [], { bridgeState:'error', diagnostics:{ visibleCount:0, parsedCount:0, selectorMode:BOOKING_ROW_SELECTOR?'custom':'safe-fallback' } }).catch(()=>{});
     }
     await sleep(POLL_MS);
     try { await page.reload({ waitUntil: 'domcontentloaded', timeout: 30000 }); } catch {}

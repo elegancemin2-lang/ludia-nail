@@ -7,7 +7,7 @@
   <meta name="description" content="LUDIA NAIL - 예약·고객관리와 LUDIA ART STUDIO를 하나로 묶은 모바일 네일샵 운영 웹앱" />
   <title>LUDIA NAIL</title>
   <link rel="manifest" href="manifest.webmanifest" />
-  <link rel="stylesheet" href="styles.css?v=2.60.2" />
+  <link rel="stylesheet" href="styles.css?v=2.60.3" />
 </head>
 <body>
   <div class="app">
@@ -342,6 +342,24 @@
               <button class="primary-btn" id="pricingSaveBtn" type="button">기준 저장</button>
             </div>
             <p class="pricing-standard-note">초기값은 기존 LUDIA 가격표를 기준으로 세팅했습니다. 손가락 변경 단가는 샵 운영 방식에 맞게 수정하세요.</p>
+          </article>
+          <article class="panel booking-hours-panel">
+            <div class="booking-hours-settings-head">
+              <div><span class="mini-label">BOOKING HOURS</span><h3>영업시간 · 예약 간격</h3><p>예약표의 시작/마감 시간과 한 칸 간격을 바로 바꿀 수 있어요.</p></div>
+              <span class="booking-hours-badge" id="bookingHoursBadge">11:00–21:00</span>
+            </div>
+            <div class="booking-hours-settings-grid">
+              <label><span>오픈</span><input id="bookingOpenTime" type="time" step="900" value="11:00" /></label>
+              <label><span>마감</span><input id="bookingCloseTime" type="time" step="900" value="21:00" /></label>
+              <label><span>예약표 간격</span><select id="bookingSlotStep"><option value="15">15분</option><option value="30" selected>30분</option><option value="60">60분</option></select></label>
+            </div>
+            <div class="booking-hours-preview">
+              <span>예약표 미리보기</span><b id="bookingHoursPreview">11:00 → 21:00 · 30분 단위</b>
+              <small>변경 후 저장하면 예약 화면 시간표에 즉시 적용됩니다.</small>
+            </div>
+            <div class="booking-hours-actions">
+              <button class="primary-btn" id="bookingHoursSaveBtn" type="button">영업시간 저장</button>
+            </div>
           </article>
           <article class="panel storage-panel">
             <div class="storage-head">
@@ -734,9 +752,9 @@
 
   <div class="toast" id="toast" role="status"></div>
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.116.0/dist/umd/supabase.min.js"></script>
-  <script src="salon-cloud.js?v=2.60.2"></script>
-  <script src="app.js?v=2.60.2"></script>
-  <script src="core-shell.js?v=2.60.2"></script>
-  <script src="runtime-loader.js?v=2.60.2"></script>
+  <script src="salon-cloud.js?v=2.60.3"></script>
+  <script src="app.js?v=2.60.3"></script>
+  <script src="core-shell.js?v=2.60.3"></script>
+  <script src="runtime-loader.js?v=2.60.3"></script>
 </body>
 </html>

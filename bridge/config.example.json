@@ -1,0 +1,10 @@
+{
+  "syncUrl": "https://ludianail.vercel.app/api/naver-sync",
+  "syncToken": "PASTE_THE_SAME_LONG_TOKEN_AS_VERCEL_LUDIA_SYNC_TOKEN",
+  "smartplaceUrl": "",
+  "pollMs": 60000,
+  "bookingRowSelector": "",
+  "reviewUrl": "",
+  "profileDir": "./.naver-profile",
+  "stateFile": "./.bridge-state.json"
+}

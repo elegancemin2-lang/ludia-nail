@@ -1022,15 +1022,15 @@ function applyAiEstimateToManual(analysis){
  const qtyMap=new Map((analysis.addons||[]).map(x=>[x.key,Math.max(0,Number(x.qty)||0)]));
  $$('#pricingAddonList .pricing-addon-row').forEach(row=>{row.querySelector('input').value=qtyMap.get(row.dataset.priceKey)||0})
 }
-const PRICING_VISUAL_REFS=[
- {id:'01',label:'원컬러 + 컬러 추가',f:[55.032362,116.742893,9.865994,53.727214,32.641602,5.408549,33.667399,16.876221,50.54362,70.236177,47.760717],baseKey:'oneColor',addons:[{key:'colorAdd',qty:1}],target:50000},
- {id:'02',label:'자석젤 + 그라데이션',f:[66.41295,135.170139,5.311415,74.031576,3.238932,4.502066,35.079698,25.814887,60.894586,36.189949,30.927181],baseKey:'magnetic',addons:[{key:'gradationAdd',qty:1}],target:80000},
- {id:'03',label:'원컬러 + 도트 4개',f:[67.217719,108.662869,.71072,67.25803,31.749132,4.340197,46.436198,20.310059,66.746257,68.907525,45.214083],baseKey:'oneColor',addons:[{key:'dot',qty:4}],target:57000},
- {id:'04',label:'자석젤 + 그라데이션 + 투명 리본 파츠 2개',f:[50.283773,118.466978,7.364909,52.924262,39.024523,5.522475,34.139513,14.72385,48.863363,69.993531,42.852016],baseKey:'magnetic',addons:[{key:'gradationAdd',qty:1},{key:'clearRibbon',qty:2}],target:88000},
- {id:'05',label:'그라데이션 + 씬프렌치 + 리본/하트 포인트',f:[74.256375,134.735126,.889757,70.225694,3.925239,5.141063,43.072645,30.522298,73.594944,33.661668,36.708473],baseKey:'gradation',addons:[{key:'thinFrench',qty:1},{key:'ribbonPoint',qty:2},{key:'smallPoint',qty:4}],target:92000},
- {id:'06',label:'복합 아트 디자인',f:[53.276855,115.382794,10.036892,50.946723,42.675781,7.292651,32.645752,17.656793,50.302544,80.943042,45.28679],baseKey:'fullDesign',addons:[],target:90000}
+const PRICING_VISUAL_REFS_FALLBACK=[
+ {id:'G01',label:'원컬러 + 컬러 추가',f:[43.360758,115.584229,10.734049,40.947808,37.068685,5.448553,21.589274,13.971924,35.561198,72.284328,44.37562],baseKey:'oneColor',addons:[{key:'colorAdd',qty:1}],target:50000},
+ {id:'G02',label:'자석젤 + 그라데이션',f:[60.226535,150.598624,15.041775,65.470378,2.275933,3.507546,31.635145,20.855713,52.490858,41.73326,34.331782],baseKey:'magnetic',addons:[{key:'gradationAdd',qty:1}],target:80000},
+ {id:'G03',label:'원컬러 + 도트 4개',f:[54.036784,93.028718,.992839,53.133138,44.558377,3.779562,36.315294,16.322483,52.637777,71.977006,48.610165],baseKey:'oneColor',addons:[{key:'dot',qty:4}],target:57000},
+ {id:'G04',label:'자석젤 + 그라데이션 + 투명 리본 파츠 2개',f:[38.763211,104.709825,6.814236,39.360894,48.071289,4.565472,24.428304,11.272705,35.701009,67.244993,42.176548],baseKey:'magnetic',addons:[{key:'gradationAdd',qty:1},{key:'clearRibbon',qty:2}],target:88000},
+ {id:'G05',label:'그라데이션 + 씬프렌치 + 리본/하트 포인트',f:[65.683675,135.419009,3.285048,60.26747,7.733832,4.827144,33.091743,29.546468,62.638211,40.255846,36.47981],baseKey:'gradation',addons:[{key:'thinFrench',qty:1},{key:'ribbonPoint',qty:2},{key:'smallPoint',qty:4}],target:92000},
+ {id:'G06',label:'복합 아트 디자인',f:[36.683811,90.618435,7.383898,32.082791,60.842556,6.468473,18.81071,10.234701,29.04541,74.808919,42.531744],baseKey:'fullDesign',addons:[],target:90000}
 ];
-const PRICING_VISUAL_SCALE=[8.696267,9.967266,3.810475,9.234555,15.963442,.965014,5.264868,5.506124,9.353775,18.180715,5.829401];
+let pricingVisualRefCache=null,pricingVisualScaleCache=null;
 function pricingVisualFeatures(d){
  let n=0,sat=0,bright=0,highlight=0,colorful=0,dark=0,edge=0,prev=null,rs=0,gs=0,bs=0,vs=[],ss=[];
  for(let i=0;i<d.length;i+=4){
@@ -1042,13 +1042,40 @@ function pricingVisualFeatures(d){
  const rm=rs/n,gm=gs/n,bm=bs/n;
  return [sm,vm,highlight/n*100,colorful/n*100,dark/n*100,edge/Math.max(1,n-1),rm-gm,gm-bm,rm-bm,vstd,sstd]
 }
-function nearestPricingVisualRef(f){
- let best=null;
- PRICING_VISUAL_REFS.forEach(ref=>{
-  const dist=Math.sqrt(f.reduce((s,x,i)=>s+Math.pow((x-ref.f[i])/PRICING_VISUAL_SCALE[i],2),0)/f.length);
-  if(!best||dist<best.dist)best={ref,dist}
- });
- return best
+function pricingVisualScales(refs){
+ const dims=refs[0]?.f?.length||11,out=[];
+ for(let i=0;i<dims;i++){
+  const vals=refs.map(r=>Number(r.f?.[i])||0),mean=vals.reduce((a,b)=>a+b,0)/Math.max(1,vals.length);
+  const sd=Math.sqrt(vals.reduce((s,x)=>s+(x-mean)*(x-mean),0)/Math.max(1,vals.length));
+  out.push(Math.max(.5,sd))
+ }
+ return out
+}
+async function loadPricingVisualRefs(){
+ if(pricingVisualRefCache)return pricingVisualRefCache;
+ try{
+  const r=await fetch('data/nail-reference-features.json',{cache:'no-cache'});
+  if(!r.ok)throw new Error('reference '+r.status);
+  const d=await r.json(),gold=Array.isArray(d.goldenPricingRefs)?d.goldenPricingRefs:[],style=Array.isArray(d.ludiaStyleRefs)?d.ludiaStyleRefs:[];
+  const refs=[...gold.map(x=>({...x,source:'golden'})),...style.map(x=>({...x,source:'ludia'}))].filter(x=>Array.isArray(x.f)&&x.f.length>=11);
+  if(refs.length<6)throw new Error('reference set too small');
+  pricingVisualRefCache=refs;pricingVisualScaleCache=pricingVisualScales(refs);return refs
+ }catch(error){
+  console.warn('pricing reference fallback',error);
+  pricingVisualRefCache=PRICING_VISUAL_REFS_FALLBACK.map(x=>({...x,source:'golden'}));
+  pricingVisualScaleCache=pricingVisualScales(pricingVisualRefCache);return pricingVisualRefCache
+ }
+}
+function rankedPricingVisualRefs(f,refs,limit=3){
+ const scale=pricingVisualScaleCache||pricingVisualScales(refs);
+ return refs.map(ref=>{
+  const dist=Math.sqrt(f.reduce((s,x,i)=>s+Math.pow((x-(Number(ref.f?.[i])||0))/(scale[i]||1),2),0)/f.length);
+  return {ref,dist}
+ }).sort((a,b)=>a.dist-b.dist).slice(0,Math.max(1,limit))
+}
+function pricingRefAmount(ref){
+ const p=mergePricing(state.pricing),base=Number(p.base?.[ref.baseKey]?.price)||0;
+ return base+(ref.addons||[]).reduce((sum,x)=>sum+(Number(p.addons?.[x.key]?.price)||0)*(Number(x.qty)||0),0)
 }
 async function localPricePhotoDraft(source){
  let blob=source;if(typeof source==='string'){const r=await fetch(source);blob=await r.blob()}
@@ -1057,11 +1084,19 @@ async function localPricePhotoDraft(source){
   const im=await new Promise((resolve,reject)=>{const x=new Image();x.onload=()=>resolve(x);x.onerror=reject;x.src=url});
   const size=192,cv=document.createElement('canvas'),ctx=cv.getContext('2d',{willReadFrequently:true});
   cv.width=size;cv.height=size;ctx.drawImage(im,0,0,size,size);
-  const hit=nearestPricingVisualRef(pricingVisualFeatures(ctx.getImageData(0,0,size,size).data)),ref=hit.ref;
-  const confidence=Math.max(45,Math.min(96,Math.round(96-hit.dist*35)));
-  return {baseKey:ref.baseKey,addons:ref.addons.map(x=>({...x})),simpleChangeQty:0,pointChangeQty:0,
-   unpricedObservations:['가장 가까운 기준 사례 '+ref.id+' · '+ref.label,'기준 예상가 '+priceWon(ref.target)+' · 최종 항목은 원장이 수정 가능'],
-   summary:'무료 기준사례 매칭 · 등록된 네일 분류 에셋 중 가장 가까운 시술 구성을 적용했습니다.',confidence,referenceId:ref.id}
+  const refs=await loadPricingVisualRefs(),feature=pricingVisualFeatures(ctx.getImageData(0,0,size,size).data),ranked=rankedPricingVisualRefs(feature,refs,3),hit=ranked[0],ref=hit.ref;
+  const margin=ranked[1]?Math.max(0,ranked[1].dist-hit.dist):.5;
+  const confidence=Math.max(42,Math.min(97,Math.round(96-hit.dist*24+Math.min(8,margin*10))));
+  const candidates=ranked.map((x,i)=>(i+1)+'순위 '+x.ref.label).join(' · ');
+  const expected=pricingRefAmount(ref)||(Number(ref.target)||0);
+  return {baseKey:ref.baseKey,addons:(ref.addons||[]).map(x=>({...x})),simpleChangeQty:0,pointChangeQty:0,
+   unpricedObservations:[
+    '가장 가까운 기준 '+ref.id+' · '+ref.label,
+    '유사 후보 · '+candidates,
+    expected?'현재 LUDIA 가격표 적용 시 '+priceWon(expected):'최종 항목은 원장이 수정 가능'
+   ],
+   summary:'무료 에셋 분류 · 6개 가격 정답셋 + LUDIA 스타일 레퍼런스를 함께 비교해 1차 견적을 만들었습니다.',confidence,referenceId:ref.id,
+   referenceCandidates:ranked.map(x=>({id:x.ref.id,label:x.ref.label,distance:Number(x.dist.toFixed(3))}))}
  }finally{URL.revokeObjectURL(url)}
 }
 async function analyzePricingPhoto(){

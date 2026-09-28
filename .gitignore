@@ -16,3 +16,7 @@ bridge/**/.naver-profile/
 *.log
 .DS_Store
 Thumbs.db
+
+# Naver bridge local config/state
+bridge/config.local.json
+bridge/.bridge-state.json

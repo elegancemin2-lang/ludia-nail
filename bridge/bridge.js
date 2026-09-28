@@ -166,6 +166,8 @@ async function diffAndSync(rows, state) {
 
 async function main() {
   console.log('[LUDIA] Naver Bridge starting. Login credentials are never read or stored by this program.');
+  if (!SYNC_URL) throw new Error('syncUrl is missing. Open config.local.json and set syncUrl.');
+  if (!SYNC_TOKEN || /^PASTE_/i.test(SYNC_TOKEN)) throw new Error('syncToken is missing. Put the same LUDIA_SYNC_TOKEN used by Vercel into config.local.json.');
   const context = await chromium.launchPersistentContext(PROFILE_DIR, {
     headless: false,
     viewport: { width: 1280, height: 900 },

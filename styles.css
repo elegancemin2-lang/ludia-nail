@@ -3109,3 +3109,219 @@ html[data-theme="dark"] .concurrent-booking-list b{color:#fff}
   .concurrent-mini-row b{font-size:7.2px!important}
   .booking-grid-event.concurrent-booking .concurrent-top time{font-size:6.9px!important}
 }
+
+
+/* v2.60.7 · Apple-like light/dark booking palette + cleaner concurrent appointments */
+#bookingScreen{
+  --ios-bg:#f5f5f7;
+  --ios-card:#ffffff;
+  --ios-card-2:#fafafa;
+  --ios-fill:#f2f2f7;
+  --ios-fill-2:#e9e9ee;
+  --ios-text:#1d1d1f;
+  --ios-secondary:#6e6e73;
+  --ios-tertiary:#8e8e93;
+  --ios-separator:rgba(60,60,67,.14);
+  --ios-separator-soft:rgba(60,60,67,.08);
+  --ios-blue:#007aff;
+  --ios-purple:#af52de;
+  --ios-orange:#ff9f0a;
+  --ios-red:#ff3b30;
+  --ios-green:#34c759;
+}
+html[data-theme="dark"] #bookingScreen{
+  --ios-bg:#000000;
+  --ios-card:#1c1c1e;
+  --ios-card-2:#242426;
+  --ios-fill:#2c2c2e;
+  --ios-fill-2:#3a3a3c;
+  --ios-text:#f5f5f7;
+  --ios-secondary:#aeaeb2;
+  --ios-tertiary:#8e8e93;
+  --ios-separator:rgba(84,84,88,.62);
+  --ios-separator-soft:rgba(84,84,88,.36);
+  --ios-blue:#0a84ff;
+  --ios-purple:#bf5af2;
+  --ios-orange:#ff9f0a;
+  --ios-red:#ff453a;
+  --ios-green:#30d158;
+}
+
+body.booking-view{background:var(--ios-bg,#f5f5f7)!important}
+#bookingScreen .booking-week-nav,
+#bookingScreen .booking-week-board-shell{
+  background:var(--ios-card)!important;
+  border-color:var(--ios-separator-soft)!important;
+}
+.booking-time-grid{
+  background:var(--ios-card)!important;
+  border-color:var(--ios-separator)!important;
+}
+.booking-grid-corner,
+.booking-grid-time,
+.booking-grid-day-head{
+  background:var(--ios-card-2)!important;
+  border-color:var(--ios-separator)!important;
+}
+.booking-grid-slot{
+  background:var(--ios-card)!important;
+  border-color:var(--ios-separator-soft)!important;
+}
+.booking-grid-corner b,.booking-grid-time b,.booking-grid-day-head b{color:var(--ios-text)!important}
+.booking-grid-corner small,.booking-grid-day-head span,.booking-grid-day-head small{color:var(--ios-tertiary)!important}
+.booking-grid-day-head.selected{
+  background:color-mix(in srgb,var(--ios-blue) 8%,var(--ios-card))!important;
+  box-shadow:inset 0 -2px 0 var(--ios-blue)!important
+}
+.booking-grid-day-head.today b,
+.booking-grid-day-head.today span{color:var(--ios-blue)!important}
+
+#bookingScreen .staff-tabs button{
+  border:0!important;background:var(--ios-fill)!important;color:var(--ios-secondary)!important;
+  box-shadow:none!important
+}
+#bookingScreen .staff-tabs button.active{
+  background:var(--ios-text)!important;color:var(--ios-card)!important
+}
+html[data-theme="dark"] #bookingScreen .staff-tabs button.active{
+  background:#f5f5f7!important;color:#111!important
+}
+#bookingScreen .staff-tabs button[data-staff-filter="__owner__"]::before{background:var(--ios-blue)!important}
+#bookingScreen .staff-tabs button[data-staff-filter="__staff__"]::before{background:var(--ios-purple)!important}
+
+.booking-staff-chip.owner{
+  background:color-mix(in srgb,var(--ios-blue) 13%,transparent)!important;
+  color:var(--ios-blue)!important
+}
+.booking-staff-chip.staff{
+  background:color-mix(in srgb,var(--ios-purple) 13%,transparent)!important;
+  color:var(--ios-purple)!important
+}
+
+/* status cards: softer system fills, status carried by the left edge */
+.booking-grid-event.waiting{
+  background:color-mix(in srgb,var(--ios-orange) 11%,var(--ios-card))!important;
+  color:var(--ios-text)!important;border-left-color:var(--ios-orange)!important;opacity:1!important
+}
+.booking-grid-event.progress{
+  background:color-mix(in srgb,var(--ios-blue) 11%,var(--ios-card))!important;
+  color:var(--ios-text)!important;border-left-color:var(--ios-blue)!important
+}
+.booking-grid-event.done{
+  background:var(--ios-fill)!important;color:var(--ios-secondary)!important;
+  border-left-color:var(--ios-tertiary)!important;opacity:.84!important
+}
+.booking-grid-event.noshow{
+  background:color-mix(in srgb,var(--ios-red) 9%,var(--ios-card))!important;
+  color:var(--ios-secondary)!important;border-left-color:var(--ios-red)!important;opacity:.86!important
+}
+
+/* exact same-time owner + staff: one clean elevated card, two role rows */
+.booking-grid-event.concurrent-booking{
+  padding:4px 5px!important;
+  background:var(--ios-card)!important;
+  color:var(--ios-text)!important;
+  border:1px solid var(--ios-separator)!important;
+  border-left:2px solid var(--ios-blue)!important;
+  border-radius:7px!important;
+  box-shadow:0 2px 8px rgba(0,0,0,.07)!important;
+  overflow:hidden!important;
+}
+.booking-grid-event.concurrent-booking::before{
+  content:"";position:absolute;left:0;top:50%;bottom:0;width:2px;background:var(--ios-purple)
+}
+.booking-grid-event.concurrent-booking .concurrent-top{
+  padding-bottom:3px!important;border-bottom:1px solid var(--ios-separator-soft)!important
+}
+.booking-grid-event.concurrent-booking .concurrent-top time{
+  color:var(--ios-text)!important;font-size:9px!important;font-weight:850!important
+}
+.booking-grid-event.concurrent-booking .concurrent-top span{
+  background:var(--ios-fill)!important;color:var(--ios-secondary)!important;
+  border:0!important;font-size:7px!important;font-weight:800!important
+}
+.concurrent-mini-list{gap:0!important;margin-top:1px!important}
+.concurrent-mini-row{
+  min-height:20px!important;grid-template-columns:14px minmax(0,1fr)!important;
+  gap:4px!important;padding:2px 0!important
+}
+.concurrent-mini-row+.concurrent-mini-row{border-top:1px solid var(--ios-separator-soft)!important}
+.concurrent-mini-row span{
+  width:14px!important;height:14px!important;border-radius:50%!important;
+  font-size:6.5px!important;font-weight:900!important
+}
+.concurrent-mini-row span.owner{
+  background:color-mix(in srgb,var(--ios-blue) 14%,transparent)!important;
+  color:var(--ios-blue)!important
+}
+.concurrent-mini-row span.staff{
+  background:color-mix(in srgb,var(--ios-purple) 14%,transparent)!important;
+  color:var(--ios-purple)!important
+}
+.concurrent-mini-row b{
+  color:var(--ios-text)!important;font-size:8.8px!important;font-weight:800!important;letter-spacing:-.045em!important
+}
+
+/* concurrent detail sheet */
+.concurrent-booking-backdrop{background:rgba(0,0,0,.32)!important;backdrop-filter:blur(2px)}
+.concurrent-booking-sheet{
+  background:var(--ios-bg)!important;
+  border:1px solid var(--ios-separator-soft)!important;
+  box-shadow:0 -14px 38px rgba(0,0,0,.16)!important
+}
+.concurrent-booking-grabber{background:var(--ios-fill-2)!important}
+.concurrent-booking-sheet header span{color:var(--ios-tertiary)!important}
+.concurrent-booking-sheet header h3{color:var(--ios-text)!important}
+.concurrent-booking-close{color:var(--ios-blue)!important}
+.concurrent-booking-list{
+  background:var(--ios-card)!important;border-color:var(--ios-separator-soft)!important
+}
+.concurrent-booking-list>button+button{border-color:var(--ios-separator-soft)!important}
+.concurrent-booking-list b{color:var(--ios-text)!important}
+.concurrent-booking-list small{color:var(--ios-secondary)!important}
+.concurrent-role.owner{
+  background:color-mix(in srgb,var(--ios-blue) 14%,transparent)!important;
+  color:var(--ios-blue)!important
+}
+.concurrent-role.staff{
+  background:color-mix(in srgb,var(--ios-purple) 14%,transparent)!important;
+  color:var(--ios-purple)!important
+}
+
+@media(max-width:760px){
+  .booking-time-grid{
+    --booking-row-h:26px!important;
+    --booking-head-h:51px!important
+  }
+  .booking-grid-day-head b{font-size:13.5px!important}
+  .booking-grid-day-head span{font-size:7.5px!important}
+  .booking-grid-day-head small{font-size:5.7px!important}
+  .booking-grid-time b{font-size:7.9px!important}
+  .booking-grid-event-top time{font-size:7.8px!important}
+  .booking-grid-event>b{font-size:8.8px!important}
+  .booking-grid-event.long>small{font-size:6.8px!important}
+
+  .booking-grid-event.concurrent-booking{
+    padding:2px 3px!important;border-radius:5px!important;
+    border-left-width:2px!important
+  }
+  .booking-grid-event.concurrent-booking .concurrent-top{
+    padding-bottom:2px!important
+  }
+  .booking-grid-event.concurrent-booking .concurrent-top time{font-size:7px!important}
+  .booking-grid-event.concurrent-booking .concurrent-top span{font-size:5.8px!important;padding:1px 3px!important}
+  .concurrent-mini-row{
+    min-height:14px!important;grid-template-columns:9px minmax(0,1fr)!important;
+    gap:2px!important;padding:1px 0!important
+  }
+  .concurrent-mini-row span{
+    width:9px!important;height:9px!important;font-size:5px!important
+  }
+  .concurrent-mini-row b{font-size:7.25px!important}
+}
+@media(max-width:390px){
+  .booking-grid-day-head b{font-size:12.8px!important}
+  .booking-grid-time b{font-size:7.3px!important}
+  .booking-grid-event>b{font-size:8.1px!important}
+  .concurrent-mini-row b{font-size:6.8px!important}
+}

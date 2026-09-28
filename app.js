@@ -126,7 +126,7 @@ const DEMO_CUSTOMERS=[
  {name:'한소희',phone:'010-••••-5317',visit:9,last:'8/27',tags:['자석','베스트'],membership:'금액권 5.0만',note:'자석 강도는 은은하게',img:img(5)}
 ]; 
 let salonCustomers=DEMO_CUSTOMERS.map(x=>({...x}));
-let salonStaffNames=['루디아','지안'],salonServices=[],salonCloudMode='demo',salonRole='owner';
+let salonStaffNames=['루디아','지안'],salonStaffRecords=[{display_name:'루디아',role:'owner'},{display_name:'지안',role:'staff'}],salonServices=[],salonCloudMode='demo',salonRole='owner';
 let localSalonSession=null,activeSalonId=null,artLoadSequence=0;
 let bookingStaff='전체', bookingDayOffset=0, activeAppointment=null;
 let customerPage=1;const CUSTOMER_PAGE_SIZE=8;
@@ -193,11 +193,67 @@ function renderBookingWeek(){
    strip.appendChild(b)
  })
 }
+
+const BOOKING_OWNER_FILTER='__owner__',BOOKING_STAFF_FILTER='__staff__';
+function bookingStaffRole(name){
+ const rec=salonStaffRecords.find(x=>String(x.display_name||'')===String(name||''));
+ return String(rec?.role||'staff').toLowerCase()
+}
+function bookingIsOwner(name){return bookingStaffRole(name)==='owner'}
+function bookingIsGroupView(){return bookingStaff==='전체'||bookingStaff===BOOKING_OWNER_FILTER||bookingStaff===BOOKING_STAFF_FILTER}
+function bookingStaffFilterOptions(){
+ const hasOwner=salonStaffNames.some(bookingIsOwner);
+ const hasStaff=salonStaffNames.some(name=>!bookingIsOwner(name));
+ const out=[{value:'전체',label:'전체',type:'group'}];
+ if(hasOwner)out.push({value:BOOKING_OWNER_FILTER,label:'원장',type:'group'});
+ if(hasStaff)out.push({value:BOOKING_STAFF_FILTER,label:'직원',type:'group'});
+ salonStaffNames.forEach(name=>out.push({value:name,label:name,type:'person'}));
+ return out
+}
+function bookingMatchesStaff(a){
+ if(bookingStaff==='전체')return true;
+ if(bookingStaff===BOOKING_OWNER_FILTER)return bookingIsOwner(a.staff);
+ if(bookingStaff===BOOKING_STAFF_FILTER)return !bookingIsOwner(a.staff)&&a.staff!=='미지정';
+ return a.staff===bookingStaff
+}
+function bookingSelectedStaffNames(){
+ if(bookingStaff==='전체')return [...salonStaffNames];
+ if(bookingStaff===BOOKING_OWNER_FILTER)return salonStaffNames.filter(bookingIsOwner);
+ if(bookingStaff===BOOKING_STAFF_FILTER)return salonStaffNames.filter(name=>!bookingIsOwner(name));
+ return salonStaffNames.includes(bookingStaff)?[bookingStaff]:[]
+}
+function bookingDefaultStaffForFilter(){
+ const names=bookingSelectedStaffNames();
+ return names[0]||salonStaffNames[0]||'미지정'
+}
+function bookingEventLayouts(items){
+ const out=new Map();
+ const rows=items.map(a=>({a,sp:bookingAppointmentSpan(a)})).filter(x=>x.sp).sort((x,y)=>x.sp.from-y.sp.from||x.sp.to-y.sp.to);
+ let group=[],groupEnd=-1;
+ const flush=()=>{
+  if(!group.length)return;
+  const laneEnds=[],assigned=[];
+  group.forEach(item=>{
+   let lane=laneEnds.findIndex(end=>end<=item.sp.from);
+   if(lane<0){lane=laneEnds.length;laneEnds.push(item.sp.to)}else laneEnds[lane]=item.sp.to;
+   assigned.push({item,lane});
+  });
+  const lanes=Math.max(1,laneEnds.length);
+  assigned.forEach(x=>out.set(x.item.a,{lane:x.lane,lanes}));
+  group=[];groupEnd=-1;
+ };
+ rows.forEach(item=>{
+  if(group.length&&item.sp.from>=groupEnd)flush();
+  group.push(item);groupEnd=Math.max(groupEnd,item.sp.to)
+ });
+ flush();
+ return out
+}
 function bookingDataForWeek(){
  const offsets=bookingWeekOffsets(),start=offsets[0],end=offsets[6];
  return salonAppointments.filter(a=>{
    const day=Number(a.dayOffset||0);
-   return day>=start&&day<=end&&(bookingStaff==='전체'||a.staff===bookingStaff)
+   return day>=start&&day<=end&&bookingMatchesStaff(a)
  })
 }
 function bookingArtImage(a,cardIndex=0){
@@ -245,19 +301,20 @@ function renderBooking(){
  if($('#bookingMonthLabel'))$('#bookingMonthLabel').textContent=monthLabel;
  if($('#bookingWeekRange'))$('#bookingWeekRange').textContent=bookingWeekRangeText();
  renderBookingWeek();
- const staffNames=['전체',...salonStaffNames];
+ const staffOptions=bookingStaffFilterOptions();
  const tabs=$('#staffTabs');
  if(tabs){
    tabs.innerHTML='';
-   staffNames.forEach(s=>{
-     const b=document.createElement('button');b.type='button';b.textContent=s;b.classList.toggle('active',bookingStaff===s);
-     b.onclick=()=>{bookingStaff=s;renderBooking()};tabs.appendChild(b)
+   staffOptions.forEach(opt=>{
+     const b=document.createElement('button');b.type='button';b.textContent=opt.label;b.classList.toggle('active',bookingStaff===opt.value);
+     b.classList.toggle('role-filter',opt.type==='group');b.dataset.staffFilter=opt.value;
+     b.onclick=()=>{bookingStaff=opt.value;renderBooking()};tabs.appendChild(b)
    })
  }
  const data=bookingDataForWeek();
  const activeData=data.filter(a=>a.status!=='취소');
- if($('#bookingCountLabel'))$('#bookingCountLabel').textContent=normalizeBookingHours(state.bookingHours).open+'–'+normalizeBookingHours(state.bookingHours).close+' · '+activeData.length+'건';
- const board=$('#bookingWeekBoard');if(!board)return;board.innerHTML='';board.className='booking-week-board booking-time-grid';
+ if($('#bookingCountLabel')){const current=staffOptions.find(x=>x.value===bookingStaff)?.label||bookingStaff;$('#bookingCountLabel').textContent=current+' · '+normalizeBookingHours(state.bookingHours).open+'–'+normalizeBookingHours(state.bookingHours).close+' · '+activeData.length+'건'}
+ const board=$('#bookingWeekBoard');if(!board)return;board.innerHTML='';board.className='booking-week-board booking-time-grid'+(bookingIsGroupView()?' booking-group-view':'');
  const cfg=bookingGridConfig(),slots=bookingGridSlots();
  board.style.setProperty('--booking-slot-count',String(slots.length));
 
@@ -265,12 +322,13 @@ function renderBooking(){
 
  offsets.forEach((offset,dayIndex)=>{
    const d=bookingDateFromOffset(offset),dayData=activeData.filter(a=>Number(a.dayOffset||0)===offset);
+   const selectedStaff=bookingSelectedStaffNames(),capacityStaff=Math.max(1,selectedStaff.length);
    const occupied=new Set();
-   dayData.forEach(a=>{const sp=bookingAppointmentSpan(a);if(!sp)return;for(let i=0;i<sp.span;i++)occupied.add(sp.row+i)});
-   const free=Math.max(0,slots.length-occupied.size);
+   dayData.forEach(a=>{const sp=bookingAppointmentSpan(a);if(!sp)return;const staffKey=a.staff||'미지정';for(let i=0;i<sp.span;i++)occupied.add(staffKey+':'+(sp.row+i))});
+   const free=Math.max(0,slots.length*capacityStaff-occupied.size);
    const head=document.createElement('button');head.type='button';head.className='booking-grid-day-head'+(offset===bookingDayOffset?' selected':'')+(offset===0?' today':'');
    head.style.gridColumn=String(dayIndex+2);head.style.gridRow='1';
-   head.innerHTML='<span>'+['일','월','화','수','목','금','토'][d.getDay()]+'</span><b>'+d.getDate()+'</b><small>예약 '+dayData.length+' · 빈 '+free+'칸</small>';
+   head.innerHTML='<span>'+['일','월','화','수','목','금','토'][d.getDay()]+'</span><b>'+d.getDate()+'</b><small>예약 '+dayData.length+' · 여유 '+free+'</small>';
    head.onclick=()=>{bookingDayOffset=offset;renderBooking()};board.appendChild(head)
  });
 
@@ -280,22 +338,25 @@ function renderBooking(){
    offsets.forEach((offset,dayIndex)=>{
      const cell=document.createElement('button');cell.type='button';cell.className='booking-grid-slot';cell.style.gridColumn=String(dayIndex+2);cell.style.gridRow=String(rowIndex+2);
      cell.dataset.dayOffset=String(offset);cell.dataset.time=label;cell.setAttribute('aria-label',bookingDateText(offset)+' '+label+' 예약 추가');
-     cell.onclick=()=>{bookingDayOffset=offset;openQuickBooking(label,bookingStaff==='전체'?(salonStaffNames[0]||'루디아'):bookingStaff)};
+     cell.onclick=()=>{bookingDayOffset=offset;openQuickBooking(label,bookingDefaultStaffForFilter())};
      board.appendChild(cell)
    })
  });
 
  offsets.forEach((offset,dayIndex)=>{
    const dayData=activeData.filter(a=>Number(a.dayOffset||0)===offset).sort((a,b)=>String(a.time).localeCompare(String(b.time)));
+   const eventLayouts=bookingEventLayouts(dayData);
    dayData.forEach(a=>{
      const sp=bookingAppointmentSpan(a);if(!sp)return;
      const ev=document.createElement('button');ev.type='button';
-     ev.className='booking-grid-event '+(a.status==='완료'?'done ':a.status==='진행중'?'progress ':a.status==='노쇼'?'noshow ':'waiting ')+(sp.span>=3?' long ':sp.span===1?' short ':' medium ');
+     const layout=eventLayouts.get(a)||{lane:0,lanes:1};
+     ev.className='booking-grid-event '+(a.status==='완료'?'done ':a.status==='진행중'?'progress ':a.status==='노쇼'?'noshow ':'waiting ')+(sp.span>=3?' long ':sp.span===1?' short ':' medium ')+(layout.lanes>1?' multi ':'');
      ev.style.gridColumn=String(dayIndex+2);ev.style.gridRow=(sp.row+2)+' / span '+sp.span;
+     ev.style.setProperty('--event-lane',String(layout.lane));ev.style.setProperty('--event-lanes',String(layout.lanes));
      ev.dataset.dayOffset=String(offset);
      ev.dataset.duration=String(a.duration||sp.span*cfg.step);
      ev.setAttribute('aria-label',htmlText(a.time)+' '+htmlText(a.customer)+' '+htmlText(a.service)+' '+htmlText(a.status));
-     const staffChip=bookingStaff==='전체'?'<span>'+htmlText(a.staff||'미지정')+'</span>':'';
+     const staffChip=bookingIsGroupView()?'<span title="'+htmlText(a.staff||'미지정')+'">'+htmlText(a.staff||'미지정')+'</span>':'';
      ev.innerHTML='<div class="booking-grid-event-top"><time>'+htmlText(a.time)+'</time>'+staffChip+'</div><b>'+htmlText(a.customer)+'</b><small>'+htmlText(a.service)+'</small><em>'+htmlText(a.status)+' · '+won(a.amount)+'원</em>';
      ev.onclick=e=>{e.stopPropagation();bookingDayOffset=offset;openOpsDetail(a)};board.appendChild(ev)
    })
@@ -428,19 +489,21 @@ function renderCustomers(){
 }
 
 function applyCloudSalonData(payload){
- activeSalonId=payload.salonId||null;salonCloudMode='cloud';salonAppointments=payload.appointments||[];salonCustomers=payload.customers||[];customerPage=1;salonStaffNames=payload.staffNames?.length?payload.staffNames:['미지정'];salonServices=payload.services||[];salonRole=payload.role||'staff';state.pricing=mergePricing(payload.pricingConfig||DEFAULT_PRICING);state.bookingHours=normalizeBookingHours(payload.pricingConfig?.bookingHours||DEFAULT_BOOKING_HOURS);
- if(bookingStaff!=='전체'&&!salonStaffNames.includes(bookingStaff))bookingStaff='전체';
+ activeSalonId=payload.salonId||null;salonCloudMode='cloud';salonAppointments=payload.appointments||[];salonCustomers=payload.customers||[];customerPage=1;salonStaffNames=payload.staffNames?.length?payload.staffNames:['미지정'];salonStaffRecords=payload.staffRecords?.length?payload.staffRecords.map(x=>({...x})):salonStaffNames.map((display_name,index)=>({display_name,role:index===0?'owner':'staff'}));salonServices=payload.services||[];salonRole=payload.role||'staff';state.pricing=mergePricing(payload.pricingConfig||DEFAULT_PRICING);state.bookingHours=normalizeBookingHours(payload.pricingConfig?.bookingHours||DEFAULT_BOOKING_HOURS);
+ if(!['전체',BOOKING_OWNER_FILTER,BOOKING_STAFF_FILTER].includes(bookingStaff)&&!salonStaffNames.includes(bookingStaff))bookingStaff='전체';
+ if(bookingStaff===BOOKING_OWNER_FILTER&&!salonStaffNames.some(bookingIsOwner))bookingStaff='전체';
+ if(bookingStaff===BOOKING_STAFF_FILTER&&!salonStaffNames.some(name=>!bookingIsOwner(name)))bookingStaff='전체';
  syncQuickBookingOptions();renderPricingSettings();renderOpsToday();renderBooking();renderCustomers();updateCloudAccountStatus({configured:true,connected:true,salonName:payload.salonName,email:payload.email,realtime:'live'});syncCloudArtLibrary();syncProfilePhoto();
 }
 function prepareCloudSalonData(){
  if(salonCloudMode==='demo')localSalonSession=structuredClone({library:state.library,designs:state.designs,appointments:salonAppointments,customers:salonCustomers,draft:state.draft,pricing:state.pricing,bookingHours:state.bookingHours});
- salonCloudMode='connecting';activeSalonId=null;artLoadSequence++;salonAppointments=[];salonCustomers=[];state.library=[];state.designs=[];state.active=null;state.collection=new Set();
+ salonCloudMode='connecting';activeSalonId=null;artLoadSequence++;salonAppointments=[];salonCustomers=[];salonStaffRecords=[];state.library=[];state.designs=[];state.active=null;state.collection=new Set();
  closeSheet();closeFinalView();closeOpsDetail();closeQuickBooking();closeDesignRegister();setProfilePhoto(null);renderLibrary();renderRecent();renderMonthlyMenu();renderPricingSettings();renderOpsToday();renderBooking();renderCustomers();
 }
 function resetCloudSalonData(){
  artLoadSequence++;activeSalonId=null;salonCloudMode='demo';
  state.library=localSalonSession?.library||baseDesigns.slice(0,5);state.designs=localSalonSession?.designs||[...baseDesigns];state.draft=localSalonSession?.draft||state.draft;state.pricing=mergePricing(localSalonSession?.pricing||state.pricing);state.bookingHours=normalizeBookingHours(localSalonSession?.bookingHours||state.bookingHours);salonRole='owner';state.active=null;
- salonAppointments=localSalonSession?.appointments||DEMO_APPOINTMENTS.map(x=>({...x}));salonCustomers=localSalonSession?.customers||DEMO_CUSTOMERS.map(x=>({...x}));customerPage=1;salonStaffNames=['루디아','지안'];salonServices=[];bookingStaff='전체';
+ salonAppointments=localSalonSession?.appointments||DEMO_APPOINTMENTS.map(x=>({...x}));salonCustomers=localSalonSession?.customers||DEMO_CUSTOMERS.map(x=>({...x}));customerPage=1;salonStaffNames=['루디아','지안'];salonStaffRecords=[{display_name:'루디아',role:'owner'},{display_name:'지안',role:'staff'}];salonServices=[];bookingStaff='전체';
  closeSheet();closeFinalView();closeOpsDetail();closeQuickBooking();closeDesignRegister();renderLibrary();renderRecent();renderMonthlyMenu();renderOpsToday();renderBooking();renderCustomers();syncProfilePhoto();
 }
 function updateCloudAccountStatus(status={}){

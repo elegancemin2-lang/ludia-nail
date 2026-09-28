@@ -37,10 +37,21 @@ function safeConflict(row){
 export default async function handler(req,res){
   if(req.method!=='GET')return json(res,405,{ok:false,error:'method_not_allowed'});
   const cfg=config();if(!cfg)return json(res,503,{ok:false,error:'server_not_configured'});
-  let access;
-  try{access=await resolveSalon(req,cfg);}catch(error){console.error('[LUDIA status auth]',error);return json(res,502,{ok:false,error:'auth_unavailable'});}
-  if(!access)return json(res,401,{ok:false,error:'unauthorized'});
-  const sid=access.salonId;
+  const auth=String(req.headers.authorization||'');
+  let access=null;
+  if(auth){
+    try{access=await resolveSalon(req,cfg);}catch(error){console.error('[LUDIA status auth]',error);return json(res,502,{ok:false,error:'auth_unavailable'});}
+    if(!access)return json(res,401,{ok:false,error:'unauthorized'});
+  }
+  const sid=access?.salonId||process.env.LUDIA_SALON_ID||null;
+  if(!sid)return json(res,200,{ok:true,configured:false,publicHealth:!access,state:'setup_required',freshness:'never',lastSyncAt:null,today:{},approvalQueue:{count:0,items:[]},recentEvents:[],conflicts:[],reviews:{pending:0,items:[]}});
+  if(!access){
+    try{
+      const connection=(await readJson(`${cfg.url}/rest/v1/ludia_integration_connections?salon_id=eq.${encodeURIComponent(sid)}&provider=eq.NAVER&select=state,last_sync_at&limit=1`,cfg.headers))[0]||null;
+      const health=staleState(connection);
+      return json(res,200,{ok:true,configured:true,publicHealth:true,...health,lastSyncAt:connection?.last_sync_at||null,today:{},approvalQueue:{count:0,items:[]},recentEvents:[],conflicts:[],reviews:{pending:0,items:[]}});
+    }catch(error){console.error('[LUDIA public Naver status]',error);return json(res,502,{ok:false,error:'status_unavailable'});}
+  }
   try{
     const connection=(await readJson(`${cfg.url}/rest/v1/ludia_integration_connections?salon_id=eq.${encodeURIComponent(sid)}&provider=eq.NAVER&select=state,last_sync_at,last_error,metadata&limit=1`,cfg.headers))[0]||null;
     const today=new Intl.DateTimeFormat('en-CA',{timeZone:'Asia/Seoul',year:'numeric',month:'2-digit',day:'2-digit'}).format(new Date());

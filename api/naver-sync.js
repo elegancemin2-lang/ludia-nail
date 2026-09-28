@@ -80,7 +80,7 @@ async function persistReviews(cfg,sid,reviews){
   return payload.length;
 }
 
-async function persist(rows){
+async function persist(rows,{bridgeState='connected',diagnostics=null}={}){
   const cfg=supabaseConfig();
   if(!cfg)return {persisted:false,reason:'supabase_not_configured',appointmentSynced:0};
   const sid=salonId();
@@ -93,7 +93,7 @@ async function persist(rows){
 
   let appointmentSynced=0;
   for(const row of rows){if(await syncAppointment(cfg,sid,row))appointmentSynced+=1;}
-  await updateConnection(cfg,{eventCount:rows.length,appointmentCount:appointmentSynced});
+  await updateConnection(cfg,{state:bridgeState,lastError:bridgeState==='error'?'bridge_cycle_failed':null,eventCount:rows.length,appointmentCount:appointmentSynced,diagnostics});
   return {persisted:true,appointmentSynced};
 }
 
@@ -126,8 +126,7 @@ export default async function handler(req,res){
     return json(res,200,{ok:true,accepted:0,persisted:Boolean(cfg&&sid),heartbeat:true,bridgeState});
   }
   try{
-    const result=await persist(rows);
-    if(cfg&&sid&&bridgeState!=='connected')await updateConnection(cfg,{state:bridgeState,lastError:bridgeState==='error'?'bridge_cycle_failed':null,eventCount:rows.length,appointmentCount:result.appointmentSynced||0,diagnostics});
+    const result=await persist(rows,{bridgeState,diagnostics});
     if(!result.persisted)return json(res,503,{ok:false,error:result.reason||'persistence_unavailable',retryable:true});
     const reviewsSynced=await persistReviews(cfg,sid,reviews);
     return json(res,200,{ok:true,accepted:rows.length,reviewsSynced,...result});

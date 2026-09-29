@@ -1,0 +1,59 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>오늘 회식 뭐 먹지?</title>
+<style>
+:root{--bg:#0b0b0d;--card:#17171b;--line:#2a2a31;--text:#f7f7f8;--muted:#a6a6ad;--accent:#ff7a45}
+*{box-sizing:border-box}body{margin:0;background:linear-gradient(180deg,#101014,#09090b);color:var(--text);font-family:-apple-system,BlinkMacSystemFont,"Pretendard","Noto Sans KR",Segoe UI,sans-serif;min-height:100vh;display:flex;align-items:center;justify-content:center;padding:22px}
+.wrap{width:min(100%,460px)}
+.badge{display:inline-block;padding:7px 10px;border:1px solid var(--line);border-radius:999px;color:var(--muted);font-size:12px;margin-bottom:14px}
+h1{font-size:30px;line-height:1.15;margin:0 0 8px}.sub{color:var(--muted);font-size:14px;margin-bottom:22px}
+.grid{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:16px}
+.item{background:var(--card);border:1px solid var(--line);border-radius:18px;padding:16px;text-align:center;font-weight:700}.item:last-child{grid-column:1/-1}
+.emoji{font-size:28px;display:block;margin-bottom:6px}
+.stage{background:var(--card);border:1px solid var(--line);border-radius:24px;padding:26px 20px;text-align:center}
+.label{font-size:12px;color:var(--muted);font-weight:700;letter-spacing:.08em}
+.big{font-size:48px;margin:13px 0 8px}.result{font-size:30px;font-weight:900;min-height:44px;display:flex;align-items:center;justify-content:center}
+.desc{font-size:14px;color:var(--muted);min-height:38px;margin-top:8px}
+button{width:100%;border:0;border-radius:16px;padding:16px;font-size:17px;font-weight:900;margin-top:18px;background:var(--accent);color:white;cursor:pointer}
+button:disabled{opacity:.6}.foot{margin-top:12px;text-align:center;color:#696970;font-size:11px}
+.pop{animation:pop .45s ease}@keyframes pop{0%{transform:scale(.88);opacity:.2}70%{transform:scale(1.06)}100%{transform:scale(1);opacity:1}}
+@media(max-width:360px){h1{font-size:26px}.result{font-size:26px}.item{padding:13px 9px}}
+</style>
+</head>
+<body>
+<main class="wrap">
+<div class="badge">8명 · 회식예산 100만원</div>
+<h1>오늘 회식 뭐 먹지? 🎲</h1>
+<div class="sub">의견 충돌 방지를 위해 아주 공정하게 뽑기로 결정합니다.</div>
+
+<div class="grid">
+  <div class="item"><span class="emoji">🥩</span>한우</div>
+  <div class="item"><span class="emoji">🍶</span>이자카야</div>
+  <div class="item"><span class="emoji">🐑</span>양고기</div>
+  <div class="item"><span class="emoji">🍽️</span>마들렌 뷔페</div>
+  <div class="item"><span class="emoji">👑</span>그룹장님 픽</div>
+</div>
+
+<section class="stage">
+  <div class="label">TODAY'S PICK</div>
+  <div id="emo" class="big">🎰</div>
+  <div id="res" class="result">운명을 확인해보세요</div>
+  <div id="desc" class="desc">버튼을 누르면 5개 후보 중 하나가 선택됩니다.</div>
+  <button id="pick">회식 메뉴 뽑기</button>
+</section>
+<div class="foot">※ 결과에 대한 이의제기는 다음 회식 때 접수됩니다.</div>
+</main>
+<script>
+(()=>{const items=[["🥩","한우"],["🍶","이자카야"],["🐑","양고기"],["🍽️","마들렌 뷔페"],["👑","그룹장님 픽"]];
+const emo=document.getElementById("emo"),res=document.getElementById("res"),desc=document.getElementById("desc"),btn=document.getElementById("pick");
+let running=false;
+btn.addEventListener("click",()=>{if(running)return;running=true;btn.disabled=true;btn.textContent="엄정한 추첨 중...";
+res.classList.remove("pop");desc.textContent="후보를 섞는 중입니다...";let i=0;
+const t=setInterval(()=>{const x=items[i%items.length];emo.textContent=x[0];res.textContent=x[1];i++;
+if(i===18){clearInterval(t);setTimeout(()=>{emo.textContent="🍽️";res.textContent="마들렌 뷔페";desc.textContent="축하합니다. 오늘의 회식 장소가 결정됐습니다 🎉";res.classList.add("pop");btn.disabled=false;btn.textContent="다시 뽑기";running=false},180)}},95)})
+})();
+</script>
+</body></html>

@@ -1,79 +1,29 @@
-# LUDIA Naver Bridge (local Windows bridge)
+# LUDIA Naver Bridge · v0.2
 
-This folder is the runnable C-route SmartPlace integration. It runs on the salon PC and uses a persistent Playwright browser profile. The user signs into Naver **inside Naver's own page**. LUDIA does not ask for, read, transmit, or save the Naver password.
+샵 Windows PC의 전용 Chromium에서 원장이 네이버 공식 페이지에 직접 로그인합니다. 비밀번호는 LUDIA 서버에 전송하거나 저장하지 않습니다. CAPTCHA/2FA를 우회하지 않습니다. 기존 Vercel/Supabase 연결을 사용합니다.
 
-## Run
+## 실행과 실제 DOM 확인
 
-### Windows recommended
-1. Double-click `START_NAVER_BRIDGE.cmd`.
-2. On first run it creates `config.local.json` from `config.example.json` and opens it in Notepad.
-3. Put the same long `LUDIA_SYNC_TOKEN` used by Vercel into `syncToken`. The production sync URL is already filled in.
-4. Run `START_NAVER_BRIDGE.cmd` again.
-5. A dedicated Chromium window opens. Sign in to Naver **only inside Naver's page** and navigate to the SmartPlace booking list.
-6. Keep the window/session available. The bridge checks rendered booking rows every 60 seconds by default.
+1. `START_NAVER_BRIDGE.cmd` 실행 → 생성된 `config.local.json`에 서버와 같은 32자 이상의 `LUDIA_SYNC_TOKEN` 설정. Supabase 서버 키는 PC에 넣지 않습니다.
+2. 다시 실행 → 네이버 공식 페이지에서 로그인 → 해당 샵 예약관리 화면으로 직접 이동.
+3. **실계정 DOM을 확인한 후에만** 정확한 `smartplaceUrl`, `bookingRowSelector`, `bookingFields`(예약번호/날짜/시간/상태, 선택 전화번호), `emptyStateSelector`를 설정하고 `selectorsVerified: true`로 변경합니다. 필드마다 예약 행 안에서 보이는 요소가 정확히 하나여야 합니다.
+4. 확인 전에는 연결 상태만 보고하고 예약을 업로드하지 않습니다. 기본 주기는 60초, 오류 시 최대 5분까지 재시도 간격을 늘립니다.
 
-The bridge remembers the last SmartPlace page where valid reservations were recognized. Before a real salon login has been validated, it runs in **safe fallback mode**: only rows containing a parseable date, time, and reservation status are uploaded. Set `bookingRowSelector` after the real SmartPlace booking DOM is confirmed to make extraction stricter and more stable.
+수동 실행: Node 20+에서 `npm install`, `npx playwright install chromium`, `npm start`. 환경변수 `LUDIA_BRIDGE_CONFIG`, `LUDIA_SYNC_URL`, `LUDIA_SYNC_TOKEN`, `LUDIA_SMARTPLACE_URL`, `LUDIA_POLL_MS`, `LUDIA_NAVER_PROFILE`, `LUDIA_BOOKING_ROW_SELECTOR`, `LUDIA_BRIDGE_STATE`를 지원합니다. 프로필/설정/상태 파일은 PC 밖으로 업로드하지 않습니다.
 
-### Manual / developer run
-Install Node.js 20+, then run `npm install`, `npx playwright install chromium`, and `npm start`. Environment variables still override values in `config.local.json`.
+## 권한과 저장
 
-For the Vercel deployment in this repository, `LUDIA_SYNC_URL` should point to `https://<production-domain>/api/naver-sync`. Generate a long random `LUDIA_SYNC_TOKEN` and set the **same value** in the salon PC environment and Vercel environment. Never put the Supabase secret/service-role key on the salon PC.
+- 서버는 기존 `SUPABASE_URL`, `SUPABASE_SECRET_KEY`(또는 service role), `LUDIA_SALON_ID`를 사용합니다. 실제 salon row가 없으면 미설정이며 Connected로 표시하지 않습니다.
+- PC 동기화 키는 읽기/충돌 해결 관리자 권한을 주지 않습니다. 외부 연동 관리자 전용 `LUDIA_INTEGRATION_ADMIN_TOKEN`은 32자 이상이며 동기화 키와 **서로 달라야** 합니다. LUDIA 일반 기능의 로그인 조건이 아닙니다.
+- 관리자 키는 사용자가 연동 화면에 입력할 때 브라우저 메모리에만 30분 유지합니다. 범위는 서버에서 지정한 한 샵이며 예약표 조회와 충돌 해결에만 사용합니다. 연결을 해제하거나 새로고침하면 제거됩니다.
+- `supabase/naver_bridge_reliability.sql`은 기존 DB 구조에 이벤트 멱등 키와 service-role 전용 원자적 수집/충돌 해결 RPC를 추가합니다. 기존 JWT 경로도 유지합니다. 이번 점검에서 INBETWEEN에 적용했으며 기존 데이터 삭제는 없습니다.
+- 매핑은 명시적으로 등록된 규칙과 정확한 전화번호만 사용합니다. raw text에서 고객/시술/담당자를 추측하지 않습니다. 신규 미매핑 예약은 미지정으로 표시합니다.
+- 동일 담당자 시간이 겹칠 때만 충돌입니다. 원장/직원 동시 예약은 허용합니다. 고객의 견적 금액, 시술 길이와 사진/아트 메타데이터를 동기화 업데이트에서 보존합니다.
 
-Optional environment variables:
+## 신뢰성 및 미완료 범위
 
-- `LUDIA_SMARTPLACE_URL`: exact SmartPlace booking-list URL for the salon. Prefer setting this after the owner has navigated to the correct page.
-- `LUDIA_POLL_MS`: polling interval, minimum 30000 ms.
-- `LUDIA_SYNC_URL`: LUDIA server endpoint that accepts `{ source, events }`.
-- `LUDIA_SYNC_TOKEN`: bearer token for the LUDIA endpoint.
-- `LUDIA_NAVER_PROFILE`: local persistent browser-profile path.
-- `LUDIA_BOOKING_ROW_SELECTOR`: optional exact CSS selector for one SmartPlace reservation row. Until the live account DOM is validated, leave it blank and use safe fallback mode.
-- `LUDIA_BRIDGE_CONFIG`: optional path to a local JSON config file.
+예약 이벤트마다 설치 ID + 예약번호 + 변경 revision + 정규화 필드 해시로 멱등 키를 만듭니다. 서버가 DB 저장과 예약표 투영에 성공한 뒤에만 PC 상태를 갱신합니다. 중간 실패/재시도/중복 전송에 안전하며 목록에서 사라진 예약을 취소로 추정하지 않습니다. 충돌하는 중복 행이나 해석 불가능한 행은 해당 수집을 중단합니다.
 
-## Server + Supabase setup
+`connected`는 확인된 예약 화면의 성공한 sync에만 사용합니다. 로그인 필요/재로그인/selector 확인 필요/오류/마지막 성공 후 10분 초과 상태를 분리합니다. 미확인 화면의 heartbeat는 최근 Sync 시간을 갱신하지 않습니다.
 
-The repository now contains `api/naver-sync.js` and `supabase/naver_bridge.sql`; both use the shared INBETWEEN Supabase project's isolated `ludia_*` namespace.
-
-1. Run `supabase/naver_bridge.sql` once in the target Supabase project.
-2. Configure Vercel server-side environment variables: `LUDIA_SYNC_TOKEN`, `SUPABASE_URL`, `SUPABASE_SECRET_KEY` (preferred), and `LUDIA_SALON_ID`. Legacy `SUPABASE_SERVICE_ROLE_KEY` remains supported as a fallback.
-3. Redeploy the production project.
-4. Open `/api/naver-sync` with GET to check endpoint health. It reports whether Supabase is configured, but never returns secrets.
-5. Start the local bridge with the matching sync URL/token.
-
-`SUPABASE_SECRET_KEY` belongs **only** in Vercel/server environment variables. Do not place it in `app.js`, localStorage, the browser, the Playwright profile, or bridge environment. Legacy `SUPABASE_SERVICE_ROLE_KEY` follows the same rule.
-
-## Event contract
-
-```json
-{
-  "source": "NAVER",
-  "events": [
-    {
-      "type": "created | updated",
-      "booking": {
-        "externalId": "stable external key",
-        "source": "NAVER",
-        "bookingNo": null,
-        "date": "2026-09-23",
-        "time": "13:00",
-        "phone": null,
-        "status": "confirmed | requested | cancelled | completed | no_show | unknown",
-        "rawText": "rendered row text"
-      }
-    }
-  ]
-}
-```
-
-The bridge deliberately does **not** treat a missing row as a cancellation because pagination or a SmartPlace filter can make an existing reservation disappear from the current DOM. Cancellation is emitted only when the rendered row itself exposes the changed status.
-
-## Safety / reliability rules
-
-- No CAPTCHA bypass, 2FA bypass, password capture, or credential storage.
-- No private SmartPlace API interception. The current reader inspects text already rendered in the authenticated page.
-- Session cookies live only in the local Playwright profile directory and must not be committed or uploaded.
-- The DOM reader is intentionally conservative. Before production use, validate the exact SmartPlace booking-list DOM from the salon account and set a stable `bookingRowSelector`. Safe fallback mode refuses rows that do not have a parseable date, time, and recognizable reservation status.
-- Customer PII should be minimized. The server endpoint accepts only normalized booking fields, caps payload size, requires a bearer token, and keeps the Supabase secret key server-side.
-
-## Next implementation step
-
-Validate the real salon SmartPlace booking-list DOM and extract customer/service/staff fields with stable semantic selectors. Only after that validation should the bridge promote staged `external_bookings` into the main `appointments` calendar; do not invent missing customer/service data.
+**실제 SmartPlace DOM, 예약 상세의 고객/시술/담당자, 사진 첨부, 리뷰 수집은 아직 실계정 검증 전입니다.** 사진 데이터는 `attachments: []`, `attachmentState: not_verified`로 명시하며 가짜 selector나 자동 사진 견적을 제공하지 않습니다. 실제 DOM/첨부 접근을 확인한 다음 기존 무료 reference matcher로 연결해야 합니다. 가격 분석은 의미론적 비전 AI가 아닌 48개 특징 벡터와 5-view ensemble입니다.

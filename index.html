@@ -7,7 +7,8 @@
   <meta name="description" content="LUDIA NAIL - 예약·고객관리와 LUDIA ART STUDIO를 하나로 묶은 모바일 네일샵 운영 웹앱" />
   <title>LUDIA NAIL</title>
   <link rel="manifest" href="manifest.webmanifest" />
-  <link rel="stylesheet" href="styles.css?v=2.60.7" />
+  <link rel="stylesheet" href="styles.css?v=2.61.0" />
+  <link rel="stylesheet" href="booking-ui.css?v=2.61.0" />
 </head>
 <body>
   <div class="app">
@@ -353,6 +354,7 @@
               <label><span>마감</span><input id="bookingCloseTime" type="time" step="900" value="21:00" /></label>
               <label><span>예약표 간격</span><select id="bookingSlotStep"><option value="15">15분</option><option value="30" selected>30분</option><option value="60">60분</option></select></label>
             </div>
+            <details class="booking-weekly-settings"><summary>요일별 영업시간 · 정기휴무</summary><label class="booking-weekly-enable"><input type="checkbox" id="bookingWeeklyEnabled">요일별 설정 사용</label><div id="bookingWeeklyRows"></div></details>
             <div class="booking-hours-preview">
               <span>예약표 미리보기</span><b id="bookingHoursPreview">11:00 → 21:00 · 30분 단위</b>
               <small>변경 후 저장하면 예약 화면 시간표에 즉시 적용됩니다.</small>
@@ -752,9 +754,10 @@
 
   <div class="toast" id="toast" role="status"></div>
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.116.0/dist/umd/supabase.min.js"></script>
-  <script src="salon-cloud.js?v=2.60.7"></script>
-  <script src="app.js?v=2.60.7"></script>
-  <script src="core-shell.js?v=2.60.7"></script>
-  <script src="runtime-loader.js?v=2.60.7"></script>
+  <script src="salon-cloud.js?v=2.61.0"></script>
+  <script src="booking-model.js?v=2.61.0"></script>
+<script src="app.js?v=2.61.0"></script>
+  <script src="core-shell.js?v=2.61.0"></script>
+  <script src="runtime-loader.js?v=2.61.0"></script>
 </body>
 </html>

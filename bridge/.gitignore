@@ -3,3 +3,6 @@ node_modules/
 .bridge-state.json
 .env
 *.log
+
+config.local.json
+.bridge-state.json.tmp

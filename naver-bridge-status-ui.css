@@ -144,3 +144,5 @@
   .home-ops-triad .ops-appointment{grid-template-columns:34px minmax(0,1fr)!important;padding-left:7px!important;padding-right:7px!important}
   .home-ops-triad .phd-row{padding-left:7px!important;padding-right:7px!important}
 }
+
+.nb-admin{border-top:1px solid var(--cal-line);margin-top:14px;padding-top:10px}.nb-admin summary{min-height:44px;cursor:pointer}.nb-admin p{font-size:12px;line-height:1.5;color:var(--cal-muted)}.nb-admin label{display:grid;gap:6px;font-size:13px}.nb-admin input{min-height:44px;width:100%;min-width:0;border:1px solid var(--cal-line);border-radius:8px;background:var(--cal-card);color:var(--cal-text);padding:8px;font-size:16px}.nb-admin button,[data-nb-admin-disconnect]{min-height:44px;border:0;border-radius:8px;background:var(--cal-fill);color:var(--cal-blue);padding:8px 14px;margin-top:8px}

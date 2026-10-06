@@ -1,221 +1,34 @@
-import { chromium } from 'playwright';
-import fs from 'node:fs/promises';
-import path from 'node:path';
-import crypto from 'node:crypto';
-
-async function loadLocalConfig() {
-  const file = path.resolve(process.env.LUDIA_BRIDGE_CONFIG || './config.local.json');
-  try { return JSON.parse(await fs.readFile(file, 'utf8')); }
-  catch { return {}; }
+import {chromium} from 'playwright';
+import fs from 'node:fs/promises';import path from 'node:path';import {randomUUID} from 'node:crypto';import {buildChanges} from './booking-reader.js';
+const read=async(file,fallback)=>{try{return JSON.parse(await fs.readFile(file,'utf8'))}catch{return fallback}};
+const cfg=await read(path.resolve(process.env.LUDIA_BRIDGE_CONFIG||'./config.local.json'),{});
+const profile=path.resolve(process.env.LUDIA_NAVER_PROFILE||cfg.profileDir||'./.naver-profile'),stateFile=path.resolve(process.env.LUDIA_BRIDGE_STATE||cfg.stateFile||'./.bridge-state.json');
+const syncUrl=process.env.LUDIA_SYNC_URL||cfg.syncUrl||'',token=process.env.LUDIA_SYNC_TOKEN||cfg.syncToken||'',bookingUrl=process.env.LUDIA_SMARTPLACE_URL||cfg.smartplaceUrl||'';
+const poll=Math.max(30000,Number(process.env.LUDIA_POLL_MS||cfg.pollMs)||60000),rowSelector=process.env.LUDIA_BOOKING_ROW_SELECTOR||cfg.bookingRowSelector||'',fields=cfg.bookingFields||{};
+const verified=cfg.selectorsVerified===true&&Boolean(rowSelector)&&['bookingNo','date','time','status'].every(key=>typeof fields[key]==='string'&&fields[key].trim());
+const save=async state=>{await fs.writeFile(stateFile+'.tmp',JSON.stringify(state,null,2),{encoding:'utf8',mode:0o600});await fs.rename(stateFile+'.tmp',stateFile)};
+function pageMatches(url){if(!bookingUrl)return false;try{const a=new URL(url),b=new URL(bookingUrl);return a.protocol==='https:'&&a.origin===b.origin&&a.pathname===b.pathname}catch{return false}}
+async function push(events,state,diagnostics={parserVerified:false}){const r=await fetch(syncUrl,{method:'POST',headers:{authorization:'Bearer '+token,'content-type':'application/json'},body:JSON.stringify({source:'NAVER',events,bridgeState:state,diagnostics}),signal:AbortSignal.timeout(20000)});let d;try{d=await r.json()}catch{throw Error('invalid_sync_response')}if(!r.ok||!d.ok||!d.persisted||d.accepted!==events.length)throw Error('sync_not_acknowledged_'+r.status)}
+async function extract(page){return page.locator('body').evaluate(({selector,fields})=>{const clean=v=>String(v||'').replace(/\s+/g,' ').trim();return[...document.querySelectorAll(selector)].filter(el=>el.getClientRects().length&&getComputedStyle(el).visibility!=='hidden').map(el=>{const out={};for(const [key,selector] of Object.entries(fields)){if(!selector)continue;const nodes=[...el.querySelectorAll(selector)].filter(n=>n.getClientRects().length&&getComputedStyle(n).visibility!=='hidden');out[key]=nodes.length===1?clean(nodes[0].textContent):''}return{text:clean(el.textContent).slice(0,2000),fields:out}})},{selector:rowSelector,fields})}
+async function main(){
+ if(!token||token.length<32||/^PASTE_/i.test(token))throw Error('Set the matching long LUDIA_SYNC_TOKEN in config.local.json');
+ const target=new URL(syncUrl),initial=new URL(bookingUrl||'https://new.smartplace.naver.com/');if(target.protocol!=='https:'||target.pathname!=='/api/naver-sync'||target.username||target.password)throw Error('Use the official LUDIA HTTPS sync endpoint');if(initial.protocol!=='https:'||!/(^|\.)smartplace\.naver\.com$/.test(initial.hostname))throw Error('Use the official HTTPS SmartPlace booking URL');
+ const state=await read(stateFile,{bookings:{},lastSyncAt:null});if(!state.bookings||typeof state.bookings!=='object')state.bookings={};if(!state.bridgeId){state.bridgeId=randomUUID();await save(state)}
+ const context=await chromium.launchPersistentContext(profile,{headless:false,viewport:{width:1280,height:900},locale:'ko-KR'}),page=context.pages()[0]||await context.newPage();await page.goto(initial.href,{waitUntil:'domcontentloaded'});
+ console.log('[LUDIA] Complete official Naver login/CAPTCHA/2FA yourself. Unverified selectors send status only; no bookings.');
+ let stopping=false,failures=0;process.once('SIGINT',()=>{stopping=true});process.once('SIGTERM',()=>{stopping=true});
+ while(!stopping){try{const body=(await page.locator('body').innerText()).slice(0,20000),login=/nid\.naver\.com|\/login/.test(page.url())||/로그인이 필요|로그인해 주세요|로그인해주세요|2단계 인증|보안문자|자동입력 방지/.test(body);
+  if(login)await push([],state.lastSyncAt?'reauth_required':'login_required');
+  else if(!verified||!pageMatches(page.url()))await push([],'selector_required');
+  else{const rows=await extract(page),empty=cfg.emptyStateSelector&&await page.locator(cfg.emptyStateSelector).isVisible();
+   if(!rows.length&&!empty)await push([],'selector_required');
+   else{const changes=buildChanges(rows,state),diag={parserVerified:true,visibleCount:rows.length,parsedCount:changes.parsedCount,selectorMode:'verified-fields'};
+    if(changes.rejectedCount)await push([],'selector_required',{...diag,parserVerified:false});
+    else{if(!changes.events.length)await push([],'connected',diag);for(let i=0;i<changes.events.length;i+=200)await push(changes.events.slice(i,i+200),'connected',diag);state.bookings={...state.bookings,...changes.next};state.lastSyncAt=new Date().toISOString();await save(state);console.log('[LUDIA] accepted '+changes.events.length+' verified events')}
+   }
+  }failures=0
+ }catch(error){failures++;console.error('[LUDIA] '+error.message);await push([],'error').catch(()=>{})}
+ if(stopping)break;await new Promise(r=>setTimeout(r,Math.min(300000,poll*Math.pow(2,Math.min(failures,3)))));if(!stopping&&pageMatches(page.url()))try{await page.reload({waitUntil:'domcontentloaded',timeout:30000})}catch{}
+ }await context.close();
 }
-const LOCAL_CONFIG = await loadLocalConfig();
-const PROFILE_DIR = path.resolve(process.env.LUDIA_NAVER_PROFILE || LOCAL_CONFIG.profileDir || './.naver-profile');
-const STATE_FILE = path.resolve(process.env.LUDIA_BRIDGE_STATE || LOCAL_CONFIG.stateFile || './.bridge-state.json');
-const CONFIGURED_SMARTPLACE_URL = process.env.LUDIA_SMARTPLACE_URL || LOCAL_CONFIG.smartplaceUrl || '';
-const SYNC_URL = process.env.LUDIA_SYNC_URL || LOCAL_CONFIG.syncUrl || '';
-const SYNC_TOKEN = process.env.LUDIA_SYNC_TOKEN || LOCAL_CONFIG.syncToken || '';
-const POLL_MS = Math.max(30000, Number(process.env.LUDIA_POLL_MS || LOCAL_CONFIG.pollMs || 60000));
-const REVIEW_URL = process.env.LUDIA_NAVER_REVIEW_URL || LOCAL_CONFIG.reviewUrl || '';
-const BOOKING_ROW_SELECTOR = process.env.LUDIA_BOOKING_ROW_SELECTOR || LOCAL_CONFIG.bookingRowSelector || '';
-const DEFAULT_SMARTPLACE_URL = 'https://new.smartplace.naver.com/';
-
-const sleep = ms => new Promise(r => setTimeout(r, ms));
-const hash = value => crypto.createHash('sha256').update(JSON.stringify(value)).digest('hex');
-
-async function readState() {
-  try { return JSON.parse(await fs.readFile(STATE_FILE, 'utf8')); }
-  catch { return { bookings: {}, lastSyncAt: null }; }
-}
-async function writeState(state) {
-  await fs.writeFile(STATE_FILE, JSON.stringify(state, null, 2), 'utf8');
-}
-
-function normalizeText(v = '') { return v.replace(/\s+/g, ' ').trim(); }
-function statusFromText(text) {
-  if (/취소/.test(text)) return 'cancelled';
-  if (/완료/.test(text)) return 'completed';
-  if (/노쇼|미방문/.test(text)) return 'no_show';
-  if (/신청|대기/.test(text)) return 'requested';
-  if (/확정/.test(text)) return 'confirmed';
-  return 'unknown';
-}
-function normalizeDate(raw) {
-  if (!raw) return null;
-  const nums = raw.match(/\d+/g)?.map(Number) || [];
-  if (nums.length < 2) return null;
-  const now = new Date();
-  const [year, month, day] = nums.length >= 3 ? nums : [now.getFullYear(), nums[0], nums[1]];
-  if (!year || !month || !day) return null;
-  return `${String(year).padStart(4, '0')}-${String(month).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
-}
-function normalizeTime(raw) {
-  if (!raw) return null;
-  const m = raw.match(/(오전|오후)?\s*(\d{1,2}):(\d{2})/);
-  if (!m) return null;
-  let hour = Number(m[2]);
-  if (m[1] === '오후' && hour < 12) hour += 12;
-  if (m[1] === '오전' && hour === 12) hour = 0;
-  if (hour > 23 || Number(m[3]) > 59) return null;
-  return `${String(hour).padStart(2, '0')}:${m[3]}`;
-}
-function identityText(text) {
-  return normalizeText(text)
-    .replace(/(?:예약번호|예약 번호)\s*[:#]?\s*[A-Za-z0-9-]+/gi, ' ')
-    .replace(/\b(?:확정|신청|대기|취소|완료|노쇼|미방문)\b/g, ' ')
-    .replace(/01[016789][- ]?\d{3,4}[- ]?\d{4}/g, ' ')
-    .replace(/20\d{2}[.\/-]\d{1,2}[.\/-]\d{1,2}|\d{1,2}[.\/-]\d{1,2}/g, ' ')
-    .replace(/(?:오전|오후)?\s*\d{1,2}:\d{2}/g, ' ')
-    .replace(/\s+/g, ' ')
-    .trim()
-    .slice(0, 120);
-}
-
-// Conservative reader: only text already rendered in the authenticated SmartPlace page.
-// It never intercepts private APIs, reads passwords, or bypasses authentication.
-async function extractVisibleBookings(page) {
-  const selector = BOOKING_ROW_SELECTOR || 'article, li, tr, [role="row"]';
-  return page.locator('body').evaluate(({ selector, strict }) => {
-    const clean = v => (v || '').replace(/\s+/g, ' ').trim();
-    let nodes = [];
-    try { nodes = [...document.querySelectorAll(selector)]; } catch { nodes = []; }
-    const candidates = nodes
-      .map((el, index) => ({ index, text: clean(el.innerText) }))
-      .filter(x => x.text.length >= 12)
-      .filter(x => strict || /(예약|확정|신청|취소|완료|노쇼)/.test(x.text));
-    return candidates.slice(0, 300);
-  }, { selector, strict: Boolean(BOOKING_ROW_SELECTOR) });
-}
-
-function parseCandidate(row) {
-  const text = normalizeText(row.text);
-  const bookingNo = text.match(/(?:예약번호|예약 번호)\s*[:#]?\s*([A-Za-z0-9-]+)/i)?.[1] || null;
-  const rawDate = text.match(/(20\d{2}[.\/-]\d{1,2}[.\/-]\d{1,2}|\d{1,2}[.\/-]\d{1,2})/)?.[1] || null;
-  const rawTime = text.match(/(?:오전|오후)?\s*\d{1,2}:\d{2}/)?.[0] || null;
-  const phone = text.match(/01[016789][- ]?\d{3,4}[- ]?\d{4}/)?.[0]?.replace(/\D/g, '') || null;
-  const date = normalizeDate(rawDate);
-  const time = normalizeTime(rawTime);
-  const status = statusFromText(text);
-  const identity = identityText(text);
-  // Status/raw text are deliberately excluded from the fallback identity so a confirmed→cancelled
-  // booking remains the same booking even when SmartPlace does not render a booking number.
-  const stableKey = bookingNo || hash({ date, time, phone, identity }).slice(0, 24);
-  const parseScore = Number(Boolean(date)) + Number(Boolean(time)) + Number(status !== 'unknown') + Number(Boolean(bookingNo || phone));
-  return { externalId: stableKey, source: 'NAVER', bookingNo, date, time, phone, status, rawText: text, parseScore };
-}
-
-async function extractVisibleReviews(page) {
-  return page.locator('body').evaluate(() => {
-    const clean=v=>(v||'').replace(/\s+/g,' ').trim();
-    return [...document.querySelectorAll('article,li,[role="listitem"]')]
-      .map((el,index)=>({index,text:clean(el.innerText)}))
-      .filter(x=>x.text.length>=8 && /(리뷰|방문|별점|답글)/.test(x.text))
-      .slice(0,300);
-  });
-}
-function parseReview(row){
-  const text=normalizeText(row.text);
-  const author=text.match(/([가-힣A-Za-z0-9_*]{2,20})\s*(?:님|고객)?/)?.[1]||null;
-  const rating=Number(text.match(/(?:별점|평점)\s*([0-5](?:\.\d)?)/)?.[1]||0)||null;
-  return {externalId:hash({author,text}).slice(0,24),authorLabel:author,rating,reviewText:text};
-}
-
-async function pushEvents(events, reviews=[], meta={}) {
-  if (!SYNC_URL) {
-    if (events.length) console.log(`[LUDIA] ${events.length} change(s) detected; LUDIA_SYNC_URL is not configured. Changes stay pending and will retry after setup.`);
-    return { uploaded: false, reason: 'sync_url_missing' };
-  }
-  const headers = { 'content-type': 'application/json' };
-  if (SYNC_TOKEN) headers.authorization = `Bearer ${SYNC_TOKEN}`;
-  // Empty event batches are intentional heartbeats. The server records last_sync_at without
-  // customer data so the salon dashboard can distinguish a healthy idle bridge from a stopped PC.
-  const response = await fetch(SYNC_URL, { method: 'POST', headers, body: JSON.stringify({ source: 'NAVER', events, reviews, bridgeState: meta.bridgeState || 'connected', diagnostics: meta.diagnostics || null }) });
-  if (!response.ok) throw new Error(`sync failed: HTTP ${response.status}`);
-  const body = await response.json().catch(() => ({ ok: true }));
-  return { ...body, uploaded: true, heartbeat: events.length === 0 };
-}
-
-async function diffAndSync(rows, state) {
-  const next = {};
-  const events = [];
-  const parsed = rows.map(parseCandidate).filter(row => row.date && row.time && row.status !== 'unknown' && row.parseScore >= 3);
-  // SmartPlace can render nested rows containing the same reservation. Keep one stable identity.
-  for (const row of parsed) {
-    const fingerprint = hash(row);
-    const existing = next[row.externalId];
-    if (existing && existing.row.rawText.length >= row.rawText.length) continue;
-    next[row.externalId] = { fingerprint, row, seenAt: new Date().toISOString() };
-  }
-  for (const [externalId, item] of Object.entries(next)) {
-    const prev = state.bookings[externalId];
-    if (!prev) events.push({ type: 'created', booking: item.row });
-    else if (prev.fingerprint !== item.fingerprint) events.push({ type: 'updated', booking: item.row });
-  }
-  // Missing rows are never auto-cancelled: pagination/filter/UI changes can hide valid bookings.
-  // Cancellation is emitted only when SmartPlace visibly renders a cancelled status.
-  const result = await pushEvents(events, [], { bridgeState:'connected', diagnostics:{ visibleCount:rows.length, parsedCount:parsed.length, selectorMode:BOOKING_ROW_SELECTOR?'custom':'safe-fallback' } });
-  // Critical durability rule: never acknowledge detected changes locally until the remote endpoint
-  // accepted them. This prevents first-run reservations from disappearing when setup is incomplete,
-  // the network is down, or the sync endpoint temporarily fails.
-  if (result.uploaded) {
-    state.bookings = { ...state.bookings, ...next };
-    state.lastSyncAt = new Date().toISOString();
-    await writeState(state);
-  }
-  return { events, uploaded: result.uploaded, pending: events.length && !result.uploaded, heartbeat: result.heartbeat === true };
-}
-
-async function main() {
-  console.log('[LUDIA] Naver Bridge starting. Login credentials are never read or stored by this program.');
-  if (!SYNC_URL) throw new Error('syncUrl is missing. Open config.local.json and set syncUrl.');
-  if (!SYNC_TOKEN || /^PASTE_/i.test(SYNC_TOKEN)) throw new Error('syncToken is missing. Put the same LUDIA_SYNC_TOKEN used by Vercel into config.local.json.');
-  const context = await chromium.launchPersistentContext(PROFILE_DIR, {
-    headless: false,
-    viewport: { width: 1280, height: 900 },
-    locale: 'ko-KR'
-  });
-  const page = context.pages()[0] || await context.newPage();
-  const state = await readState();
-  const initialUrl = CONFIGURED_SMARTPLACE_URL || state.lastBookingUrl || DEFAULT_SMARTPLACE_URL;
-  await page.goto(initialUrl, { waitUntil: 'domcontentloaded' });
-  console.log('[LUDIA] If Naver asks you to sign in or verify, complete it yourself in this browser window. CAPTCHA/2FA is never bypassed.');
-  if (!BOOKING_ROW_SELECTOR) console.log('[LUDIA] Booking DOM is in safe fallback mode. Only rows with date + time + recognizable status are synced until a real SmartPlace selector is validated.');
-  while (true) {
-    try {
-      const url = page.url();
-      if (/nid\.naver\.com|login/i.test(url)) {
-        console.log('[LUDIA] Waiting for manual Naver login…');
-        await pushEvents([], [], { bridgeState:'reauth_required', diagnostics:{ visibleCount:0, parsedCount:0, selectorMode:BOOKING_ROW_SELECTOR?'custom':'safe-fallback' } }).catch(()=>{});
-      } else {
-        const visible = await extractVisibleBookings(page);
-        const parsedPreview = visible.map(parseCandidate).filter(row => row.date && row.time && row.status !== 'unknown' && row.parseScore >= 3);
-        if (parsedPreview.length && /smartplace\.naver\.com/i.test(url)) {
-          state.lastBookingUrl = url;
-          await writeState(state);
-        }
-        const result = await diffAndSync(visible, state);
-        if (REVIEW_URL) {
-          const reviewPage = await context.newPage();
-          try {
-            await reviewPage.goto(REVIEW_URL,{waitUntil:'domcontentloaded',timeout:30000});
-            const reviewRows=await extractVisibleReviews(reviewPage);
-            const reviews=reviewRows.map(parseReview);
-            if(reviews.length) await pushEvents([],reviews);
-            console.log(`[LUDIA] reviews visible ${reviews.length}`);
-          } finally { await reviewPage.close(); }
-        }
-        const syncState = result.pending ? `pending ${result.events.length}` : result.heartbeat ? 'heartbeat ok' : `changes ${result.events.length}`;
-        console.log(`[LUDIA] ${new Date().toLocaleTimeString('ko-KR')} · visible ${visible.length} · ${syncState}`);
-      }
-    } catch (error) {
-      console.error('[LUDIA] sync cycle failed:', error.message);
-      await pushEvents([], [], { bridgeState:'error', diagnostics:{ visibleCount:0, parsedCount:0, selectorMode:BOOKING_ROW_SELECTOR?'custom':'safe-fallback' } }).catch(()=>{});
-    }
-    await sleep(POLL_MS);
-    try { await page.reload({ waitUntil: 'domcontentloaded', timeout: 30000 }); } catch {}
-  }
-}
-
-main().catch(error => {
-  console.error('[LUDIA] fatal:', error);
-  process.exitCode = 1;
-});
+main().catch(error=>{console.error('[LUDIA] '+error.message);process.exitCode=1});

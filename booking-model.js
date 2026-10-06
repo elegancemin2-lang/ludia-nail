@@ -1,0 +1,14 @@
+/* Shared local booking rules: no auth or network required. */
+(function(root){'use strict';
+ const minutes=value=>{const m=String(value||'').match(/^(\d{1,2}):(\d{2})$/);return m&&+m[1]<24&&+m[2]<60?+m[1]*60+ +m[2]:null};
+ const time=value=>String(Math.floor(value/60)).padStart(2,'0')+':'+String(value%60).padStart(2,'0');
+ function range(v,f={open:'11:00',close:'21:00'}){const s=minutes(v?.open),e=minutes(v?.close);return s!==null&&e!==null&&e>s?{open:time(s),close:time(e)}:{open:f.open,close:f.close}}
+ function normalize(v={}){const common=range(v),out={...common,step:[15,30,60].includes(+v.step)?+v.step:30};if(v.weekly&&typeof v.weekly==='object'){out.weekly={};for(let d=0;d<7;d++)if(v.weekly[d])out.weekly[d]={...range(v.weekly[d],common),closed:v.weekly[d].closed===true}}if(Array.isArray(v.exceptions))out.exceptions=v.exceptions.filter(x=>/^\d{4}-\d{2}-\d{2}$/.test(x?.date||'')).map(x=>({date:x.date,...range(x,common),closed:x.closed===true}));return out}
+ function dayHours(settings,date){const cfg=normalize(settings),key=[date.getFullYear(),String(date.getMonth()+1).padStart(2,'0'),String(date.getDate()).padStart(2,'0')].join('-'),rule=cfg.exceptions?.find(x=>x.date===key)||cfg.weekly?.[date.getDay()]||cfg;return{...range(rule,cfg),closed:rule.closed===true,step:cfg.step}}
+ const blocks=a=>!['취소','노쇼','cancelled','no_show'].includes(a.status);
+ const duration=a=>Math.max(5,Number(a.duration)||90);
+ const overlaps=(start,end,a)=>{const s=minutes(a.time);return s!==null&&start<s+duration(a)&&end>s};
+ function availability({settings,date,dayOffset=0,staff,time:at,duration:len=90,appointments=[]}){const hours=dayHours(settings,date),start=minutes(at),end=start+Number(len);if(!staff||staff==='미지정')return{available:false,reason:'inactive_staff'};if(start===null||!Number.isFinite(Number(len))||len<5||len>720)return{available:false,reason:'invalid_time'};if(hours.closed)return{available:false,reason:'time_off'};if(start<minutes(hours.open)||end>minutes(hours.close))return{available:false,reason:'outside_work_hours'};const conflict=appointments.find(a=>Number(a.dayOffset||0)===Number(dayOffset)&&a.staff===staff&&blocks(a)&&overlaps(start,end,a));return conflict?{available:false,reason:'appointment_conflict',conflict}:{available:true,reason:null}}
+ function groups(items){const rows=items.filter(a=>minutes(a.time)!==null).sort((a,b)=>minutes(a.time)-minutes(b.time)),out=[];for(const a of rows){const start=minutes(a.time),end=start+duration(a),last=out[out.length-1];if(last&&start<last.end){last.items.push(a);last.end=Math.max(last.end,end)}else out.push({start,end,items:[a]})}return out}
+ const api={minutes,time,normalize,dayHours,blocks,duration,overlaps,availability,groups};if(typeof module==='object'&&module.exports)module.exports=api;else root.LudiaBookingModel=api;
+})(typeof window==='undefined'?globalThis:window);

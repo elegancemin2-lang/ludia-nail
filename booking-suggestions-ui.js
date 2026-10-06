@@ -1,6 +1,6 @@
 /* LUDIA NAIL · nearest booking suggestions
  * Progressive enhancement over booking-availability-ui.js.
- * Never invents availability: suggestions are cloned only from server-verified available slots.
+ * Never invents availability: suggestions are cloned only from available slots from the displayed local/server preflight.
  */
 (()=>{
   const $=s=>document.querySelector(s);
@@ -22,7 +22,7 @@
     const future=available.filter(b=>minutes(b.dataset.time||b.textContent)>=selectedMin);
     const picks=(future.length?future:available).slice(0,3);
     if(!picks.length){box.innerHTML='<div class="qb-suggestions-label"><span>가까운 추천 시간</span></div><div class="qb-suggestions-empty">현재 조건에서 바로 예약 가능한 시간이 없어요.</div>';return}
-    box.innerHTML='<div class="qb-suggestions-label"><span>가까운 추천 시간</span><span>서버 확인 완료</span></div><div class="qb-suggestions-list"></div>';
+    box.innerHTML='<div class="qb-suggestions-label"><span>가까운 추천 시간</span><span>'+ (strip.dataset.verification==='local'?'기기 예약 기준':'서버 확인 완료') +'</span></div><div class="qb-suggestions-list"></div>';
     const list=box.querySelector('.qb-suggestions-list');
     picks.forEach((source,i)=>{const time=source.dataset.time||source.textContent.trim(),button=document.createElement('button');button.type='button';button.className='qb-suggestion';button.innerHTML=`${time}<small>${i===0?'가장 빠름':'예약 가능'}</small>`;button.addEventListener('click',()=>source.click());list.appendChild(button)});
   }

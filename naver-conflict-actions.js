@@ -1,25 +1,3 @@
-/* LUDIA NAIL · authenticated manager actions for Naver schedule conflicts */
-window.LudiaNaverConflicts=(()=>{
-  let clientPromise=null;
-  async function client(){
-    if(clientPromise)return clientPromise;
-    clientPromise=(async()=>{
-      const r=await fetch('/api/salon-config',{cache:'no-store'}),cfg=await r.json();
-      if(!cfg?.configured||!window.supabase?.createClient)throw new Error('cloud unavailable');
-      return await window.LudiaSalonCloud.getClient();
-    })();
-    return clientPromise;
-  }
-  async function resolve(conflictId,action){
-    if(!Number.isFinite(Number(conflictId)))throw new Error('invalid conflict');
-    if(!['keep_ludia','accept_naver'].includes(action))throw new Error('invalid action');
-    const c=await client();
-    const {data:{session}}=await c.auth.getSession();
-    if(!session?.user)throw new Error('login required');
-    const {data,error}=await c.rpc('ludia_resolve_naver_conflict',{p_conflict_id:Number(conflictId),p_action:action});
-    if(error)throw error;
-    return data;
-  }
-  return{resolve};
-})();
-
+/* External integration only; core navigation never requires this capability. */
+window.LudiaNaverAccess=(()=>{let token='',expiresAt=0;function clear(){const had=Boolean(token);token='';expiresAt=0;if(had)window.dispatchEvent(new CustomEvent('ludia:naver-access'))}async function headers(){if(token&&Date.now()<expiresAt)return{accept:'application/json','x-ludia-integration-token':token};if(token)clear();const jwt=await window.LudiaSalonCloud?.getAccessToken?.();return jwt?{accept:'application/json',authorization:'Bearer '+jwt}:{accept:'application/json'}}async function connect(value){const key=String(value||'').trim();if(key.length<32||key.length>1024)throw Error('invalid_admin_key');const r=await fetch('/api/naver-status',{headers:{accept:'application/json','x-ludia-integration-token':key},cache:'no-store',signal:AbortSignal.timeout(15000)}),d=await r.json();if(!r.ok||!d.ok||!d.configured||d.publicHealth)throw Error('integration_admin_unavailable');token=key;expiresAt=Date.now()+1800000;window.dispatchEvent(new CustomEvent('ludia:naver-access'));return d}return{headers,connect,clear,isScoped:()=>Boolean(token&&Date.now()<expiresAt)}})();
+window.LudiaNaverConflicts={async resolve(conflictId,action){if(!Number.isSafeInteger(+conflictId)||+conflictId<=0||!['keep_ludia','accept_naver'].includes(action))throw Error('invalid_resolution');const r=await fetch('/api/naver-conflict',{method:'POST',headers:{...await window.LudiaNaverAccess.headers(),'content-type':'application/json'},body:JSON.stringify({conflictId:+conflictId,action}),cache:'no-store',signal:AbortSignal.timeout(15000)}),d=await r.json();if(!r.ok||!d.ok)throw Error(d.error||'resolution_failed');window.dispatchEvent(new CustomEvent('ludia:naver-refresh'));return d}};

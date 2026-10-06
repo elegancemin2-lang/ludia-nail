@@ -1,13 +1,13 @@
 {
   "name": "ludia-naver-bridge",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "private": true,
   "type": "module",
   "scripts": {
     "start": "node bridge.js",
-    "check": "node --check bridge.js"
+    "check": "node --check bridge.js && node --check booking-reader.js"
   },
   "dependencies": {
-    "playwright": "^1.55.0"
+    "playwright": "1.55.0"
   }
 }

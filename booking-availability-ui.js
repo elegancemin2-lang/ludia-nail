@@ -1,20 +1,13 @@
 /* LUDIA NAIL · booking availability preflight
- * Uses the authenticated Supabase browser session only. DB trigger remains authoritative.
+ * Local preflight works without login; connected Supabase sessions use the authoritative DB slots.
  */
 (()=>{
   const $=s=>document.querySelector(s);
-  let client=null,salonId=null,staff=[],requestSeq=0;
-  const reasonLabel={outside_work_hours:'근무시간 외',time_off:'휴무',appointment_conflict:'예약 있음',inactive_staff:'비활성 직원'};
-  function localDate(){
-    const text=$('#quickBookingContext')?.textContent||'';
-    const m=text.match(/(\d{1,2})월\s*(\d{1,2})일/),now=new Date();
-    if(!m)return now.toISOString().slice(0,10);
-    let year=now.getFullYear(),month=Number(m[1]),day=Number(m[2]);
-    if(now.getMonth()===11&&month===1)year++;
-    if(now.getMonth()===0&&month===12)year--;
-    return `${year}-${String(month).padStart(2,'0')}-${String(day).padStart(2,'0')}`;
-  }
+  let client=null,salonId=null,staff=[],requestSeq=0,lastRows=[];
+  const reasonLabel={outside_work_hours:'근무시간 외',time_off:'휴무',appointment_conflict:'같은 담당자 예약 있음',inactive_staff:'담당자 확인 필요',invalid_time:'시간 확인 필요'};
+  function localDate(){return $('#quickBookingContext')?.dataset.date||new Intl.DateTimeFormat('en-CA',{year:'numeric',month:'2-digit',day:'2-digit'}).format(new Date())}
   async function cloud(){
+    if(!window.LudiaSalonCloud?.isConnected?.())return null;
     if(client&&salonId)return client;
     if(!window.supabase?.createClient)return null;
     if(!client){
@@ -40,30 +33,33 @@
     if(!staffName)return;renderLoading();
     try{
       const c=await cloud();if(seq!==requestSeq)return;
-      if(!c){$('#qbAvailabilityState').textContent='오프라인';$('#qbSlotStrip').innerHTML='<span class="qb-slot-loading">클라우드 연결 후 근무·휴무 시간을 확인할 수 있어요.</span>';return}
-      const person=staff.find(x=>x.display_name===staffName);if(!person){$('#qbAvailabilityState').textContent='담당자 확인';return}
-      const {data,error}=await c.rpc('ludia_staff_day_slots',{p_salon_id:salonId,p_staff_user_id:person.user_id,p_local_date:localDate(),p_duration_minutes:duration,p_step_minutes:30});
-      if(error)throw error;if(seq!==requestSeq)return;
-      const rows=data||[],strip=$('#qbSlotStrip');strip.innerHTML='';
+      let rows;
+      if(!c){rows=window.LudiaBookingAvailability?.localRows(staffName,duration)||[];$('#qbSlotStrip').dataset.verification='local'}
+      else{
+        const person=staff.find(x=>x.display_name===staffName);if(!person){$('#qbAvailabilityState').textContent='담당자 확인';$('#qbSlotStrip').innerHTML='';return}
+        const {data,error}=await c.rpc('ludia_staff_day_slots',{p_salon_id:salonId,p_staff_user_id:person.user_id,p_local_date:localDate(),p_duration_minutes:duration,p_step_minutes:window.LudiaBookingAvailability?.getStep?.()||30});
+        if(error)throw error;if(seq!==requestSeq)return;rows=data||[];$('#qbSlotStrip').dataset.verification='server';
+      }
+      lastRows=rows;const strip=$('#qbSlotStrip');strip.innerHTML='';
       rows.forEach(row=>{
-        if(!row.slot_start)return;const d=new Date(row.slot_start),time=new Intl.DateTimeFormat('en-GB',{timeZone:'Asia/Seoul',hour:'2-digit',minute:'2-digit',hour12:false}).format(d);
+        const time=row.time||(row.slot_start?new Intl.DateTimeFormat('en-GB',{timeZone:'Asia/Seoul',hour:'2-digit',minute:'2-digit',hour12:false}).format(new Date(row.slot_start)):null);if(!time)return;
         const b=document.createElement('button');b.type='button';b.className='qb-slot '+(row.available?'available':'blocked');b.disabled=!row.available;b.dataset.time=time;b.textContent=time;b.title=row.available?'예약 가능':(reasonLabel[row.reason]||'예약 불가');
         if(row.available)b.onclick=()=>{if($('#qbTime'))$('#qbTime').value=time;markSelected(rows);};strip.appendChild(b)
       });
       $('#qbAvailabilityState').textContent=`가능 ${rows.filter(x=>x.available).length}`;
-      $('#qbAvailabilityMeta').textContent=`${window.LudiaEscapeHTML(staffName)} · ${duration}분 기준`;
+      $('#qbAvailabilityMeta').textContent=`${staffName} · ${duration}분 기준`;
       markSelected(rows);
-    }catch(error){console.warn('[LUDIA availability]',error);$('#qbAvailabilityState').textContent='확인 실패';$('#qbSlotStrip').innerHTML='<span class="qb-slot-loading">시간 확인에 실패했어요. 저장 시 서버가 다시 검증합니다.</span>';const save=$('#qbSaveBtn');if(save)save.disabled=false}
+    }catch(error){if(seq!==requestSeq)return;console.warn('[LUDIA availability]',error.message);$('#qbAvailabilityState').textContent='확인 실패';$('#qbSlotStrip').innerHTML='<span class="qb-slot-loading">시간 확인에 실패했어요. 저장 시 서버가 다시 검증합니다.</span>';const save=$('#qbSaveBtn');if(save)save.disabled=false}
   }
   function markSelected(rows=[]){
     const time=$('#qbTime')?.value||'';document.querySelectorAll('.qb-slot').forEach(b=>b.classList.toggle('selected',b.dataset.time===time));
     const fmt=v=>new Intl.DateTimeFormat('en-GB',{timeZone:'Asia/Seoul',hour:'2-digit',minute:'2-digit',hour12:false}).format(new Date(v));
-    const exact=rows.find(r=>r.slot_start&&fmt(r.slot_start)===time),save=$('#qbSaveBtn');if(save)save.disabled=Boolean(exact&&!exact.available);
-    const note=$('#qbAvailabilityNote');if(note&&exact&&!exact.available)note.textContent=reasonLabel[exact.reason]||'선택한 시간은 예약할 수 없어요.';else if(note)note.textContent='회색 시간은 근무·휴무·기존 예약 기준으로 선택할 수 없어요.';
+    const exact=rows.find(r=>(r.time||(r.slot_start?fmt(r.slot_start):null))===time),save=$('#qbSaveBtn');if(save)save.disabled=Boolean(exact&&!exact.available);
+    const note=$('#qbAvailabilityNote');if(note&&exact&&!exact.available)note.textContent=reasonLabel[exact.reason]||'선택한 시간은 예약할 수 없어요.';else if(note)note.textContent=($('#qbSlotStrip')?.dataset.verification==='local'?'이 기기에 저장된 예약과 샵 영업시간 기준이에요.':'서버 근무·휴무·예약 기준이에요.');
   }
   function bind(){
     ensureUI();['qbStaff','qbDuration','qbService'].forEach(id=>$('#'+id)?.addEventListener('change',()=>setTimeout(refresh,0)));
-    $('#qbTime')?.addEventListener('change',refresh);
+    $('#qbTime')?.addEventListener('change',()=>{markSelected(lastRows);refresh()});
     const sheet=$('#quickBookingSheet');if(sheet)new MutationObserver(()=>{if(sheet.classList.contains('open'))setTimeout(refresh,40)}).observe(sheet,{attributes:true,attributeFilter:['class']});
   }
   if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',bind);else bind();

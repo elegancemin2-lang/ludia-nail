@@ -57,7 +57,7 @@
 #bookingScreen #bookingWeekStrip{display:none!important}
 #bookingScreen .booking-week-board-shell{margin:0!important;padding:0!important;width:100%!important;max-width:100%!important}
 #bookingScreen .booking-filter-row{flex-wrap:wrap!important}
-@media(max-width:760px){html{scrollbar-width:none}html::-webkit-scrollbar{display:none}#bookingScreen #staffTabs{flex:0 0 100%!important;padding:0!important}#bookingScreen #bookingCountLabel{flex:0 0 100%!important;padding:0!important}#bookingScreen .booking-grid-event{font-size:inherit}}
+@media(max-width:760px){html{scrollbar-width:none}html::-webkit-scrollbar{display:none}#bookingScreen #staffTabs{flex:0 0 100%!important;max-width:100%!important;width:100%!important;padding:0!important}#bookingScreen #bookingCountLabel{flex:0 0 100%!important;padding:0!important}#bookingScreen .booking-grid-event{font-size:inherit}}
 
 /* Keep both names readable in short simultaneous appointments. */
 .concurrent-mini-row>span.unassigned{color:var(--cal-muted);background:var(--cal-fill)}

@@ -52,3 +52,9 @@
  .booking-grid-event.concurrent-booking{padding:3px 2px;border-left-width:2px}.concurrent-top span{font-size:9px}.concurrent-mini-list{gap:3px}.concurrent-mini-row{grid-template-columns:1fr;gap:2px;padding-top:3px}.concurrent-mini-row>span{width:auto;height:auto;display:block;text-align:left;font-size:9px;background:transparent!important}.concurrent-mini-row>b{font-size:11.5px;letter-spacing:-.055em}.concurrent-mini-row>time{grid-column:1;font-size:9px}.concurrent-mini-row:nth-child(n+3){display:none}.booking-now-line span{font-size:9px}
 }
 @media(prefers-reduced-motion:reduce){.concurrent-booking-sheet,.concurrent-booking-backdrop{transition:none}}
+
+/* Production QA: remove inherited horizontal-board spacing and duplicate date strip. */
+#bookingScreen #bookingWeekStrip{display:none!important}
+#bookingScreen .booking-week-board-shell{margin:0!important;padding:0!important;width:100%!important;max-width:100%!important}
+#bookingScreen .booking-filter-row{flex-wrap:wrap!important}
+@media(max-width:760px){html{scrollbar-width:none}html::-webkit-scrollbar{display:none}#bookingScreen #staffTabs{flex:0 0 100%!important;padding:0!important}#bookingScreen #bookingCountLabel{flex:0 0 100%!important;padding:0!important}#bookingScreen .booking-grid-event{font-size:inherit}}

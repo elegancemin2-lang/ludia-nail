@@ -58,3 +58,13 @@
 #bookingScreen .booking-week-board-shell{margin:0!important;padding:0!important;width:100%!important;max-width:100%!important}
 #bookingScreen .booking-filter-row{flex-wrap:wrap!important}
 @media(max-width:760px){html{scrollbar-width:none}html::-webkit-scrollbar{display:none}#bookingScreen #staffTabs{flex:0 0 100%!important;padding:0!important}#bookingScreen #bookingCountLabel{flex:0 0 100%!important;padding:0!important}#bookingScreen .booking-grid-event{font-size:inherit}}
+
+/* Keep both names readable in short simultaneous appointments. */
+.concurrent-mini-row>span.unassigned{color:var(--cal-muted);background:var(--cal-fill)}
+@media(max-width:760px){
+ .concurrent-mini-list{gap:2px}.concurrent-mini-row{gap:1px;padding-top:2px}.concurrent-mini-row>span{line-height:1}.concurrent-mini-row>b{line-height:1.15}
+ .concurrent-booking.same-start .concurrent-mini-row>time{display:none}
+ .concurrent-booking.short{padding:2px 1px;gap:1px}.concurrent-booking.short .concurrent-top{flex-wrap:nowrap}.concurrent-booking.short .concurrent-top time{display:none}.concurrent-booking.short .concurrent-top span{line-height:1.1}
+ .concurrent-booking.short .concurrent-mini-list{gap:1px}.concurrent-booking.short .concurrent-mini-row{border-top:0;border-left:2px solid var(--cal-muted);padding:0 0 0 1px;gap:0}.concurrent-booking.short .concurrent-mini-row.owner{border-left-color:var(--cal-blue)}.concurrent-booking.short .concurrent-mini-row.staff{border-left-color:var(--cal-purple)}
+ .concurrent-booking.short .concurrent-mini-row>span,.concurrent-booking.short .concurrent-mini-row>time{display:none}.concurrent-booking.short .concurrent-mini-row>b{font-size:11.5px;line-height:1.1}
+}

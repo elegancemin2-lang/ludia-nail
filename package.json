@@ -1,0 +1,10 @@
+{
+  "name": "ludia-nail",
+  "version": "2.61.2",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "test": "node --test tests/final-qa.test.cjs tests/reliability.test.cjs",
+    "check": "node scripts/check-syntax.cjs"
+  }
+}

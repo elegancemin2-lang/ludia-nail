@@ -38,7 +38,7 @@
       else{
         const person=staff.find(x=>x.display_name===staffName);if(!person){$('#qbAvailabilityState').textContent='담당자 확인';$('#qbSlotStrip').innerHTML='';return}
         const {data,error}=await c.rpc('ludia_staff_day_slots',{p_salon_id:salonId,p_staff_user_id:person.user_id,p_local_date:localDate(),p_duration_minutes:duration,p_step_minutes:window.LudiaBookingAvailability?.getStep?.()||30});
-        if(error)throw error;if(seq!==requestSeq)return;rows=data||[];$('#qbSlotStrip').dataset.verification='server';
+        if(error)throw error;if(seq!==requestSeq)return;const local=new Map((window.LudiaBookingAvailability?.localRows(staffName,duration)||[]).map(r=>[r.time,r]));rows=(data||[]).filter(r=>r.slot_start&&local.has(new Intl.DateTimeFormat('en-GB',{timeZone:'Asia/Seoul',hour:'2-digit',minute:'2-digit',hour12:false}).format(new Date(r.slot_start)))).map(r=>{const t=new Intl.DateTimeFormat('en-GB',{timeZone:'Asia/Seoul',hour:'2-digit',minute:'2-digit',hour12:false}).format(new Date(r.slot_start)),l=local.get(t);return{...r,available:r.available&&l.available,reason:r.available?l.reason:r.reason}});$('#qbSlotStrip').dataset.verification='server';
       }
       lastRows=rows;const strip=$('#qbSlotStrip');strip.innerHTML='';
       rows.forEach(row=>{

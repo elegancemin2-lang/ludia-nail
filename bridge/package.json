@@ -8,6 +8,6 @@
     "check": "node --check bridge.js && node --check booking-reader.js"
   },
   "dependencies": {
-    "playwright": "1.55.0"
+    "playwright": "^1.55.0"
   }
 }

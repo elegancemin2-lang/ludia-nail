@@ -1038,7 +1038,7 @@ function renderPricingAiSummary(){
  const box=$('#pricingAiSummary'),stateBox=$('#pricingAiState');if(!box)return;
  if(!pricingAiMeta){box.classList.add('hidden');if(stateBox)stateBox.classList.add('hidden');return}
  box.classList.remove('hidden');
- if($('#pricingAiConfidence'))$('#pricingAiConfidence').textContent='신뢰 '+Math.round(Number(pricingAiMeta.confidence)||0)+'%';
+ if($('#pricingAiConfidence'))$('#pricingAiConfidence').textContent='비교 점수 '+Math.round(Number(pricingAiMeta.confidence)||0)+'/100';
  if($('#pricingAiSummaryText'))$('#pricingAiSummaryText').textContent=pricingAiMeta.summary||'사진에서 보이는 시술 요소를 기준으로 1차 분류했습니다.';
  const ul=$('#pricingAiObservations');if(ul){ul.innerHTML='';(pricingAiMeta.unpricedObservations||[]).forEach(x=>{const li=document.createElement('li');li.textContent=x;ul.appendChild(li)});ul.classList.toggle('hidden',!ul.children.length)}
 }
@@ -1347,7 +1347,7 @@ $('#bookingNextWeek')?.addEventListener('click',()=>{bookingDayOffset+=7;refresh
 $$('.more-card:not([data-nav])').forEach(b=>b.onclick=()=>toast(`${b.querySelector('b').textContent} · 필요한 핵심 화면만 단계적으로 연결합니다`));
 
 
-(async function boot(){try{const mode=await loadPersisted();hydrateFromState();renderAll();renderOpsToday();renderBooking();renderCustomers();syncProfilePhoto();setView('opsHome');setSaveStatus('saved',mode==='new'?'자동저장 준비':'자동저장됨');if(mode==='restored'||mode==='migrated')toast(mode==='migrated'?'기존 보관함을 새 저장방식으로 옮겼어요':'이전 작업을 복원했어요');if(mode==='new')schedulePersist();initSalonCloud().catch(error=>console.error('[LUDIA cloud init]',error))}catch(error){console.error('[LUDIA boot recovery]',error);renderOpsToday();renderBooking();renderCustomers();setView('opsHome');setSaveStatus('error','일부 기능 복구 모드')}})();
+(async function boot(){try{const mode=await loadPersisted();hydrateFromState();renderAll();renderOpsToday();renderBooking();renderCustomers();syncProfilePhoto();setView(state.view);setSaveStatus('saved',mode==='new'?'자동저장 준비':'자동저장됨');if(mode==='restored'||mode==='migrated')toast(mode==='migrated'?'기존 보관함을 새 저장방식으로 옮겼어요':'이전 작업을 복원했어요');if(mode==='new')schedulePersist();initSalonCloud().catch(error=>console.error('[LUDIA cloud init]',error))}catch(error){console.error('[LUDIA boot recovery]',error);renderOpsToday();renderBooking();renderCustomers();setView(state.view);setSaveStatus('error','일부 기능 복구 모드')}})();
 if('serviceWorker' in navigator)window.addEventListener('load',()=>navigator.serviceWorker.register('sw.js',{updateViaCache:'none'}).then(reg=>reg.update()).catch(()=>{}));
 
 /* v2.37 · Nail Canvas Pro — commit-on-save editor */

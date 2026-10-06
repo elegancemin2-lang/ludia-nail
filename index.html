@@ -7,8 +7,8 @@
   <meta name="description" content="LUDIA NAIL - 예약·고객관리와 LUDIA ART STUDIO를 하나로 묶은 모바일 네일샵 운영 웹앱" />
   <title>LUDIA NAIL</title>
   <link rel="manifest" href="manifest.webmanifest" />
-  <link rel="stylesheet" href="styles.css?v=2.61.1" />
-  <link rel="stylesheet" href="booking-ui.css?v=2.61.1" />
+  <link rel="stylesheet" href="styles.css?v=2.61.2" />
+  <link rel="stylesheet" href="booking-ui.css?v=2.61.2" />
 </head>
 <body>
   <div class="app">
@@ -171,7 +171,7 @@
         <div class="native-group-title">시스템</div>
         <div class="native-settings-group">
           <button id="cloudAccountBtn"><span class="settings-glyph glyph-blue">☁</span><span><b>클라우드 계정</b><small id="cloudAccountStatus">연결 상태 확인 중…</small></span><em class="cloud-state-badge loading" id="cloudAccountBadge">연결</em><i>›</i></button>
-          <button><span class="settings-glyph glyph-gray">⚙</span><span><b>설정</b><small>샵 · 메뉴 · 권한 · 백업</small></span><i>›</i></button>
+          <button data-nav="settings"><span class="settings-glyph glyph-gray">⚙</span><span><b>설정</b><small>샵 · 메뉴 · 권한 · 백업</small></span><i>›</i></button>
         </div>
       </section>
 
@@ -551,7 +551,7 @@
             <label><span>디자인 아트 요청 <small>고객이 가져온 사진·원하는 스타일</small></span><input id="qbCustomDesignNote" maxlength="80" placeholder="예: 고객 사진 참고 · 핑크 리본 느낌" /></label>
             <label class="qb-custom-photo">
               <input id="qbCustomPhotoInput" type="file" accept="image/jpeg,image/png,image/webp" hidden />
-              <span class="qb-custom-photo-preview" id="qbCustomPhotoPreview"><b>＋ 참고사진</b><small>사진을 올리면 AI가 1차 견적을 잡아요</small></span>
+              <span class="qb-custom-photo-preview" id="qbCustomPhotoPreview"><b>＋ 참고사진</b><small>사진을 비교해 1차 견적을 잡아요</small></span>
             </label>
             <div class="qb-custom-price-row">
               <label><span>표준 계산가</span><input id="qbCustomPrice" type="number" min="0" step="1000" inputmode="numeric" placeholder="90000" /></label>
@@ -684,7 +684,7 @@
       <div class="sheet-body">
         <span class="mini-label">STANDARD PRICE CALCULATOR</span>
         <h2>가격 계산</h2>
-        <p class="pricing-sheet-intro">사진에서 시술 요소를 판독하고 샵 기준 단가로 계산합니다. 항목별 근거를 확인한 뒤 최종가격을 확정하세요.</p>
+        <p class="pricing-sheet-intro">사진을 참고이미지와 비교해 샵 기준 단가로 계산합니다. 항목별 근거를 확인한 뒤 최종가격을 확정하세요.</p>
 
         <div class="pricing-ai-panel">
           <label class="pricing-ai-upload">
@@ -698,7 +698,7 @@
         </div>
 
         <div class="pricing-ai-summary hidden" id="pricingAiSummary">
-          <div><span>사진 판독</span><b id="pricingAiConfidence">-</b></div>
+          <div><span>참고이미지 비교</span><b id="pricingAiConfidence">-</b></div>
           <p id="pricingAiSummaryText"></p>
           <ul id="pricingAiObservations"></ul>
         </div>
@@ -754,10 +754,10 @@
 
   <div class="toast" id="toast" role="status"></div>
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.116.0/dist/umd/supabase.min.js"></script>
-  <script src="salon-cloud.js?v=2.61.1"></script>
-  <script src="booking-model.js?v=2.61.1"></script>
-<script src="app.js?v=2.61.1"></script>
-  <script src="core-shell.js?v=2.61.1"></script>
-  <script src="runtime-loader.js?v=2.61.1"></script>
+  <script src="salon-cloud.js?v=2.61.2"></script>
+  <script src="booking-model.js?v=2.61.2"></script>
+<script src="app.js?v=2.61.2"></script>
+  <script src="core-shell.js?v=2.61.2"></script>
+  <script src="runtime-loader.js?v=2.61.2"></script>
 </body>
 </html>

@@ -1,5 +1,5 @@
 import {chromium} from 'playwright';
-import fs from 'node:fs/promises';import path from 'node:path';import {randomUUID} from 'node:crypto';import {buildChanges} from './booking-reader.js';
+import fs from 'node:fs/promises';import path from 'node:path';import {randomUUID} from 'node:crypto';import {buildChanges,stageChanges,commitPending} from './booking-reader.js';
 const read=async(file,fallback)=>{try{return JSON.parse(await fs.readFile(file,'utf8'))}catch{return fallback}};
 const cfg=await read(path.resolve(process.env.LUDIA_BRIDGE_CONFIG||'./config.local.json'),{});
 const profile=path.resolve(process.env.LUDIA_NAVER_PROFILE||cfg.profileDir||'./.naver-profile'),stateFile=path.resolve(process.env.LUDIA_BRIDGE_STATE||cfg.stateFile||'./.bridge-state.json');
@@ -16,15 +16,16 @@ async function main(){
  const state=await read(stateFile,{bookings:{},lastSyncAt:null});if(!state.bookings||typeof state.bookings!=='object')state.bookings={};if(!state.bridgeId){state.bridgeId=randomUUID();await save(state)}
  const context=await chromium.launchPersistentContext(profile,{headless:false,viewport:{width:1280,height:900},locale:'ko-KR'}),page=context.pages()[0]||await context.newPage();await page.goto(initial.href,{waitUntil:'domcontentloaded'});
  console.log('[LUDIA] Complete official Naver login/CAPTCHA/2FA yourself. Unverified selectors send status only; no bookings.');
+ async function flushPending(){if(!state.pending)return;await save(state);for(let i=0;i<state.pending.events.length;i+=200)await push(state.pending.events.slice(i,i+200),'connected',state.pending.diagnostics);const committed=commitPending(state);await save(committed);Object.assign(state,committed);delete state.pending}
  let stopping=false,failures=0;process.once('SIGINT',()=>{stopping=true});process.once('SIGTERM',()=>{stopping=true});
- while(!stopping){try{const body=(await page.locator('body').innerText()).slice(0,20000),login=/nid\.naver\.com|\/login/.test(page.url())||/로그인이 필요|로그인해 주세요|로그인해주세요|2단계 인증|보안문자|자동입력 방지/.test(body);
+ while(!stopping){try{if(verified&&state.pending)await flushPending();const body=(await page.locator('body').innerText()).slice(0,20000),login=/nid\.naver\.com|\/login/.test(page.url())||/로그인이 필요|로그인해 주세요|로그인해주세요|2단계 인증|보안문자|자동입력 방지/.test(body);
   if(login)await push([],state.lastSyncAt?'reauth_required':'login_required');
   else if(!verified||!pageMatches(page.url()))await push([],'selector_required');
   else{const rows=await extract(page),empty=cfg.emptyStateSelector&&await page.locator(cfg.emptyStateSelector).isVisible();
    if(!rows.length&&!empty)await push([],'selector_required');
    else{const changes=buildChanges(rows,state),diag={parserVerified:true,visibleCount:rows.length,parsedCount:changes.parsedCount,selectorMode:'verified-fields'};
     if(changes.rejectedCount)await push([],'selector_required',{...diag,parserVerified:false});
-    else{if(!changes.events.length)await push([],'connected',diag);for(let i=0;i<changes.events.length;i+=200)await push(changes.events.slice(i,i+200),'connected',diag);state.bookings={...state.bookings,...changes.next};state.lastSyncAt=new Date().toISOString();await save(state);console.log('[LUDIA] accepted '+changes.events.length+' verified events')}
+    else{if(changes.events.length){state.pending=stageChanges(rows,state,diag).state.pending;await flushPending()}else{await push([],'connected',diag);state.lastSyncAt=new Date().toISOString();await save(state)}console.log('[LUDIA] accepted '+changes.events.length+' verified events')}
    }
   }failures=0
  }catch(error){failures++;console.error('[LUDIA] '+error.message);await push([],'error').catch(()=>{})}

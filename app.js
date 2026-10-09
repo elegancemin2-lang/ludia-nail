@@ -1053,6 +1053,7 @@ function recalculatePricingReview(){
  if($('#pricingRawTotal'))$('#pricingRawTotal').textContent=priceWon(raw);
  if($('#pricingRegularPrice'))$('#pricingRegularPrice').textContent=priceWon(regular);
  if($('#pricingEventPrice'))$('#pricingEventPrice').textContent=priceWon(event);
+ if(pricingAiMeta?.requiresBaseChoice&&!pricingReviewLines.length&&!override){if($('#pricingRegularPrice'))$('#pricingRegularPrice').textContent='소재 선택 필요';if($('#pricingEventPrice'))$('#pricingEventPrice').textContent='—'}
  if($('#pricingBreakdown'))$('#pricingBreakdown').textContent=pricingReviewLines.length?pricingReviewLines.map(x=>x.label+' '+(x.qty||0)+' × '+priceWon(x.unitPrice)).join(' · '):'상세내역을 추가하거나 최종금액을 직접 입력하세요.';
  const apply=$('#pricingApplyBtn');if(apply){apply.textContent=pricingContext==='monthly'?'정상가·이벤트가 적용':pricingContext==='booking'?'예약 최종금액 적용':'계산 결과 사용';apply.disabled=!pricingReviewLines.length&&!override}
 }
@@ -1205,7 +1206,7 @@ async function localPricePhotoDraft(source){
   const im=await new Promise((resolve,reject)=>{const x=new Image();x.onload=()=>resolve(x);x.onerror=reject;x.src=url});
   const features=pricingPhotoViews(im,192),photoRecord={hash,scope,blob,features:features[0]};
   let confirmed=null,examples=[];try{examples=await readPricingExamples(scope);if(hash)confirmed=examples.find(x=>x.photoHash===hash)}catch(error){console.warn('[LUDIA photo memory unavailable]',error)}
-  if(confirmed){const replay=window.LudiaPricingCore.replay(confirmed,state.pricing),base=confirmed.lines.find(x=>x.kind==='base');return{baseKey:base.key,addons:confirmed.lines.filter(x=>x.kind==='addon').map(x=>({key:x.key,qty:x.qty})),ownerConfirmed:true,confirmedLines:replay.lines,finalOverride:replay.finalOverride,summary:'같은 사진에 대해 원장이 확정한 항목을 불러왔습니다.',unpricedObservations:[replay.pricingChanged?'기준 단가가 바뀌어 현재 단가로 다시 계산했습니다. 과거 수동 최종금액은 자동 적용하지 않습니다.':'저장 당시 확정한 수량·단가를 적용했습니다.'],_photoRecord:photoRecord}}
+  if(confirmed){photoRecord.vision=confirmed.vision;const replay=window.LudiaPricingCore.replay(confirmed,state.pricing),base=confirmed.lines.find(x=>x.kind==='base');return{baseKey:base.key,addons:confirmed.lines.filter(x=>x.kind==='addon').map(x=>({key:x.key,qty:x.qty})),ownerConfirmed:true,confirmedLines:replay.lines,finalOverride:replay.finalOverride,summary:'같은 사진에 대해 원장이 확정한 항목을 불러왔습니다.',unpricedObservations:[replay.pricingChanged?'기준 단가가 바뀌어 현재 단가로 다시 계산했습니다. 과거 수동 최종금액은 자동 적용하지 않습니다.':'저장 당시 확정한 수량·단가를 적용했습니다.'],_photoRecord:photoRecord}}
   if(window.LudiaNailVision?.isEnabled()){
    const result=await window.LudiaNailVision.analyze(blob);
    if(!result.isNail)throw Error('not_a_nail_photo');
@@ -1235,11 +1236,13 @@ async function localPricePhotoDraft(source){
 }
 async function analyzePricingPhoto(){
  const source=pricingContextImageSource();if(!source)return toast('먼저 네일 사진을 올려 주세요');
+ if(window.LudiaNailVision?.hasPending())window.LudiaNailVision.cancel();
  const request=++pricingPhotoAnalysisSeq;pricingPhotoRecord=null;updatePricingRememberButton();
  const btn=$('#pricingAiAnalyzeBtn'),stateBox=$('#pricingAiState');
  if(btn){btn.disabled=true;btn.textContent='무료 견적 준비 중…'}
+ ['pricingLocalVisionBtn','pricingReferenceBtn'].forEach(id=>{if($('#'+id))$('#'+id).disabled=true});
  const applyButton=$('#pricingApplyBtn');if(applyButton)applyButton.disabled=true;
- if(window.LudiaNailVision?.isEnabled()){pricingReviewLines=[];pricingAiMeta=null;if($('#pricingFinalOverride'))$('#pricingFinalOverride').value='';renderPricingReviewLines();recalculatePricingReview()}
+ if(window.LudiaNailVision?.isEnabled()){pricingReviewLines=[];pricingAiMeta=null;if($('#pricingFinalOverride'))$('#pricingFinalOverride').value='';renderPricingAiSummary();renderPricingReviewLines();recalculatePricingReview();if(stateBox){stateBox.classList.remove('hidden');stateBox.textContent='로컬 모델 준비 · 사진은 기기 안에서 처리합니다.'}}
  try{
    const analysis=await localPricePhotoDraft(source);
    if(request!==pricingPhotoAnalysisSeq||analysis._photoRecord.scope!==pricingExampleScope())return;
@@ -1261,11 +1264,12 @@ async function analyzePricingPhoto(){
    console.error('[LUDIA local price]',error);
    if(stateBox){stateBox.classList.remove('hidden');stateBox.textContent=error.message==='not_a_nail_photo'?'네일 사진인지 확인해 주세요. 가격을 자동 적용하지 않았습니다.':'로컬 분석을 마치지 못했어요. 다시 시도하거나 기준 비교를 사용하세요.'}
    toast(error.message==='not_a_nail_photo'?'선명한 네일 사진을 선택해 주세요':'사진 분석을 마치지 못했어요')
- }finally{if(request===pricingPhotoAnalysisSeq){if(btn){btn.disabled=false;btn.textContent='무료 견적 열기'}if(applyButton)applyButton.disabled=!pricingReviewLines.length}}
+ }finally{if(request===pricingPhotoAnalysisSeq){if(btn){btn.disabled=false;btn.textContent='무료 견적 열기'}['pricingLocalVisionBtn','pricingReferenceBtn'].forEach(id=>{if($('#'+id))$('#'+id).disabled=false});if(applyButton)applyButton.disabled=!pricingReviewLines.length&&!Number($('#pricingFinalOverride')?.value)}}
 }
 function openPricingSheet(context='standalone',mode='custom',{autoAnalyze=false}={}){
  pricingPhotoAnalysisSeq++;pricingPhotoRecord=null;updatePricingRememberButton();
  const analyzeBtn=$('#pricingAiAnalyzeBtn');if(analyzeBtn){analyzeBtn.disabled=false;analyzeBtn.textContent='사진 분석'}
+ ['pricingLocalVisionBtn','pricingReferenceBtn'].forEach(id=>{if($('#'+id))$('#'+id).disabled=false});
  if($('#pricingApplyBtn'))$('#pricingApplyBtn').disabled=false;
  pricingContext=context;pricingMode=mode==='monthly'?'monthly':'custom';pricingPhotoFile=null;pricingAiMeta=null;
  if($('#pricingFinalOverride'))$('#pricingFinalOverride').value='';
@@ -1302,7 +1306,7 @@ $('#pricingAddLineBtn')?.addEventListener('click',addPricingReviewLine);
 $('#pricingFinalOverride')?.addEventListener('input',recalculatePricingReview);
 $('#pricingAiAnalyzeBtn')?.addEventListener('click',analyzePricingPhoto);
 $('#pricingLocalVisionBtn')?.addEventListener('click',()=>{window.LudiaNailVision.enable();analyzePricingPhoto()});
-$$('[data-vision-base]').forEach(button=>button.addEventListener('click',()=>{if(!pricingAiMeta?.engine?.startsWith('siglip2'))return;const key=button.dataset.visionBase;applyAiEstimateToManual({baseKey:key,addons:[]});pricingAiMeta.baseKey=key;pricingAiMeta.requiresBaseChoice=false;pricingAiMeta.summary='선택한 기본 시술을 기존 가격표로 계산했습니다. 추가 옵션 수량을 확인해 주세요.';pricingReviewLines=manualPricingLines();renderPricingAiSummary();renderPricingReviewLines();recalculatePricingReview();if($('#pricingAiState'))$('#pricingAiState').textContent='기본 시술 확인됨 · 추가 수량은 기준표에서 입력하세요.'}));
+$$('[data-vision-base]').forEach(button=>button.addEventListener('click',()=>{if(!pricingAiMeta?.engine?.startsWith('siglip2'))return;const key=button.dataset.visionBase;$('#pricingBaseSelect').value=key;$('#pricingUseFullDesign').checked=key==='fullDesign';pricingAiMeta.baseKey=key;pricingAiMeta.requiresBaseChoice=false;pricingAiMeta.summary='선택한 기본 시술을 기존 가격표로 계산했습니다. 추가 옵션 수량을 확인해 주세요.';pricingReviewLines=manualPricingLines();renderPricingAiSummary();renderPricingReviewLines();recalculatePricingReview();if($('#pricingAiState'))$('#pricingAiState').textContent='기본 시술 확인됨 · 추가 수량은 기준표에서 입력하세요.'}));
 $('#pricingReferenceBtn')?.addEventListener('click',()=>{window.LudiaNailVision.disable();analyzePricingPhoto()});
 window.addEventListener('ludia:vision-progress',e=>{const box=$('#pricingAiState');if(box&&$('#pricingAiAnalyzeBtn')?.disabled){box.classList.remove('hidden');box.textContent=e.detail.text}});
 $('#pricingPhotoInput')?.addEventListener('change',e=>{const file=e.target.files?.[0];if(!file)return;pricingPhotoFile=file;setPricingPhotoPreview(URL.createObjectURL(file));pricingAiMeta=null;renderPricingAiSummary();setTimeout(analyzePricingPhoto,100)});

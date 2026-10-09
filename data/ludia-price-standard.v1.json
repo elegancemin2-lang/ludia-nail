@@ -1,0 +1,186 @@
+{
+  "schema": "ludia-price-standard/v1",
+  "standardId": "ludia-existing-2026-10-09",
+  "currency": "KRW",
+  "provenance": {
+    "source": "Existing main DEFAULT_PRICING, preserved without price or unit changes",
+    "sourceCommit": "086848e3cf1d7143d6762ece698b6983938ff7ea",
+    "originalUserAttachmentRecovered": false,
+    "note": "The original uploaded price-table image was not recovered in this session. This preserves the already implemented existing standard; no new shop prices are inferred."
+  },
+  "pricing": {
+    "version": 2,
+    "eventDiscount": 10,
+    "base": {
+      "oneColor": {
+        "label": "원컬러",
+        "price": 45000
+      },
+      "gradation": {
+        "label": "그라데이션",
+        "price": 60000
+      },
+      "magnetic": {
+        "label": "자석젤",
+        "price": 70000
+      },
+      "fullDesign": {
+        "label": "전체 디자인",
+        "price": 90000
+      }
+    },
+    "addons": {
+      "colorAdd": {
+        "label": "컬러 추가",
+        "price": 5000,
+        "unit": "컬러"
+      },
+      "gradationAdd": {
+        "label": "그라데이션 추가",
+        "price": 10000,
+        "unit": "회"
+      },
+      "thinFrench": {
+        "label": "씬프렌치",
+        "price": 10000,
+        "unit": "세트"
+      },
+      "dot": {
+        "label": "도트",
+        "price": 3000,
+        "unit": "손가락"
+      },
+      "lineArt": {
+        "label": "라인/체크 아트",
+        "price": 4000,
+        "unit": "손가락"
+      },
+      "glitter": {
+        "label": "글리터/펄 포인트",
+        "price": 4000,
+        "unit": "손가락"
+      },
+      "foilFilm": {
+        "label": "호일/필름 포인트",
+        "price": 4000,
+        "unit": "손가락"
+      },
+      "smallPoint": {
+        "label": "하트/스팽글 소포인트",
+        "price": 3000,
+        "unit": "손가락"
+      },
+      "ribbonPoint": {
+        "label": "리본/스와 포인트",
+        "price": 5000,
+        "unit": "손가락"
+      },
+      "clearRibbon": {
+        "label": "투명 리본 파츠",
+        "price": 4000,
+        "unit": "개"
+      },
+      "stone": {
+        "label": "스톤/큐빅 포인트",
+        "price": 5000,
+        "unit": "손가락"
+      },
+      "pearl": {
+        "label": "진주/메탈 파츠",
+        "price": 5000,
+        "unit": "손가락"
+      },
+      "chromePowder": {
+        "label": "미러/크롬 파우더",
+        "price": 10000,
+        "unit": "세트"
+      },
+      "marble": {
+        "label": "마블/뉘앙스 아트",
+        "price": 6000,
+        "unit": "손가락"
+      },
+      "characterArt": {
+        "label": "캐릭터/드로잉 아트",
+        "price": 10000,
+        "unit": "손가락"
+      },
+      "extensionRepair": {
+        "label": "연장/보수",
+        "price": 5000,
+        "unit": "손가락"
+      },
+      "other": {
+        "label": "기타 · 직접 입력",
+        "price": 0,
+        "unit": "항목"
+      }
+    },
+    "fingerChange": {
+      "simple": {
+        "label": "단순 변경",
+        "price": 3000
+      },
+      "point": {
+        "label": "포인트 변경",
+        "price": 5000
+      }
+    }
+  },
+  "calculation": {
+    "roundingWon": 1000,
+    "fullDesign": "Flat total, without automatic addon/change stacking",
+    "unseenRemovalOrExtension": "Never infer from a reference photo",
+    "quantity": "Do not double a one-hand photo or inherit a similar photo quantity as confirmed"
+  },
+  "goldenCases": [
+    {
+      "id": "G01",
+      "sourceFile": "1000065008.jpg",
+      "expectedClass": "원컬러 + 컬러 추가",
+      "expectedPrice": 50000,
+      "runs": 5,
+      "passed": 5
+    },
+    {
+      "id": "G02",
+      "sourceFile": "1000065009.jpg",
+      "expectedClass": "자석젤 + 그라데이션",
+      "expectedPrice": 80000,
+      "runs": 5,
+      "passed": 5
+    },
+    {
+      "id": "G03",
+      "sourceFile": "1000065004.jpg",
+      "expectedClass": "원컬러 + 도트 4개",
+      "expectedPrice": 57000,
+      "runs": 5,
+      "passed": 5
+    },
+    {
+      "id": "G04",
+      "sourceFile": "1000065005.jpg",
+      "expectedClass": "자석젤 + 그라데이션 + 투명 리본 파츠 2개",
+      "expectedPrice": 88000,
+      "runs": 5,
+      "passed": 5
+    },
+    {
+      "id": "G05",
+      "sourceFile": "1000065006.jpg",
+      "expectedClass": "그라데이션 + 씬프렌치 + 리본/하트 포인트",
+      "expectedPrice": 92000,
+      "runs": 5,
+      "passed": 5
+    },
+    {
+      "id": "G06",
+      "sourceFile": "1000065007.jpg",
+      "expectedClass": "복합 아트 디자인",
+      "expectedPrice": 90000,
+      "runs": 5,
+      "passed": 5
+    }
+  ]
+}

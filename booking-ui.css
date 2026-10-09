@@ -68,3 +68,10 @@
  .concurrent-booking.short .concurrent-mini-list{gap:1px}.concurrent-booking.short .concurrent-mini-row{border-top:0;border-left:2px solid var(--cal-muted);padding:0 0 0 1px;gap:0}.concurrent-booking.short .concurrent-mini-row.owner{border-left-color:var(--cal-blue)}.concurrent-booking.short .concurrent-mini-row.staff{border-left-color:var(--cal-purple)}
  .concurrent-booking.short .concurrent-mini-row>span,.concurrent-booking.short .concurrent-mini-row>time{display:none}.concurrent-booking.short .concurrent-mini-row>b{font-size:11.5px;line-height:1.1}
 }
+
+/* Photo review stays within the existing sheet. */
+.pricing-remember-row{display:flex;align-items:center;gap:10px;margin:12px 0;min-width:0;flex-wrap:wrap}
+.pricing-remember-row button{min-height:44px;white-space:normal}
+.pricing-remember-row small{flex:1 1 160px;font-size:12px;line-height:1.5;color:var(--text-secondary,#666);overflow-wrap:anywhere}
+.pricing-standard-actions .text-action{min-height:44px;white-space:normal;font-size:12px}
+html[data-theme="dark"] .pricing-remember-row small{color:#aeaeb2}

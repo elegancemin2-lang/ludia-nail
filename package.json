@@ -1,10 +1,11 @@
 {
   "name": "ludia-nail",
-  "version": "2.61.3",
+  "version": "2.62.0",
   "private": true,
   "type": "module",
   "scripts": {
-    "test": "node --test tests/final-qa.test.cjs tests/reliability.test.cjs",
-    "check": "node scripts/check-syntax.cjs"
+    "test": "node --test tests/final-qa.test.cjs tests/reliability.test.cjs tests/pricing.test.cjs",
+    "check": "node scripts/check-syntax.cjs",
+    "build:pricing": "node scripts/build-pricing-standard.cjs"
   }
 }

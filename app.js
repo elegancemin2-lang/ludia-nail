@@ -25,39 +25,7 @@ const baseDesigns=[
  {id:5,name:'Mini Dot Jelly',desc:'시럽 핑크에 잔도트와 글리터를 넣어 귀엽지만 담백하게.',img:img(5),diff:'쉬움',time:65,price:65000,fit:97,stock:'보유재료 100%',tags:['시럽','도트','데일리'],status:'이달의아트',materials:['핑크 시럽','미니 도트','잔글리터'],tech:'시럽 2코트 → 도트 배치 → 글리터 얇게 → 탑'},
  {id:6,name:'Aurora Glass',desc:'클리어 핑크와 오로라 필름, 초소형 스톤으로 유리알 느낌.',img:img(2),diff:'보통',time:80,price:79000,fit:91,stock:'보유재료 88%',tags:['오로라','웨딩','글라스'],status:'후보',materials:['클리어 핑크','오로라 필름','미니 스톤'],tech:'클리어 컬러 → 필름 조각 → 볼륨젤 → 미니 스톤 → 탑'}
 ];
-const DEFAULT_PRICING={
- version:2,
- eventDiscount:10,
- base:{
-  oneColor:{label:'원컬러',price:45000},
-  gradation:{label:'그라데이션',price:60000},
-  magnetic:{label:'자석젤',price:70000},
-  fullDesign:{label:'전체 디자인',price:90000}
- },
- addons:{
-  colorAdd:{label:'컬러 추가',price:5000,unit:'컬러'},
-  gradationAdd:{label:'그라데이션 추가',price:10000,unit:'회'},
-  thinFrench:{label:'씬프렌치',price:10000,unit:'세트'},
-  dot:{label:'도트',price:3000,unit:'손가락'},
-  lineArt:{label:'라인/체크 아트',price:4000,unit:'손가락'},
-  glitter:{label:'글리터/펄 포인트',price:4000,unit:'손가락'},
-  foilFilm:{label:'호일/필름 포인트',price:4000,unit:'손가락'},
-  smallPoint:{label:'하트/스팽글 소포인트',price:3000,unit:'손가락'},
-  ribbonPoint:{label:'리본/스와 포인트',price:5000,unit:'손가락'},
-  clearRibbon:{label:'투명 리본 파츠',price:4000,unit:'개'},
-  stone:{label:'스톤/큐빅 포인트',price:5000,unit:'손가락'},
-  pearl:{label:'진주/메탈 파츠',price:5000,unit:'손가락'},
-  chromePowder:{label:'미러/크롬 파우더',price:10000,unit:'세트'},
-  marble:{label:'마블/뉘앙스 아트',price:6000,unit:'손가락'},
-  characterArt:{label:'캐릭터/드로잉 아트',price:10000,unit:'손가락'},
-  extensionRepair:{label:'연장/보수',price:5000,unit:'손가락'},
-  other:{label:'기타 · 직접 입력',price:0,unit:'항목'}
- },
- fingerChange:{
-  simple:{label:'단순 변경',price:3000},
-  point:{label:'포인트 변경',price:5000}
- }
-};
+const DEFAULT_PRICING=window.LudiaPricingStandard.pricing;
 const DEFAULT_BOOKING_HOURS={open:'11:00',close:'21:00',step:30};
 function timeValueMinutes(value,fallback=0){
  const m=String(value||'').match(/^(\d{1,2}):(\d{2})$/);if(!m)return fallback;
@@ -942,6 +910,32 @@ const PRICING_BASE_KEYS=['oneColor','gradation','magnetic','fullDesign'];
 const PRICING_ADDON_KEYS=['colorAdd','gradationAdd','thinFrench','dot','lineArt','glitter','foilFilm','smallPoint','ribbonPoint','clearRibbon','stone','pearl','chromePowder','marble','characterArt','extensionRepair','other'];
 let pricingContext='standalone',pricingMode='custom',pricingLastResult={raw:0,regular:0,event:0};
 let pricingReviewLines=[],pricingReviewSeq=0,pricingAiMeta=null,pricingPhotoFile=null,qbCustomPhotoFile=null,qbCustomPhotoUrl=null;
+let pricingPhotoRecord=null,pricingPhotoAnalysisSeq=0,pricingExampleSaveBusy=false;
+function pricingExampleScope(){const c=window.LudiaSalonCloud?.getState?.();return salonCloudMode==='cloud'?(c?.salonId?'salon:'+c.salonId:null):'local'}
+async function readPricingExamples(scope=pricingExampleScope()){
+ if(!scope)return[];
+ const rows=await idbGet('pricingConfirmedPhotos:v1:'+scope);if(!Array.isArray(rows))return[];
+ return rows.slice(-50).flatMap(row=>{try{const value=window.LudiaPricingCore.confirmedExample(row);return value.scope===scope?[value]:[]}catch{return[]}})
+}
+function updatePricingRememberButton(){const btn=$('#pricingRememberBtn'),scope=pricingExampleScope();if(btn)btn.disabled=pricingExampleSaveBusy||!scope||!pricingPhotoRecord?.hash||pricingPhotoRecord.scope!==scope}
+async function rememberPricingPhoto(){
+ const record=pricingPhotoRecord,scope=pricingExampleScope();if(pricingExampleSaveBusy||!scope||!record?.hash||record.scope!==scope)return;
+ const lines=structuredClone(pricingReviewLines),finalOverride=Number($('#pricingFinalOverride')?.value)||0,pricingFingerprint=window.LudiaPricingCore.fingerprint(state.pricing);
+ pricingExampleSaveBusy=true;updatePricingRememberButton();
+ try{
+  const rows=await readPricingExamples(scope);if(rows.length>=50&&!rows.some(x=>x.photoHash===record.hash))return toast('정답 50개가 저장됐어요 · 먼저 정답 내보내기로 보관해 주세요');
+  const photoDataUrl=await compressImageToDataUrl(record.blob);
+  const sample=window.LudiaPricingCore.confirmedExample({schema:'ludia-confirmed-photo/v1',verifiedBy:'owner',verifiedAt:new Date().toISOString(),scope,photoHash:record.hash,features:record.features,photoDataUrl,lines,finalOverride,pricingFingerprint});
+  if(!sample.photoDataUrl)throw new Error('example_photo_too_large');
+  if(pricingExampleScope()!==scope)throw new Error('example_scope_changed');
+  await idbSet('pricingConfirmedPhotos:v1:'+scope,[...rows.filter(x=>x.photoHash!==record.hash),sample]);
+  if(pricingPhotoRecord===record){const el=$('#pricingRememberState');if(el)el.textContent='정답 저장됨 · 같은 사진은 확정한 견적을 불러옵니다.'}
+  toast('사진·견적 정답을 이 기기에 저장했어요')
+ }catch(error){console.error('[LUDIA confirmed photo]',error);toast(error.message?.startsWith('invalid_example')?'기본 시술 1개와 항목 수량·단가를 확인해 주세요':'사진·견적 정답 저장에 실패했어요')}
+ finally{pricingExampleSaveBusy=false;updatePricingRememberButton()}
+}
+async function exportPricingExamples(){try{const scope=pricingExampleScope(),examples=await readPricingExamples(scope);downloadJson('LUDIA_confirmed_photos_'+localDateKey()+'.json',{schema:'ludia-confirmed-photos-export/v1',exportedAt:new Date().toISOString(),scope,standard:window.LudiaPricingStandard,currentPricing:clonePricing(state.pricing),examples});toast('확정 사진·견적을 내보냈어요')}catch{toast('정답 내보내기에 실패했어요')}}
+function exportPricingStandard(){downloadJson('LUDIA_price_standard_'+localDateKey()+'.json',{...window.LudiaPricingStandard,exportedAt:new Date().toISOString(),currentPricing:clonePricing(state.pricing)})}
 
 function priceWon(value){return (Number(value)||0).toLocaleString('ko-KR')+'원'}
 function roundPrice(value){return Math.max(0,Math.round((Number(value)||0)/1000)*1000)}
@@ -977,6 +971,7 @@ async function savePricingStandard(){
  finally{renderPricingSettings()}
 }
 function closePricingSheet(){
+ pricingPhotoAnalysisSeq++;pricingPhotoRecord=null;updatePricingRememberButton();
  const sheet=$('#pricingSheet');if(!sheet)return;sheet.classList.remove('open');sheet.setAttribute('aria-hidden','true');document.body.style.overflow=''
 }
 function setPricingMode(mode){
@@ -1038,14 +1033,13 @@ function renderPricingAiSummary(){
  const box=$('#pricingAiSummary'),stateBox=$('#pricingAiState');if(!box)return;
  if(!pricingAiMeta){box.classList.add('hidden');if(stateBox)stateBox.classList.add('hidden');return}
  box.classList.remove('hidden');
- if($('#pricingAiConfidence'))$('#pricingAiConfidence').textContent='비교 점수 '+Math.round(Number(pricingAiMeta.confidence)||0)+'/100';
+ if($('#pricingAiConfidence'))$('#pricingAiConfidence').textContent=pricingAiMeta.ownerConfirmed?'원장 확정 기록':'비교 점수 '+Math.round(Number(pricingAiMeta.confidence)||0)+'/100';
  if($('#pricingAiSummaryText'))$('#pricingAiSummaryText').textContent=pricingAiMeta.summary||'사진에서 보이는 시술 요소를 기준으로 1차 분류했습니다.';
  const ul=$('#pricingAiObservations');if(ul){ul.innerHTML='';(pricingAiMeta.unpricedObservations||[]).forEach(x=>{const li=document.createElement('li');li.textContent=x;ul.appendChild(li)});ul.classList.toggle('hidden',!ul.children.length)}
 }
 function recalculatePricingReview(){
- const raw=pricingReviewLines.reduce((sum,line)=>sum+Math.max(0,Number(line.qty)||0)*Math.max(0,Number(line.unitPrice)||0),0);
  const override=Math.max(0,Number($('#pricingFinalOverride')?.value)||0);
- const regular=override||roundPrice(raw),discount=Math.min(50,Math.max(0,Number(state.pricing?.eventDiscount)||0)),event=roundPrice(regular*(1-discount/100));
+ const calculated=window.LudiaPricingCore.calculate(pricingReviewLines,state.pricing,override),raw=calculated.rawTotal,regular=calculated.regularPrice,event=calculated.eventPrice;
  pricingLastResult={raw,regular,event};
  if($('#pricingRawTotal'))$('#pricingRawTotal').textContent=priceWon(raw);
  if($('#pricingRegularPrice'))$('#pricingRegularPrice').textContent=priceWon(regular);
@@ -1194,49 +1188,62 @@ function ensemblePricingVisualRefs(features,refs,limit=3){
   .sort((a,b)=>b.score-a.score||a.dist-b.dist).slice(0,Math.max(1,limit))
 }
 async function localPricePhotoDraft(source){
- let blob=source;if(typeof source==='string'){const r=await fetch(source);blob=await r.blob()}
+ let blob=source;if(typeof source==='string'){const r=await fetch(source);if(!r.ok)throw new Error('photo_fetch_failed');blob=await r.blob()}
+ if(!(blob instanceof Blob)||blob.size>16000000)throw new Error('invalid_photo');
+ const scope=pricingExampleScope();let hash=null;if(window.crypto?.subtle)hash=Array.from(new Uint8Array(await window.crypto.subtle.digest('SHA-256',await blob.arrayBuffer())),x=>x.toString(16).padStart(2,'0')).join('');
  const url=URL.createObjectURL(blob);
  try{
   const im=await new Promise((resolve,reject)=>{const x=new Image();x.onload=()=>resolve(x);x.onerror=reject;x.src=url});
-  const refs=await loadPricingVisualRefs(),features=pricingPhotoViews(im,192),ranked=ensemblePricingVisualRefs(features,refs,3),hit=ranked[0],ref=hit.ref;
+  const features=pricingPhotoViews(im,192),photoRecord={hash,scope,blob,features:features[0]};
+  let confirmed=null;try{if(hash)confirmed=(await readPricingExamples(scope)).find(x=>x.photoHash===hash)}catch(error){console.warn('[LUDIA photo memory unavailable]',error)}
+  if(confirmed){const replay=window.LudiaPricingCore.replay(confirmed,state.pricing),base=confirmed.lines.find(x=>x.kind==='base');return{baseKey:base.key,addons:confirmed.lines.filter(x=>x.kind==='addon').map(x=>({key:x.key,qty:x.qty})),ownerConfirmed:true,confirmedLines:replay.lines,finalOverride:replay.finalOverride,summary:'같은 사진에 대해 원장이 확정한 항목을 불러왔습니다.',unpricedObservations:[replay.pricingChanged?'기준 단가가 바뀌어 현재 단가로 다시 계산했습니다. 과거 수동 최종금액은 자동 적용하지 않습니다.':'저장 당시 확정한 수량·단가를 적용했습니다.'],_photoRecord:photoRecord}}
+  const refs=await loadPricingVisualRefs(),ranked=ensemblePricingVisualRefs(features,refs,3),hit=ranked[0],ref=hit.ref;
   const margin=ranked[1]?Math.max(0,hit.score-ranked[1].score):.5;
   const confidence=Math.max(42,Math.min(97,Math.round(96-hit.dist*24+Math.min(8,margin*10))));
   const candidates=ranked.map((x,i)=>(i+1)+'순위 '+x.ref.label+(x.votes?' · '+x.votes+'/5뷰':'')).join(' · ');
   const expected=pricingRefAmount(ref)||(Number(ref.target)||0);
   return {baseKey:ref.baseKey,addons:(ref.addons||[]).map(x=>({...x})),simpleChangeQty:0,pointChangeQty:0,
    unpricedObservations:[
-    '가장 가까운 기준 '+ref.id+' · '+ref.label,
+    '유사 기준 '+ref.id+' · '+ref.label+' — 소재 판독 확정이 아닙니다.',
+    '자석/일반 반사광 구분과 파츠·손가락 수량은 사진을 보고 확인해 주세요. 한 손을 자동으로 두 배 계산하지 않습니다.',
     '유사 후보 · '+candidates,
     expected?'현재 LUDIA 가격표 적용 시 '+priceWon(expected):'최종 항목은 원장이 수정 가능'
    ],
-   summary:'무료 에셋 분류 · 6개 가격 정답셋 + LUDIA 룩북 + 30개 네일팁 샘플을 5뷰 앙상블로 비교해 1차 견적을 만들었습니다.',confidence,referenceId:ref.id,
+   summary:'48개 참고사진의 색·밝기 특징을 5개 뷰로 비교한 견적 초안입니다. 사진과 가까운 기준의 항목·수량을 제안하므로 확인이 필요합니다.',confidence,referenceId:ref.id,requiresReview:true,_photoRecord:photoRecord,
    referenceCandidates:ranked.map(x=>({id:x.ref.id,label:x.ref.label,distance:Number(x.dist.toFixed(3)),votes:x.votes||0,source:x.ref.source||''}))}
  }finally{URL.revokeObjectURL(url)}
 }
 async function analyzePricingPhoto(){
  const source=pricingContextImageSource();if(!source)return toast('먼저 네일 사진을 올려 주세요');
+ const request=++pricingPhotoAnalysisSeq;pricingPhotoRecord=null;updatePricingRememberButton();
  const btn=$('#pricingAiAnalyzeBtn'),stateBox=$('#pricingAiState');
  if(btn){btn.disabled=true;btn.textContent='무료 견적 준비 중…'}
  try{
    const analysis=await localPricePhotoDraft(source);
+   if(request!==pricingPhotoAnalysisSeq||analysis._photoRecord.scope!==pricingExampleScope())return;
+   pricingPhotoRecord=analysis._photoRecord;delete analysis._photoRecord;updatePricingRememberButton();
    applyAiEstimateToManual(analysis);
    pricingAiMeta=analysis;
-   pricingReviewLines=manualPricingLines();
-   if($('#pricingFinalOverride'))$('#pricingFinalOverride').value='';
+   pricingReviewLines=analysis.confirmedLines||manualPricingLines();
+   if($('#pricingFinalOverride'))$('#pricingFinalOverride').value=analysis.finalOverride||'';
+   if($('#pricingRememberState'))$('#pricingRememberState').textContent=analysis.ownerConfirmed?'저장한 사진과 동일합니다.':'사진과 수량을 확인한 뒤 정답을 저장하세요. 사진은 이 기기에만 보관합니다.';
    const detailHost=$('#pricingReviewLines')?.parentElement;if(detailHost)detailHost.classList.add('pricing-detail-open');
    renderPricingAiSummary();renderPricingReviewLines();recalculatePricingReview();
    if(stateBox){
      stateBox.classList.remove('hidden');
-     stateBox.textContent='무료 모드 · API 비용 0원 · 사진을 보며 기본 시술/추가 항목만 확인하면 가격이 바로 계산됩니다.'
+     stateBox.textContent=analysis.ownerConfirmed?'원장 확정 기록 · API 비용 0원':'견적 초안 · API 비용 0원 · 자석젤·파츠 수량은 확인 후 확정해 주세요.'
    }
-   toast('무료 견적 모드로 열었어요 · 항목만 확인해 주세요')
+   toast(analysis.ownerConfirmed?'확정한 견적을 불러왔어요':'견적 초안이 나왔어요 · 항목과 수량을 확인해 주세요')
  }catch(error){
+   if(request!==pricingPhotoAnalysisSeq)return;
    console.error('[LUDIA local price]',error);
    if(stateBox){stateBox.classList.remove('hidden');stateBox.textContent='무료 견적 준비 중 오류가 발생했습니다.'}
    toast('무료 견적 준비에 실패했어요')
- }finally{if(btn){btn.disabled=false;btn.textContent='무료 견적 열기'}}
+ }finally{if(btn&&request===pricingPhotoAnalysisSeq){btn.disabled=false;btn.textContent='무료 견적 열기'}}
 }
 function openPricingSheet(context='standalone',mode='custom',{autoAnalyze=false}={}){
+ pricingPhotoAnalysisSeq++;pricingPhotoRecord=null;updatePricingRememberButton();
+ const analyzeBtn=$('#pricingAiAnalyzeBtn');if(analyzeBtn){analyzeBtn.disabled=false;analyzeBtn.textContent='사진 분석'}
  pricingContext=context;pricingMode=mode==='monthly'?'monthly':'custom';pricingPhotoFile=null;pricingAiMeta=null;
  if($('#pricingFinalOverride'))$('#pricingFinalOverride').value='';
  renderPricingCalculator();renderPricingAiSummary();
@@ -1261,6 +1268,9 @@ function applyPricingResult(){
  closePricingSheet()
 }
 $('#pricingSaveBtn')?.addEventListener('click',savePricingStandard);
+$('#pricingRememberBtn')?.addEventListener('click',rememberPricingPhoto);
+$('#pricingExamplesExportBtn')?.addEventListener('click',exportPricingExamples);
+$('#pricingStandardExportBtn')?.addEventListener('click',exportPricingStandard);
 $('#pricingCalculatorBtn')?.addEventListener('click',()=>openPricingSheet('standalone','custom'));
 $('#monthlyPriceRecommendBtn')?.addEventListener('click',()=>openPricingSheet('monthly','monthly',{autoAnalyze:Boolean(designRegisterFile||$('#designPhotoPreview')?.getAttribute('src'))}));
 $('#qbCustomPriceBtn')?.addEventListener('click',()=>openPricingSheet('booking','custom',{autoAnalyze:Boolean(qbCustomPhotoFile)}));

@@ -1,0 +1,117 @@
+{
+  "schema": "ludia-nail-vision-plan/v1",
+  "status": "planned_not_trained",
+  "pricingSource": "data/ludia-price-standard.v1.json",
+  "sourcePhotoAvailability": "original_golden_photos_not_recovered_in_this_session",
+  "materialClasses": [
+    "solid_or_syrup",
+    "magnetic_cat_eye",
+    "glitter_or_pearl",
+    "chrome_mirror",
+    "foil_or_film",
+    "unknown"
+  ],
+  "artClasses": [
+    "gradation",
+    "thin_french",
+    "dot",
+    "line_or_check",
+    "marble",
+    "character_drawing",
+    "small_point",
+    "ribbon_point"
+  ],
+  "partClasses": [
+    "clear_ribbon",
+    "stone",
+    "pearl_or_metal",
+    "unknown"
+  ],
+  "labelRules": [
+    "Owner confirms materials independently of the photo matcher.",
+    "A magnetic band or velvet depth is a cue, not proof; distinguish ordinary reflection and glitter with hard negative photos.",
+    "Do not infer hidden fingers, double one hand, or fabricate nail/part boxes.",
+    "Quantity needs visible per-nail evidence or owner confirmation.",
+    "Removal, repair need and customer membership remain explicit inputs."
+  ],
+  "datasetExport": "Settings: confirmed photos and quotes export; compressed photo, SHA-256, owner-confirmed item quantities, baseline snapshot, timestamp; local only.",
+  "modelCandidates": [
+    {
+      "name": "SigLIP2",
+      "role": "Evaluate material similarity/embedding on confirmed cropped nails; not a counter.",
+      "source": "https://huggingface.co/docs/transformers/model_doc/siglip2"
+    },
+    {
+      "name": "Transformers.js / ONNX Runtime",
+      "role": "Run a measured, exported model locally in browser/Windows; no paid model API.",
+      "source": "https://huggingface.co/docs/transformers.js/index"
+    },
+    {
+      "name": "CLIP ONNX",
+      "role": "Alternative semantic proposal baseline, not final pricing or part counts.",
+      "source": "https://huggingface.co/Xenova/clip-vit-base-patch32"
+    }
+  ],
+  "evaluation": {
+    "split": "Hold out original photos by design/session; put resized/brightened/cropped variants in the same split.",
+    "metrics": [
+      "magnetic precision and recall",
+      "material confusion matrix",
+      "per-part count error",
+      "itemized quote absolute error using frozen standard",
+      "uncertain/abstained coverage",
+      "360px mobile inference time and memory"
+    ],
+    "releaseGate": "No semantic model is enabled in Production before unseen-photo benchmark and mobile measurements."
+  },
+  "goldenCases": [
+    {
+      "id": "G01",
+      "sourceFile": "1000065008.jpg",
+      "expectedClass": "원컬러 + 컬러 추가",
+      "expectedPrice": 50000,
+      "runs": 5,
+      "passed": 5
+    },
+    {
+      "id": "G02",
+      "sourceFile": "1000065009.jpg",
+      "expectedClass": "자석젤 + 그라데이션",
+      "expectedPrice": 80000,
+      "runs": 5,
+      "passed": 5
+    },
+    {
+      "id": "G03",
+      "sourceFile": "1000065004.jpg",
+      "expectedClass": "원컬러 + 도트 4개",
+      "expectedPrice": 57000,
+      "runs": 5,
+      "passed": 5
+    },
+    {
+      "id": "G04",
+      "sourceFile": "1000065005.jpg",
+      "expectedClass": "자석젤 + 그라데이션 + 투명 리본 파츠 2개",
+      "expectedPrice": 88000,
+      "runs": 5,
+      "passed": 5
+    },
+    {
+      "id": "G05",
+      "sourceFile": "1000065006.jpg",
+      "expectedClass": "그라데이션 + 씬프렌치 + 리본/하트 포인트",
+      "expectedPrice": 92000,
+      "runs": 5,
+      "passed": 5
+    },
+    {
+      "id": "G06",
+      "sourceFile": "1000065007.jpg",
+      "expectedClass": "복합 아트 디자인",
+      "expectedPrice": 90000,
+      "runs": 5,
+      "passed": 5
+    }
+  ]
+}

@@ -1,0 +1,145 @@
+{
+  "model": "onnx-community/siglip2-base-patch16-224-ONNX",
+  "revision": "ba1f3b0843f24bc5417d38e19c37b287d719b2f4",
+  "executedAt": "2026-10-09T18:26:28.581Z",
+  "runtime": "Node CPU q8; browser verification documented separately",
+  "dataset": "Five existing repository photos; no independently labeled material/count ground truth",
+  "accuracyMeasured": false,
+  "results": [
+    {
+      "file": "assets/nail_1.jpg",
+      "isNail": true,
+      "uncertain": true,
+      "baseKey": null,
+      "baseCandidates": [
+        {
+          "key": "gradation",
+          "group": "material",
+          "label": "그라데이션",
+          "similarity": 0.1229663092991435
+        },
+        {
+          "key": "oneColor",
+          "group": "material",
+          "label": "원컬러 · 시럽",
+          "similarity": 0.12229243721593745
+        },
+        {
+          "key": "bare",
+          "group": "material",
+          "label": "맨손톱 · 소재 확인",
+          "similarity": 0.12088947320366274
+        }
+      ],
+      "detailCandidates": []
+    },
+    {
+      "file": "assets/nail_2.jpg",
+      "isNail": true,
+      "uncertain": true,
+      "baseKey": null,
+      "baseCandidates": [
+        {
+          "key": "gradation",
+          "group": "material",
+          "label": "그라데이션",
+          "similarity": 0.12432685166359508
+        },
+        {
+          "key": "magnetic",
+          "group": "material",
+          "label": "자석젤 · 캣아이",
+          "similarity": 0.1236968205403577
+        },
+        {
+          "key": "oneColor",
+          "group": "material",
+          "label": "원컬러 · 시럽",
+          "similarity": 0.12225075558988081
+        }
+      ],
+      "detailCandidates": []
+    },
+    {
+      "file": "assets/nail_3.jpg",
+      "isNail": true,
+      "uncertain": true,
+      "baseKey": null,
+      "baseCandidates": [
+        {
+          "key": "magnetic",
+          "group": "material",
+          "label": "자석젤 · 캣아이",
+          "similarity": 0.11452318836688548
+        },
+        {
+          "key": "bare",
+          "group": "material",
+          "label": "맨손톱 · 소재 확인",
+          "similarity": 0.11410530020576388
+        },
+        {
+          "key": "oneColor",
+          "group": "material",
+          "label": "원컬러 · 시럽",
+          "similarity": 0.11262002207429721
+        }
+      ],
+      "detailCandidates": []
+    },
+    {
+      "file": "assets/nail_4.jpg",
+      "isNail": true,
+      "uncertain": true,
+      "baseKey": null,
+      "baseCandidates": [
+        {
+          "key": "oneColor",
+          "group": "material",
+          "label": "원컬러 · 시럽",
+          "similarity": 0.12355273803940114
+        },
+        {
+          "key": "gradation",
+          "group": "material",
+          "label": "그라데이션",
+          "similarity": 0.12165847417816218
+        },
+        {
+          "key": "bare",
+          "group": "material",
+          "label": "맨손톱 · 소재 확인",
+          "similarity": 0.11838518144877715
+        }
+      ],
+      "detailCandidates": []
+    },
+    {
+      "file": "assets/nail_5.jpg",
+      "isNail": true,
+      "uncertain": true,
+      "baseKey": null,
+      "baseCandidates": [
+        {
+          "key": "gradation",
+          "group": "material",
+          "label": "그라데이션",
+          "similarity": 0.1296885973511105
+        },
+        {
+          "key": "oneColor",
+          "group": "material",
+          "label": "원컬러 · 시럽",
+          "similarity": 0.12884188373037844
+        },
+        {
+          "key": "bare",
+          "group": "material",
+          "label": "맨손톱 · 소재 확인",
+          "similarity": 0.1277138317915203
+        }
+      ],
+      "detailCandidates": []
+    }
+  ]
+}

@@ -7,7 +7,7 @@ if not exist "config.local.json" (
   copy /Y "config.example.json" "config.local.json" >nul
   echo.
   echo [LUDIA] config.local.json created.
-  echo [LUDIA] Put the same LUDIA_SYNC_TOKEN used in Vercel into syncToken.
+  echo [LUDIA] Local mode needs no server token. Sign in, then verify booking selectors.
   echo [LUDIA] Then save the file and run this START file again.
   start "" notepad "config.local.json"
   pause

@@ -58,7 +58,7 @@ function applySnapshot(snap){if(!snap?.data)return false;const d=snap.data;state
 function setSaveStatus(mode,text){const el=$('#saveStatus');if(!el)return;el.classList.remove('saving','saved','error');if(mode)el.classList.add(mode);$('#saveStatusText').textContent=text}
 function schedulePersist(){if(salonCloudMode!=='demo'){setSaveStatus('saved','샵 연결 · 저장 버튼 사용');return}setSaveStatus('saving','저장 중…');clearTimeout(saveTimer);saveTimer=setTimeout(()=>persistNow(),650)}
 async function persistNow(){if(salonCloudMode!=='demo')return;const snap=snapshot();try{await idbSet('snapshot',snap);storageMode='IndexedDB';localStorage.removeItem('ludiaLibrary');lastSavedAt=new Date(snap.savedAt);setSaveStatus('saved','자동저장됨')}catch(err){storageMode='localStorage';try{const fallback={...snap,data:{...snap.data,draft:{...snap.data.draft,refDataUrl:null}}};localStorage.setItem('ludiaStudioFallback',JSON.stringify(fallback));lastSavedAt=new Date();setSaveStatus('saved','기기저장됨')}catch(e){setSaveStatus('error','저장 오류')}}updateStorageStats()}
-async function loadPersisted(){let snap=null;try{snap=await idbGet('snapshot');storageMode='IndexedDB'}catch(err){storageMode='localStorage';try{snap=JSON.parse(localStorage.getItem('ludiaStudioFallback')||'null')}catch(e){}}
+async function loadPersisted(){let snap=null;try{snap=await idbGet('snapshot');storageMode='IndexedDB'}catch(err){storageMode='localStorage'}try{const fallback=JSON.parse(localStorage.getItem('ludiaStudioFallback')||'null');if(fallback?.magic===BACKUP_MAGIC&&fallback.data&&(!snap||Date.parse(fallback.savedAt)>Date.parse(snap.savedAt))){snap=fallback;storageMode='localStorage'}}catch(e){}
  if(!snap){try{const legacy=JSON.parse(localStorage.getItem('ludiaLibrary')||'null');if(Array.isArray(legacy)&&legacy.length){state.library=legacy;await persistNow();return 'migrated'}}catch(e){}return 'new'}
  applySnapshot(snap);return 'restored'}
 function formatBytes(n){if(!Number.isFinite(n))return '확인 불가';if(n<1024)return n+' B';if(n<1024*1024)return (n/1024).toFixed(1)+' KB';return (n/1024/1024).toFixed(1)+' MB'}
@@ -494,6 +494,13 @@ function setView(v){
  window.scrollTo({top:0,behavior:'smooth'});
 }
 window.LudiaNaverCalendar={range(){const o=bookingWeekOffsets();return{from:localDateKey(bookingDateFromOffset(o[0])),to:localDateKey(bookingDateFromOffset(o[6]+1))}},apply(rows){integrationAppointments=(Array.isArray(rows)?rows:[]).filter(a=>a&&/^\d{4}-\d{2}-\d{2}$/.test(a.date)&&bookingTimeMinutes(a.time)!==null).map(a=>({...a,id:'naver:'+a.id,cloudId:a.id,dayOffset:Math.round((Date.parse(a.date+'T12:00:00Z')-Date.parse(localDateKey()+'T12:00:00Z'))/86400000),source:'naver',integrationReadOnly:true,note:'네이버 연동 예약 · 매핑된 항목만 표시',membership:'확인 필요',last:'확인 필요'}));if(activeAppointment?.integrationReadOnly)closeOpsDetail();renderOpsToday();renderBooking()}};
+window.LudiaNaverImport={
+ context(){return{local:salonCloudMode==='demo',today:localDateKey(),staffNames:salonStaffNames.slice(),appointments:structuredClone(allSalonAppointments())}},
+ preview(rows,options){if(salonCloudMode!=='demo')throw Error('local_mode_required');return window.LudiaNaverImportCore.plan(rows,salonAppointments,{today:localDateKey(),staffNames:salonStaffNames,...options})},
+ async apply(rows,options){if(salonCloudMode!=='demo')throw Error('local_mode_required');const result=this.preview(rows,options),previous=salonAppointments;if(!result.changes.length)return result;
+  salonAppointments=result.appointments;try{const saved=snapshot();try{await idbSet('snapshot',saved);storageMode='IndexedDB'}catch{localStorage.setItem('ludiaStudioFallback',JSON.stringify(saved));storageMode='localStorage'}lastSavedAt=new Date(saved.savedAt);setSaveStatus('saved','예약 가져오기 저장됨')}catch(e){salonAppointments=previous;throw e}renderBooking();renderOpsToday();updateStorageStats();window.dispatchEvent(new CustomEvent('ludia:naver-local-import',{detail:{changed:result.changes.length}}));return result
+ }
+};
 window.LudiaBookingAvailability={localRows(staff,duration=90){const offset=Number($('#quickBookingContext')?.dataset.dayOffset||0),hours=bookingDayHours(offset),rows=[];for(let m=bookingTimeMinutes(hours.open);m<bookingTimeMinutes(hours.close);m+=state.bookingHours.step){const time=bookingTimeLabel(m),check=bookingLocalAvailability(offset,staff,time,duration);rows.push({time,available:check.available,reason:check.reason})}return rows},getStep:()=>state.bookingHours.step};
 $$('[data-nav]').forEach(b=>b.onclick=()=>setView(b.dataset.nav));window.__ludiaNavBound=true;
 
@@ -925,7 +932,7 @@ async function rememberPricingPhoto(){
  try{
   const rows=await readPricingExamples(scope);if(rows.length>=50&&!rows.some(x=>x.photoHash===record.hash))return toast('정답 50개가 저장됐어요 · 먼저 정답 내보내기로 보관해 주세요');
   const photoDataUrl=await compressImageToDataUrl(record.blob);
-  const sample=window.LudiaPricingCore.confirmedExample({schema:'ludia-confirmed-photo/v1',verifiedBy:'owner',verifiedAt:new Date().toISOString(),scope,photoHash:record.hash,features:record.features,photoDataUrl,lines,finalOverride,pricingFingerprint});
+  const sample=window.LudiaPricingCore.confirmedExample({schema:'ludia-confirmed-photo/v1',verifiedBy:'owner',verifiedAt:new Date().toISOString(),scope,photoHash:record.hash,features:record.features,vision:record.vision,photoDataUrl,lines,finalOverride,pricingFingerprint});
   if(!sample.photoDataUrl)throw new Error('example_photo_too_large');
   if(pricingExampleScope()!==scope)throw new Error('example_scope_changed');
   await idbSet('pricingConfirmedPhotos:v1:'+scope,[...rows.filter(x=>x.photoHash!==record.hash),sample]);
@@ -972,6 +979,7 @@ async function savePricingStandard(){
 }
 function closePricingSheet(){
  pricingPhotoAnalysisSeq++;pricingPhotoRecord=null;updatePricingRememberButton();
+ window.LudiaNailVision?.cancel();
  const sheet=$('#pricingSheet');if(!sheet)return;sheet.classList.remove('open');sheet.setAttribute('aria-hidden','true');document.body.style.overflow=''
 }
 function setPricingMode(mode){
@@ -1031,9 +1039,10 @@ function addPricingReviewLine(){
 }
 function renderPricingAiSummary(){
  const box=$('#pricingAiSummary'),stateBox=$('#pricingAiState');if(!box)return;
+ const choices=$('#pricingVisionChoice');if(choices){choices.classList.toggle('hidden',!pricingAiMeta?.engine?.startsWith('siglip2'));choices.querySelectorAll('[data-vision-base]').forEach(b=>{b.textContent=state.pricing.base[b.dataset.visionBase].label+' · '+priceWon(state.pricing.base[b.dataset.visionBase].price);b.classList.toggle('active',pricingAiMeta?.baseKey===b.dataset.visionBase)})}
  if(!pricingAiMeta){box.classList.add('hidden');if(stateBox)stateBox.classList.add('hidden');return}
  box.classList.remove('hidden');
- if($('#pricingAiConfidence'))$('#pricingAiConfidence').textContent=pricingAiMeta.ownerConfirmed?'원장 확정 기록':'비교 점수 '+Math.round(Number(pricingAiMeta.confidence)||0)+'/100';
+ if($('#pricingAiConfidence'))$('#pricingAiConfidence').textContent=pricingAiMeta.ownerConfirmed?'원장 확정 기록':pricingAiMeta.engine==='siglip2-local-q8'?'로컬 AI · 확인 필요':'비교 점수 '+Math.round(Number(pricingAiMeta.confidence)||0)+'/100';
  if($('#pricingAiSummaryText'))$('#pricingAiSummaryText').textContent=pricingAiMeta.summary||'사진에서 보이는 시술 요소를 기준으로 1차 분류했습니다.';
  const ul=$('#pricingAiObservations');if(ul){ul.innerHTML='';(pricingAiMeta.unpricedObservations||[]).forEach(x=>{const li=document.createElement('li');li.textContent=x;ul.appendChild(li)});ul.classList.toggle('hidden',!ul.children.length)}
 }
@@ -1045,7 +1054,7 @@ function recalculatePricingReview(){
  if($('#pricingRegularPrice'))$('#pricingRegularPrice').textContent=priceWon(regular);
  if($('#pricingEventPrice'))$('#pricingEventPrice').textContent=priceWon(event);
  if($('#pricingBreakdown'))$('#pricingBreakdown').textContent=pricingReviewLines.length?pricingReviewLines.map(x=>x.label+' '+(x.qty||0)+' × '+priceWon(x.unitPrice)).join(' · '):'상세내역을 추가하거나 최종금액을 직접 입력하세요.';
- const apply=$('#pricingApplyBtn');if(apply)apply.textContent=pricingContext==='monthly'?'정상가·이벤트가 적용':pricingContext==='booking'?'예약 최종금액 적용':'계산 결과 사용'
+ const apply=$('#pricingApplyBtn');if(apply){apply.textContent=pricingContext==='monthly'?'정상가·이벤트가 적용':pricingContext==='booking'?'예약 최종금액 적용':'계산 결과 사용';apply.disabled=!pricingReviewLines.length&&!override}
 }
 function renderPricingCalculator(){
  state.pricing=mergePricing(state.pricing);
@@ -1195,8 +1204,19 @@ async function localPricePhotoDraft(source){
  try{
   const im=await new Promise((resolve,reject)=>{const x=new Image();x.onload=()=>resolve(x);x.onerror=reject;x.src=url});
   const features=pricingPhotoViews(im,192),photoRecord={hash,scope,blob,features:features[0]};
-  let confirmed=null;try{if(hash)confirmed=(await readPricingExamples(scope)).find(x=>x.photoHash===hash)}catch(error){console.warn('[LUDIA photo memory unavailable]',error)}
+  let confirmed=null,examples=[];try{examples=await readPricingExamples(scope);if(hash)confirmed=examples.find(x=>x.photoHash===hash)}catch(error){console.warn('[LUDIA photo memory unavailable]',error)}
   if(confirmed){const replay=window.LudiaPricingCore.replay(confirmed,state.pricing),base=confirmed.lines.find(x=>x.kind==='base');return{baseKey:base.key,addons:confirmed.lines.filter(x=>x.kind==='addon').map(x=>({key:x.key,qty:x.qty})),ownerConfirmed:true,confirmedLines:replay.lines,finalOverride:replay.finalOverride,summary:'같은 사진에 대해 원장이 확정한 항목을 불러왔습니다.',unpricedObservations:[replay.pricingChanged?'기준 단가가 바뀌어 현재 단가로 다시 계산했습니다. 과거 수동 최종금액은 자동 적용하지 않습니다.':'저장 당시 확정한 수량·단가를 적용했습니다.'],_photoRecord:photoRecord}}
+  if(window.LudiaNailVision?.isEnabled()){
+   const result=await window.LudiaNailVision.analyze(blob);
+   if(!result.isNail)throw Error('not_a_nail_photo');
+   photoRecord.vision={model:result.model,revision:result.revision,embedding:result.embedding};
+   const hint=window.LudiaNailVisionCore.ownerHint(result,examples),selected=hint?.baseKey||result.baseKey||null,baseKey=selected;
+   const candidates=result.baseCandidates.map(x=>x.label).join(' / '),details=result.detailCandidates.map(x=>x.label);
+   const {embedding,...publicResult}=result;
+   return{...publicResult,baseKey,requiresBaseChoice:!selected,addons:[],simpleChangeQty:0,pointChangeQty:0,_photoRecord:photoRecord,
+    summary:hint?'저장한 정답 사진과 가까운 소재를 제안합니다. 다른 사진의 파츠 수량·최종금액은 복사하지 않습니다.':!selected?'소재를 확정하지 못했습니다. 아래에서 기본 시술을 선택하면 기존 가격표로 계산합니다.':'로컬 AI가 소재 후보를 찾았습니다. 현재 금액은 기본가이며 추가 옵션 확인 후 최종 견적을 확정하세요.',
+    unpricedObservations:['소재 비교 후보 · '+candidates,selected?'기본 시술 제안 · '+state.pricing.base[baseKey].label+' · '+priceWon(state.pricing.base[baseKey].price):'소재 미확정 · 가격을 자동 적용하지 않았습니다.',details.length?'옵션 비교 후보 · '+details.join(' / ')+' · 사진을 보고 확인하세요.':'파츠·손가락 수량은 직접 확인해 주세요. 이 모델은 파츠를 세지 않습니다.','유사도는 정확도 확률이 아닙니다. 자석젤·일반 반사광 구분은 검토가 필요합니다.'],requiresReview:true}
+  }
   const refs=await loadPricingVisualRefs(),ranked=ensemblePricingVisualRefs(features,refs,3),hit=ranked[0],ref=hit.ref;
   const margin=ranked[1]?Math.max(0,hit.score-ranked[1].score):.5;
   const confidence=Math.max(42,Math.min(97,Math.round(96-hit.dist*24+Math.min(8,margin*10))));
@@ -1218,32 +1238,35 @@ async function analyzePricingPhoto(){
  const request=++pricingPhotoAnalysisSeq;pricingPhotoRecord=null;updatePricingRememberButton();
  const btn=$('#pricingAiAnalyzeBtn'),stateBox=$('#pricingAiState');
  if(btn){btn.disabled=true;btn.textContent='무료 견적 준비 중…'}
+ const applyButton=$('#pricingApplyBtn');if(applyButton)applyButton.disabled=true;
+ if(window.LudiaNailVision?.isEnabled()){pricingReviewLines=[];pricingAiMeta=null;if($('#pricingFinalOverride'))$('#pricingFinalOverride').value='';renderPricingReviewLines();recalculatePricingReview()}
  try{
    const analysis=await localPricePhotoDraft(source);
    if(request!==pricingPhotoAnalysisSeq||analysis._photoRecord.scope!==pricingExampleScope())return;
    pricingPhotoRecord=analysis._photoRecord;delete analysis._photoRecord;updatePricingRememberButton();
    applyAiEstimateToManual(analysis);
    pricingAiMeta=analysis;
-   pricingReviewLines=analysis.confirmedLines||manualPricingLines();
+   pricingReviewLines=analysis.requiresBaseChoice?[]:analysis.confirmedLines||manualPricingLines();
    if($('#pricingFinalOverride'))$('#pricingFinalOverride').value=analysis.finalOverride||'';
    if($('#pricingRememberState'))$('#pricingRememberState').textContent=analysis.ownerConfirmed?'저장한 사진과 동일합니다.':'사진과 수량을 확인한 뒤 정답을 저장하세요. 사진은 이 기기에만 보관합니다.';
    const detailHost=$('#pricingReviewLines')?.parentElement;if(detailHost)detailHost.classList.add('pricing-detail-open');
    renderPricingAiSummary();renderPricingReviewLines();recalculatePricingReview();
    if(stateBox){
      stateBox.classList.remove('hidden');
-     stateBox.textContent=analysis.ownerConfirmed?'원장 확정 기록 · API 비용 0원':'견적 초안 · API 비용 0원 · 자석젤·파츠 수량은 확인 후 확정해 주세요.'
+     stateBox.textContent=analysis.ownerConfirmed?'원장 확정 기록 · API 비용 0원':analysis.engine==='siglip2-local-q8'?(analysis.requiresBaseChoice?'소재 미확정 · 기본 시술을 선택해 주세요':'로컬 AI 초안 · 추가 수량 확인 필요'):'기준 비교 초안 · API 비용 0원 · 소재·수량은 확인 후 확정해 주세요.'
    }
    toast(analysis.ownerConfirmed?'확정한 견적을 불러왔어요':'견적 초안이 나왔어요 · 항목과 수량을 확인해 주세요')
  }catch(error){
    if(request!==pricingPhotoAnalysisSeq)return;
    console.error('[LUDIA local price]',error);
-   if(stateBox){stateBox.classList.remove('hidden');stateBox.textContent='무료 견적 준비 중 오류가 발생했습니다.'}
-   toast('무료 견적 준비에 실패했어요')
- }finally{if(btn&&request===pricingPhotoAnalysisSeq){btn.disabled=false;btn.textContent='무료 견적 열기'}}
+   if(stateBox){stateBox.classList.remove('hidden');stateBox.textContent=error.message==='not_a_nail_photo'?'네일 사진인지 확인해 주세요. 가격을 자동 적용하지 않았습니다.':'로컬 분석을 마치지 못했어요. 다시 시도하거나 기준 비교를 사용하세요.'}
+   toast(error.message==='not_a_nail_photo'?'선명한 네일 사진을 선택해 주세요':'사진 분석을 마치지 못했어요')
+ }finally{if(request===pricingPhotoAnalysisSeq){if(btn){btn.disabled=false;btn.textContent='무료 견적 열기'}if(applyButton)applyButton.disabled=!pricingReviewLines.length}}
 }
 function openPricingSheet(context='standalone',mode='custom',{autoAnalyze=false}={}){
  pricingPhotoAnalysisSeq++;pricingPhotoRecord=null;updatePricingRememberButton();
  const analyzeBtn=$('#pricingAiAnalyzeBtn');if(analyzeBtn){analyzeBtn.disabled=false;analyzeBtn.textContent='사진 분석'}
+ if($('#pricingApplyBtn'))$('#pricingApplyBtn').disabled=false;
  pricingContext=context;pricingMode=mode==='monthly'?'monthly':'custom';pricingPhotoFile=null;pricingAiMeta=null;
  if($('#pricingFinalOverride'))$('#pricingFinalOverride').value='';
  renderPricingCalculator();renderPricingAiSummary();
@@ -1278,6 +1301,10 @@ $('#pricingApplyBtn')?.addEventListener('click',applyPricingResult);
 $('#pricingAddLineBtn')?.addEventListener('click',addPricingReviewLine);
 $('#pricingFinalOverride')?.addEventListener('input',recalculatePricingReview);
 $('#pricingAiAnalyzeBtn')?.addEventListener('click',analyzePricingPhoto);
+$('#pricingLocalVisionBtn')?.addEventListener('click',()=>{window.LudiaNailVision.enable();analyzePricingPhoto()});
+$$('[data-vision-base]').forEach(button=>button.addEventListener('click',()=>{if(!pricingAiMeta?.engine?.startsWith('siglip2'))return;const key=button.dataset.visionBase;applyAiEstimateToManual({baseKey:key,addons:[]});pricingAiMeta.baseKey=key;pricingAiMeta.requiresBaseChoice=false;pricingAiMeta.summary='선택한 기본 시술을 기존 가격표로 계산했습니다. 추가 옵션 수량을 확인해 주세요.';pricingReviewLines=manualPricingLines();renderPricingAiSummary();renderPricingReviewLines();recalculatePricingReview();if($('#pricingAiState'))$('#pricingAiState').textContent='기본 시술 확인됨 · 추가 수량은 기준표에서 입력하세요.'}));
+$('#pricingReferenceBtn')?.addEventListener('click',()=>{window.LudiaNailVision.disable();analyzePricingPhoto()});
+window.addEventListener('ludia:vision-progress',e=>{const box=$('#pricingAiState');if(box&&$('#pricingAiAnalyzeBtn')?.disabled){box.classList.remove('hidden');box.textContent=e.detail.text}});
 $('#pricingPhotoInput')?.addEventListener('change',e=>{const file=e.target.files?.[0];if(!file)return;pricingPhotoFile=file;setPricingPhotoPreview(URL.createObjectURL(file));pricingAiMeta=null;renderPricingAiSummary();setTimeout(analyzePricingPhoto,100)});
 $('#qbCustomPhotoInput')?.addEventListener('change',e=>{
  const file=e.target.files?.[0];if(!file)return;if(qbCustomPhotoUrl)URL.revokeObjectURL(qbCustomPhotoUrl);qbCustomPhotoFile=file;qbCustomPhotoUrl=URL.createObjectURL(file);

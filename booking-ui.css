@@ -75,3 +75,5 @@
 .pricing-remember-row small{flex:1 1 160px;font-size:12px;line-height:1.5;color:var(--text-secondary,#666);overflow-wrap:anywhere}
 .pricing-standard-actions .text-action{min-height:44px;white-space:normal;font-size:12px}
 html[data-theme="dark"] .pricing-remember-row small{color:#aeaeb2}
+.pricing-engine-row{display:flex;flex-wrap:wrap;gap:6px;margin:8px 0 14px;align-items:center}.pricing-engine-row button{min-height:44px;padding:8px 12px;border:1px solid var(--cal-line);border-radius:9px;background:var(--cal-fill);color:var(--cal-blue);font-size:13px;font-weight:600;font-family:inherit}.pricing-engine-row small{width:100%;font-size:12px;line-height:1.45;color:var(--cal-muted)}
+.pricing-vision-choice{padding:12px 0}.pricing-vision-choice>div{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:6px;margin:8px 0}.pricing-vision-choice button{min-height:44px;font-size:13px;border:1px solid var(--cal-line);border-radius:10px;background:var(--cal-card);color:var(--cal-text);padding:8px 5px}.pricing-vision-choice button.active{background:var(--cal-owner-fill);color:var(--cal-blue)}.pricing-vision-choice small{color:var(--cal-muted);font-size:12px}

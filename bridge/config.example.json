@@ -6,14 +6,20 @@
   "bookingRowSelector": "",
   "reviewUrl": "",
   "profileDir": "./.naver-profile",
-  "stateFile": "./.bridge-state.json",
+  "stateFile": "./.bridge-local-state.json",
   "selectorsVerified": false,
   "bookingFields": {
     "bookingNo": "",
     "date": "",
     "time": "",
     "phone": "",
-    "status": ""
+    "status": "",
+    "customerName": "",
+    "serviceName": "",
+    "staffName": "",
+    "duration": ""
   },
-  "emptyStateSelector": ""
+  "emptyStateSelector": "",
+  "deliveryMode": "local",
+  "exportDir": "./exports"
 }

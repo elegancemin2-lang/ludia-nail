@@ -20,3 +20,8 @@ Thumbs.db
 # Naver bridge local config/state
 bridge/config.local.json
 bridge/.bridge-state.json
+.model-cache/
+vision/*.test.json
+bridge/exports/
+
+bridge/.bridge-local-state.json

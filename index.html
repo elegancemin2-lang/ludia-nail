@@ -7,8 +7,8 @@
   <meta name="description" content="LUDIA NAIL - 예약·고객관리와 LUDIA ART STUDIO를 하나로 묶은 모바일 네일샵 운영 웹앱" />
   <title>LUDIA NAIL</title>
   <link rel="manifest" href="manifest.webmanifest" />
-  <link rel="stylesheet" href="styles.css?v=2.62.0" />
-  <link rel="stylesheet" href="booking-ui.css?v=2.62.0" />
+  <link rel="stylesheet" href="styles.css?v=2.63.0" />
+  <link rel="stylesheet" href="booking-ui.css?v=2.63.0" />
 </head>
 <body>
   <div class="app">
@@ -698,6 +698,8 @@
           <button class="primary-btn pricing-ai-run" id="pricingAiAnalyzeBtn" type="button">사진 분석</button>
           <div class="pricing-ai-state hidden" id="pricingAiState"></div>
         </div>
+        <div class="pricing-engine-row"><button type="button" id="pricingLocalVisionBtn">무료 로컬 AI</button><button type="button" id="pricingReferenceBtn">기존 기준 비교</button><small>SigLIP2 최초 약 95MB · 사진은 기기 안에서 처리</small></div>
+        <div class="pricing-vision-choice hidden" id="pricingVisionChoice"><b>기본 시술 확인</b><div><button type="button" data-vision-base="oneColor">원컬러</button><button type="button" data-vision-base="magnetic">자석젤</button><button type="button" data-vision-base="gradation">그라데이션</button><button type="button" data-vision-base="fullDesign">전체 디자인</button></div><small>추가 파츠·손가락 수량은 기준표에서 확인하세요.</small></div>
 
         <div class="pricing-ai-summary hidden" id="pricingAiSummary">
           <div><span>참고이미지 비교</span><b id="pricingAiConfidence">-</b></div>
@@ -758,12 +760,15 @@
 
   <div class="toast" id="toast" role="status"></div>
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.116.0/dist/umd/supabase.min.js"></script>
-  <script src="salon-cloud.js?v=2.62.0"></script>
-  <script src="booking-model.js?v=2.62.0"></script>
-<script src="pricing-standard.js?v=2.62.0"></script>
-  <script src="pricing-core.js?v=2.62.0"></script>
-<script src="app.js?v=2.62.0"></script>
-  <script src="core-shell.js?v=2.62.0"></script>
-  <script src="runtime-loader.js?v=2.62.0"></script>
+  <script src="salon-cloud.js?v=2.63.0"></script>
+  <script src="booking-model.js?v=2.63.0"></script>
+<script src="pricing-standard.js?v=2.63.0"></script>
+  <script src="pricing-core.js?v=2.63.0"></script>
+  <script src="naver-import-core.js?v=2.63.0"></script>
+  <script src="nail-vision-core.js?v=2.63.0"></script>
+  <script src="nail-vision.js?v=2.63.0"></script>
+<script src="app.js?v=2.63.0"></script>
+  <script src="core-shell.js?v=2.63.0"></script>
+  <script src="runtime-loader.js?v=2.63.0"></script>
 </body>
 </html>

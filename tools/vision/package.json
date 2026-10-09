@@ -1,0 +1,8 @@
+{
+  "name": "ludia-vision-tools",
+  "private": true,
+  "type": "module",
+  "dependencies": {
+    "@huggingface/transformers": "4.3.1"
+  }
+}

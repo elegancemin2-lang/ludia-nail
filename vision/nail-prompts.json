@@ -1,0 +1,216 @@
+{
+  "schema": "ludia-nail-prompts/v1",
+  "model": "onnx-community/siglip2-base-patch16-224-ONNX",
+  "revision": "ba1f3b0843f24bc5417d38e19c37b287d719b2f4",
+  "dtype": "q8",
+  "dimensions": 768,
+  "classes": [
+    {
+      "key": "nails",
+      "group": "gate",
+      "label": "네일 사진",
+      "prompts": [
+        "A close-up photograph of a manicure on fingernails.",
+        "A photo of hands with decorated gel nails.",
+        "A set of artificial nail tips with nail art."
+      ]
+    },
+    {
+      "key": "otherPhoto",
+      "group": "gate",
+      "label": "네일 외 사진",
+      "prompts": [
+        "A photo of a landscape, food, or everyday objects without fingernails.",
+        "A portrait of a face without any visible fingernails.",
+        "A document, screenshot, or price list with text."
+      ]
+    },
+    {
+      "key": "bare",
+      "group": "material",
+      "label": "맨손톱 · 소재 확인",
+      "prompts": [
+        "A close-up of bare natural fingernails without nail polish.",
+        "A manicure with clear transparent nail polish on natural nails.",
+        "Short natural fingernails with no nail art."
+      ]
+    },
+    {
+      "key": "oneColor",
+      "group": "material",
+      "label": "원컬러 · 시럽",
+      "prompts": [
+        "A manicure with plain solid color glossy gel nail polish.",
+        "Fingernails painted with translucent jelly syrup nail polish.",
+        "A simple manicure with smooth plain pink gel polish and ordinary reflections."
+      ]
+    },
+    {
+      "key": "magnetic",
+      "group": "material",
+      "label": "자석젤 · 캣아이",
+      "prompts": [
+        "A manicure with magnetic cat eye gel polish and a luminous band of light on each fingernail.",
+        "Velvet cat-eye magnetic gel nails with a shimmering silver glow.",
+        "Magnetic gel nail polish with a bright curved cat eye light stripe and dark edges."
+      ]
+    },
+    {
+      "key": "gradation",
+      "group": "material",
+      "label": "그라데이션",
+      "prompts": [
+        "A manicure with ombre gradient gel nail polish fading from pink to white.",
+        "Fingernails with a soft airbrushed color gradient that fades toward the cuticle.",
+        "A manicure with blush aura gradient nail art."
+      ]
+    },
+    {
+      "key": "glitterBase",
+      "group": "material",
+      "label": "글리터 · 펄 베이스",
+      "prompts": [
+        "A manicure with glitter nail polish showing many tiny sparkling particles.",
+        "Fingernails covered with coarse glitter flakes and sequins.",
+        "Sparkling glitter gel nails with scattered glitter specks."
+      ]
+    },
+    {
+      "key": "chromeBase",
+      "group": "material",
+      "label": "미러 · 크롬 베이스",
+      "prompts": [
+        "A manicure with chrome mirror nails and a reflective metallic finish.",
+        "Fingernails covered with smooth silver chrome nail powder.",
+        "Glazed donut pearlescent chrome nail polish on fingernails."
+      ]
+    },
+    {
+      "key": "fullDesign",
+      "group": "material",
+      "label": "복합 전체 디자인",
+      "prompts": [
+        "An elaborate manicure with different intricate nail art designs on every fingernail.",
+        "A heavily decorated manicure with many 3D charms, gems, and detailed patterns.",
+        "A complex mixed nail art design with multiple decorative techniques."
+      ]
+    },
+    {
+      "key": "thinFrench",
+      "group": "detail",
+      "label": "씬프렌치",
+      "prompts": [
+        "A manicure with very thin French tip lines on the edges of fingernails.",
+        "Micro French tip nail art on nude gel nails."
+      ]
+    },
+    {
+      "key": "dot",
+      "group": "detail",
+      "label": "도트",
+      "prompts": [
+        "A manicure with small painted polka dots on fingernails.",
+        "Nail art with round painted dots on a plain gel polish base."
+      ]
+    },
+    {
+      "key": "lineArt",
+      "group": "detail",
+      "label": "라인 · 체크",
+      "prompts": [
+        "Nail art with painted thin lines and a checkered pattern.",
+        "A manicure with plaid grid line art on fingernails."
+      ]
+    },
+    {
+      "key": "glitter",
+      "group": "detail",
+      "label": "글리터 포인트",
+      "prompts": [
+        "A manicure with glitter accents on some fingernails.",
+        "Nail art with sparkling glitter particles at the nail tips."
+      ]
+    },
+    {
+      "key": "foilFilm",
+      "group": "detail",
+      "label": "호일 · 필름",
+      "prompts": [
+        "A manicure with gold foil flakes on fingernails.",
+        "Nail art with iridescent cellophane film flakes."
+      ]
+    },
+    {
+      "key": "smallPoint",
+      "group": "detail",
+      "label": "하트 · 스팽글",
+      "prompts": [
+        "Nail art with small heart shapes and heart sequins.",
+        "A manicure with tiny heart-shaped nail decorations."
+      ]
+    },
+    {
+      "key": "ribbonPoint",
+      "group": "detail",
+      "label": "리본 포인트",
+      "prompts": [
+        "A manicure with bow shaped nail art decorations.",
+        "Nail art with little ribbon bows on fingernails."
+      ]
+    },
+    {
+      "key": "clearRibbon",
+      "group": "detail",
+      "label": "투명 리본 파츠",
+      "prompts": [
+        "Nail art with transparent three dimensional clear resin bow charms.",
+        "A manicure with clear raised plastic ribbon bow nail charms."
+      ]
+    },
+    {
+      "key": "stone",
+      "group": "detail",
+      "label": "스톤 · 큐빅",
+      "prompts": [
+        "A manicure decorated with raised rhinestones and crystal gems.",
+        "Fingernails with sparkling jewel nail charms glued on top."
+      ]
+    },
+    {
+      "key": "pearl",
+      "group": "detail",
+      "label": "진주 · 메탈 파츠",
+      "prompts": [
+        "A manicure with white pearl beads attached to fingernails.",
+        "Nail art with raised metallic beads and pearl charms."
+      ]
+    },
+    {
+      "key": "marble",
+      "group": "detail",
+      "label": "마블 · 뉘앙스",
+      "prompts": [
+        "A manicure with marble stone patterns and swirled nail art.",
+        "Fingernails with translucent abstract watercolor and tortoiseshell nail art."
+      ]
+    },
+    {
+      "key": "characterArt",
+      "group": "detail",
+      "label": "캐릭터 · 드로잉",
+      "prompts": [
+        "Nail art with detailed hand painted cartoon characters.",
+        "A manicure with painted flower illustrations and detailed drawings."
+      ]
+    },
+    {
+      "key": "plainDetail",
+      "group": "detail",
+      "label": "추가 장식 없음 후보",
+      "prompts": [
+        "A simple plain manicure without any nail art, patterns, gems, bows or other decorations.",
+        "Smooth undecorated gel nails with no additional ornaments."
+      ]
+    }
+  ]
+}

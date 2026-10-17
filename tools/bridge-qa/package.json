@@ -1,0 +1,7 @@
+{
+  "name": "ludia-bridge-dom-qa",
+  "private": true,
+  "version": "1.0.0",
+  "description": "Isolated DOM fixture checks; not installed in the production app or PC bundle",
+  "devDependencies": {"jsdom": "30.1.3"}
+}

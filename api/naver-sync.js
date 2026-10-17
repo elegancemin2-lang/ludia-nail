@@ -13,6 +13,14 @@ export default async function handler(req,res){
  if(!tokenMatches(String(req.headers.authorization||'').replace(/^Bearer /,''),expected))return json(res,401,{ok:false,error:'unauthorized'});
  if(!cfg)return json(res,503,{ok:false,error:'supabase_not_configured',retryable:true});
  let body;try{body=typeof req.body==='string'?JSON.parse(req.body):req.body}catch{return json(res,400,{ok:false,error:'invalid_json'})}
+ if(body?.source==='NAVER'&&body.probe===true){
+  if(Object.keys(body).some(k=>!['source','probe'].includes(k)))return json(res,400,{ok:false,error:'invalid_probe'});
+  try{if(!await salonExists(cfg,sid))return json(res,503,{ok:false,error:'salon_not_configured'});
+   const schema=await readJson(cfg.url+'/rest/v1/',{...cfg.headers,accept:'application/openapi+json'});
+   if(!schema?.paths?.['/rpc/ludia_ingest_naver_bridge_event']?.post)return json(res,503,{ok:false,error:'sync_schema_not_ready'});
+   return json(res,200,{ok:true,probe:true,writable:true,mutated:false,requiresVerifiedSelectors:true,attachmentsSupported:false});
+  }catch{return json(res,503,{ok:false,error:'configuration_unavailable'})}
+ }
  if(body?.source!=='NAVER'||!Array.isArray(body.events)||body.reviews&&(!Array.isArray(body.reviews)||body.reviews.length))return json(res,400,{ok:false,error:'invalid_or_unverified_payload'});
  if(body.events.length>200)return json(res,413,{ok:false,error:'too_many_events'});
  const diag=diagnostics(body.diagnostics),rows=body.events.map(normalizeEvent);if(rows.some(x=>!x))return json(res,400,{ok:false,error:'ambiguous_booking_rejected'});

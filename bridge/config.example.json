@@ -12,6 +12,7 @@
     "bookingNo": "",
     "date": "",
     "time": "",
+    "dateTime": "",
     "phone": "",
     "status": "",
     "customerName": "",

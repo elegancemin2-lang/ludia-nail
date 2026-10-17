@@ -1,34 +1,62 @@
-# LUDIA Naver Bridge · v0.3
+# LUDIA Naver Bridge · v0.4.0
 
-샵 Windows PC의 전용 Chromium에서 원장이 네이버 공식 페이지에 직접 로그인합니다. 비밀번호는 LUDIA 서버에 전송하거나 저장하지 않습니다. CAPTCHA/2FA를 우회하지 않습니다. 기존 Vercel/Supabase 연결을 사용합니다.
+샵 Windows PC에서 네이버 예약을 확인하는 연결 프로그램입니다. 최초 1회 실제 예약 화면의 항목을 원장이 지정하고 검토합니다. 네이버 비밀번호는 네이버 공식 창에서만 입력하며 LUDIA에 전송하거나 저장하지 않습니다. CAPTCHA·2FA 우회는 없습니다.
 
-## 실행과 실제 DOM 확인
+## Windows에서 시작
 
-1. `START_NAVER_BRIDGE.cmd` 실행 → 생성된 `config.local.json`은 **local 모드**이며 서버 키가 필요하지 않습니다. Supabase 서버 키는 PC에 넣지 않습니다.
-2. 다시 실행 → 네이버 공식 페이지에서 로그인 → 해당 샵 예약관리 화면으로 직접 이동.
-3. **실계정 DOM을 확인한 후에만** 정확한 `smartplaceUrl`, `bookingRowSelector`, `bookingFields`(예약번호/날짜/시간/상태, 선택 전화번호·고객명·상품·담당자·소요시간), `emptyStateSelector`를 설정하고 `selectorsVerified: true`로 변경합니다. 필드마다 예약 행 안에서 보이는 요소가 정확히 하나여야 합니다. 소요시간은 정수 분으로 실제 표시된 값만 읽습니다.
-4. local 모드는 `exports` 폴더에 예약·상태 JSON을 원자적으로 저장합니다. LUDIA **더보기 → 네이버 SmartPlace → PC 자동 파일 확인**에서 폴더를 선택하고 미리보기를 확인하세요. PC Chrome/Edge에서 앱이 열려 있는 동안 확인하며, 이 PC에만 저장합니다. 폰/다른 기기로 자동 공유하지 않습니다.
-5. 확인 전에는 예약을 출력하지 않습니다. 기본 주기는 60초, 오류 시 최대 5분까지 재시도 간격을 늘립니다. 사진 첨부 추출은 지원하지 않습니다.
+1. LUDIA **더보기 → 네이버 SmartPlace → PC 연결 시작**에서 ZIP을 받습니다.
+2. 압축을 풀고 **START_NAVER_BRIDGE.cmd**를 실행합니다. Node.js 20 이상이 필요합니다. 첫 실행은 lockfile에 고정된 Playwright 1.64.1과 Chromium을 공식 배포처에서 설치합니다.
+3. 처음에는 **이 PC 전용 설정 화면**이 열립니다. 화면이 자동으로 열리지 않으면 실행 창에 표시된 로컬 주소를 이 PC 브라우저에서 여세요. 주소는 공유하지 마세요.
+4. **네이버 로그인 창 열기**를 누르고 직접 로그인한 뒤, 해당 매장의 실제 **예약관리 목록**으로 이동합니다.
+5. **현재 네이버 화면 주소 사용**을 누릅니다. **예약 한 줄 전체** 버튼을 누른 뒤 네이버 창에서 예약을 가리키고 ↑로 영역을 넓혀 한 줄 전체를 선택한 후 Enter로 확정합니다.
+6. 예약번호·날짜·시간·예약상태 버튼을 각각 누르고 네이버 창의 해당 표시 요소를 클릭합니다. 날짜·시간이 한 요소에 표시되면 **날짜·시간이 한 항목일 때**를 사용합니다. 확인되는 고객명·시술·담당자·소요시간은 선택적으로 지정합니다.
+7. **실제 예약 미리보기**에서 모든 행이 정상 해석되는지 확인합니다. 미리보기는 고객명을 가리고 예약번호 뒷부분만 표시합니다. 실제 내용과 조회 기간을 확인했다는 항목을 체크한 뒤 설정을 저장합니다.
+8. **예약 연결 실행**을 누릅니다. 이후 실행할 때는 START 파일로 시작합니다. 화면 구성이 바뀌었거나 선택을 수정할 때는 **SETUP_NAVER_BRIDGE.cmd**로 재설정합니다.
 
-DOM 확인 전 당장 사용할 대안: 네이버에서 예약 내역을 내려받아 LUDIA의 **예약 파일 가져오기**를 사용합니다. XLS·암호 엑셀은 Excel에서 CSV UTF-8로 저장합니다. 실제 네이버 다운로드 열/암호 및 계정 E2E는 아직 검증하지 않았습니다.
+이 설정 도구는 DOM 요소를 지정할 뿐이며, SmartPlace의 특정 selector를 미리 추정해 넣지 않습니다. 실제 네이버 계정·DOM·첨부사진 E2E는 아직 검증 전입니다. 자동 페이지 넘김, 조회 기간 확장, 가상 스크롤 전체 로딩은 구현하지 않았습니다. 현재 화면의 조회 기간·페이지에 렌더링된 예약만 수집합니다. 예약이 목록에서 사라졌다는 이유로 취소하지 않습니다.
 
-서버 모드는 `deliveryMode: server`와 기존 서버와 같은 32자 이상의 `syncToken`이 필요합니다. Vercel의 매장 ID·Supabase 서버 키·동기화 키 및 실제 매장 row가 준비돼야 합니다. deliveryMode 없는 기존 설정은 server 모드를 유지합니다. 모드마다 별도 `stateFile`을 사용하며, 다른 모드의 확인 상태를 재사용하지 않습니다.
+## 두 가지 저장 방식
 
-수동 실행: Node 20+에서 `npm install`, `npx playwright install chromium`, `npm start`. 환경변수 `LUDIA_BRIDGE_CONFIG`, `LUDIA_SYNC_URL`, `LUDIA_SYNC_TOKEN`, `LUDIA_SMARTPLACE_URL`, `LUDIA_POLL_MS`, `LUDIA_NAVER_PROFILE`, `LUDIA_BOOKING_ROW_SELECTOR`, `LUDIA_BRIDGE_STATE`를 지원합니다. 프로필/설정/상태 파일은 PC 밖으로 업로드하지 않습니다.
+### 이 PC에 저장
 
-## 권한과 저장
+서버 키가 필요 없습니다. 검증된 예약과 상태가 exports 폴더에 JSON으로 저장됩니다. LUDIA **더보기 → 네이버 SmartPlace → PC 자동 파일 확인 → PC 폴더 연결**에서 이 폴더를 선택하고 미리보기를 확인합니다.
 
-- 서버는 기존 `SUPABASE_URL`, `SUPABASE_SECRET_KEY`(또는 service role), `LUDIA_SALON_ID`를 사용합니다. 실제 salon row가 없으면 미설정이며 Connected로 표시하지 않습니다.
-- PC 동기화 키는 읽기/충돌 해결 관리자 권한을 주지 않습니다. 외부 연동 관리자 전용 `LUDIA_INTEGRATION_ADMIN_TOKEN`은 32자 이상이며 동기화 키와 **서로 달라야** 합니다. LUDIA 일반 기능의 로그인 조건이 아닙니다.
-- 관리자 키는 사용자가 연동 화면에 입력할 때 브라우저 메모리에만 30분 유지합니다. 범위는 서버에서 지정한 한 샵이며 예약표 조회와 충돌 해결에만 사용합니다. 연결을 해제하거나 새로고침하면 제거됩니다.
-- `supabase/naver_bridge_reliability.sql`은 기존 DB 구조에 이벤트 멱등 키와 service-role 전용 원자적 수집/충돌 해결 RPC를 추가합니다. 기존 JWT 경로도 유지합니다. 추가로 `naver_service_availability.sql`, `booking_capacity_reactivation.sql`, 기존 `staff_day_slots.sql`도 설치했습니다. 기존 ACL은 유지하며 service role의 매핑 검증만 허용하고 취소/노쇼 복구 시 용량을 다시 검사합니다. 이전 버전 점검에서 INBETWEEN에 적용했으며, v0.3 작업에서는 DB를 변경하지 않았습니다.
-- 매핑은 명시적으로 등록된 규칙과 정확한 전화번호만 사용합니다. raw text에서 고객/시술/담당자를 추측하지 않습니다. 신규 미매핑 예약은 미지정으로 표시합니다.
-- 동일 담당자 시간이 겹칠 때만 충돌입니다. 원장/직원 동시 예약은 허용합니다. 고객의 견적 금액, 시술 길이와 사진/아트 메타데이터를 동기화 업데이트에서 보존합니다.
+PC Chrome/Edge에서 LUDIA가 열려 있는 동안 약 60초마다 읽습니다. **다른 PC·휴대폰으로 자동 공유되지 않습니다.** 폴더 선택·파일 감시의 실제 매장 PC E2E는 별도로 확인해야 합니다.
 
-## 신뢰성 및 미완료 범위
+### 서버에 전송 · 휴대폰에서 확인
 
-예약 이벤트마다 설치 ID + 예약번호 + 변경 revision + 정규화 필드 해시로 멱등 키를 만듭니다. 전송 전에 디스크 outbox에 변경을 저장하고, 미확인 batch를 먼저 재시도합니다. 서버가 DB 저장과 예약표 투영에 성공한 뒤에만 PC 확인 상태를 갱신합니다. 서버 저장 후 응답 실패 또는 PC 재시작 중 A→B→A로 바뀌어도 마지막 상태를 누락하지 않습니다. 중간 실패/재시도/중복 전송에 안전하며 목록에서 사라진 예약을 취소로 추정하지 않습니다. 충돌하는 중복 행이나 해석 불가능한 행은 해당 수집을 중단합니다.
+설정 화면에서 이 방식을 선택하고 **서버 연결 검사**를 실행합니다. 현재 공식 LUDIA HTTPS endpoint만 허용하며, 준비되지 않은 서버에는 PC 키를 보내지 않습니다. 준비 상태가 확인된 뒤 별도의 읽기 전용 권한 검사로 키를 검증합니다. 검사 과정은 예약·연결 상태를 쓰지 않으며 최근 Sync도 갱신하지 않습니다.
 
-`connected`는 확인된 예약 화면의 성공한 sync에만 사용합니다. 로그인 필요/재로그인/selector 확인 필요/오류/마지막 성공 후 10분 초과 상태를 분리합니다. 미확인 화면의 heartbeat는 최근 Sync 시간을 갱신하지 않습니다.
+필요한 서버 설정은 기존 Vercel/Supabase 연결 안의 SUPABASE_URL, SUPABASE_SECRET_KEY(또는 service role), LUDIA_SALON_ID, LUDIA_SYNC_TOKEN입니다. 실제 매장 row 및 기존 ludia_ingest_naver_bridge_event RPC가 있어야 합니다. **Supabase 서버 키를 PC에 넣지 않습니다.**
 
-**실제 SmartPlace DOM, 예약 상세의 고객/시술/담당자, 사진 첨부, 리뷰 수집은 아직 실계정 검증 전입니다.** 사진 데이터는 `attachments: []`, `attachmentState: not_verified`로 명시하며 가짜 selector나 자동 사진 견적을 제공하지 않습니다. 실제 DOM/첨부 접근을 확인한 다음 가격 계산 화면으로 연결해야 합니다. 기존 48개 특징 벡터/5-view 비교와 무료 SigLIP2 후보 분석이 있으며, 손톱별 소재·파츠 개수 자동 판독은 완료되지 않았습니다.
+PC의 syncToken은 위 동기화 키와 같아야 합니다. 휴대폰에서 개인 예약을 조회할 때는 별도 **외부 연동 관리자 키**가 필요합니다. LUDIA 일반 기능에는 로그인을 요구하지 않습니다. 관리자 키는 PC 동기화 키와 서로 달라야 하며 서버에 지정된 한 매장으로 범위를 제한합니다. 현행 조회 권한은 브라우저 메모리에서 30분 유지되며 새로고침하면 해제됩니다.
+
+서버 예약표의 담당자·시술·소요시간은 기존 매장 매핑과 정확한 전화번호 매칭을 사용합니다. PC에서 선택한 추가 표시 필드만으로 서버의 담당자 UUID를 임의 배정하지 않습니다. 매핑이 없으면 미지정이며, 매장별 매핑 검증도 실계정 E2E 항목입니다. 사진·기존 견적 금액·시술 메타데이터는 동기화에서 덮어쓰지 않습니다.
+
+## 수집·저장 신뢰성
+
+- 같은 담당자와 겹치는 예약만 충돌입니다. 원장·직원 동시시술은 허용합니다.
+- 고정된 매장 주소의 path, query 값, fragment를 모두 확인합니다. 다른 매장이나 다른 조회 조건으로 이동하면 수집을 멈추고 재확인 상태를 표시합니다.
+- 선택한 필드가 없거나 여러 개 잡히면 수집을 중단합니다. 고객·시술·담당자를 raw text에서 추측하지 않습니다. 날짜·시간은 실제 연·월·일과 시간으로 명확히 표시돼야 합니다.
+- 페이지 새로고침이 실패하면 이전 화면을 새 동기화 성공으로 표시하지 않습니다.
+- 변경은 전송 전에 디스크 outbox에 저장합니다. DB 저장 및 예약표 투영의 정확한 응답을 받은 뒤에만 확인 상태를 진행합니다. 재시작·중복 전송·A→B→A 변경에도 미확인 이벤트를 보존합니다.
+- local/server는 서로 다른 stateFile을 씁니다. 기존 deliveryMode 없는 설정은 server로 유지합니다.
+- 깨진 config/state 파일을 빈 상태로 덮어쓰지 않습니다. 원본을 보존하고 설정 화면에서 원인을 확인합니다.
+- connected는 검증된 예약 화면의 정상 수집·저장 이후에만 사용합니다. 로그인 필요·재로그인·화면 확인 필요·오류·최근 Sync 지연을 구분합니다.
+- 이 연결은 **네이버 → LUDIA**입니다. LUDIA에서 만든 예약의 네이버 시간 차단은 별도 양방향 기능입니다.
+
+## 보안·진단
+
+설정 서버는 127.0.0.1의 임의 포트에만 바인딩합니다. 60분 한정의 난수 capability가 필요하며 다른 Origin/Host 요청을 거부합니다. 키는 설정 URL의 fragment로만 전달하고 화면 로딩 직후 주소에서 제거합니다. 설정 응답·진단 파일에는 키·쿠키·비밀번호·고객 원문을 포함하지 않습니다. 설정 UI의 변경 가능한 값으로는 PC 파일 경로를 바꿀 수 없습니다.
+
+설정 화면의 **고객정보 없는 진단 파일 저장** 또는 npm run diagnose로 점검 결과를 받을 수 있습니다. config.local.json, .naver-profile, .bridge-state.json, .bridge-local-state.json, exports 폴더는 PC 밖으로 공유하지 마세요.
+
+코드 배포 ZIP은 명시적 파일 allowlist로 생성합니다. 실제 설정·키·쿠키·예약 파일·node_modules는 포함하지 않습니다. package-lock.json과 SHA-256을 함께 제공합니다. 빌드: python3 scripts/build-bridge-package.py (저장소 루트).
+
+개발 실행: bridge 폴더에서 npm ci --ignore-scripts, node node_modules/playwright/cli.js install chromium, npm run setup 또는 npm start. 기존 LUDIA_BRIDGE_CONFIG / LUDIA_BRIDGE_MODE / LUDIA_SYNC_URL / LUDIA_SYNC_TOKEN / LUDIA_SMARTPLACE_URL / LUDIA_POLL_MS / LUDIA_NAVER_PROFILE / LUDIA_BOOKING_ROW_SELECTOR / LUDIA_BRIDGE_STATE 환경변수도 유지합니다.
+
+## 이번 확인과 남은 실검증
+
+2026-10-17 Production 공개 상태 검사에서 서버 저장소·매장·동기화 키가 준비되지 않은 상태를 확인했습니다. Vercel 메타데이터에서도 연동용 서버 변수는 없었습니다. INBETWEEN 프로젝트 상태는 ACTIVE_HEALTHY였으나 관리 SQL 조회는 연결 시간 초과가 발생해 현재 DB row 수는 확인하지 못했습니다. 이번 작업은 실제 DB를 변경하지 않습니다.
+
+합성 DOM fixture 테스트는 실제 SmartPlace 검증을 대신하지 않습니다. 매장 PC에서 실제 로그인, 예약 등록·변경·취소·담당자 매핑, 페이지/조회 기간 범위, PC 재시작, 휴대폰 조회를 이어서 확인해야 합니다. 첨부사진·리뷰 수집과 자동 양방향 예약은 구현 완료로 표시하지 않습니다.

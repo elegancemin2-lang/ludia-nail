@@ -21,4 +21,14 @@
 - 서버 DB/매장/키 구성 및 실제 DB 투영·서버 충돌 처리·휴대폰 조회. 기존 환경 연결은 유지하며 DB 변경/삭제나 인증 완화는 하지 않음.
 - 전체 날짜/페이지/가상 스크롤의 자동 순회, 첨부사진, 네이버 시간 차단의 양방향 연동은 구현 범위 아님.
 
-Production UI/ZIP 검증 결과는 실제 배포 후 기록합니다.
+## 실제 Production 브라우저 확인 · 2026-10-18
+
+- 코드 커밋: 0ee01ee561fc8392abc5592506cb97bc11037701. Vercel Production dpl_CoBNPZ1RYPuoLjiRQ7jzdttxfJpD READY 확인.
+- https://ludianail.vercel.app/ 를 실제 Chrome에서 열어 일반 기능의 로그인 없는 진입, app/runtime/naver 모듈의 v2.65.0, 새 PC 연결 안내를 확인했습니다.
+- 안내는 Node 별도 설치/폴더 선택 대신 실행 환경 자동 준비와 전용 LUDIA 창 직접 반영을 설명합니다. 기존 일반 브라우저·휴대폰과 데이터가 별도임을 표시합니다.
+- 운영 health를 실제 호출한 결과 ready=false, supabaseConfigured=false, salonConfigured=false, tokenConfigured=false입니다. UI도 미설정/설정 대기/휴대폰 공유 미준비로 표시하며 연결됨으로 표시하지 않습니다.
+- 안내의 실제 다운로드 버튼으로 ZIP을 받았습니다. 37,929 bytes이며 소스에서 검사한 ZIP과 바이트 단위 일치. SHA-256: 573401f4e81c02e20715cb2d64018ac589808327c89e1463615c847ec1c2f266.
+- 360/375/390/412/430px의 Light/Dark에서 실제 앱 iframe 측정: 예약표 10개 조합 모두 날짜 7개, document.scrollWidth=clientWidth, 예약표 자체 가로 넘침 없음.
+- 같은 10개 조합의 PC 안내도 가로 넘침 없고 다운로드 터치 높이 48px. Desktop Light와 390px Dark 화면을 실제 스크린샷으로 시각 확인했습니다. 실제 iPhone/Safari 기기 검증은 아님.
+- 관측한 브라우저 로그의 오류는 chrome-extension origin의 metadata 전송 오류이며, 해당 로그에서 앱 origin 오류는 관측하지 않았습니다.
+- Production 검증은 UI/배포/다운로드 경로입니다. 실제 Naver 로그인·DOM·예약 수집·Windows 설치·DB 반영 E2E 검증을 대신하지 않습니다.

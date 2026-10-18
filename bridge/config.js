@@ -23,7 +23,7 @@ export function pageMatches(current, configured) {
   try {
     const a = new URL(smartplaceUrl(current)), b = new URL(smartplaceUrl(configured));
     return a.origin === b.origin && a.pathname === b.pathname && a.hash === b.hash && a.searchParams.size === b.searchParams.size &&
-      [...b.searchParams].every(([key, value]) => a.searchParams.getAll(key).length === b.searchParams.getAll(key).length && a.searchParams.getAll(key).includes(value));
+      [...b.searchParams.keys()].every(key => JSON.stringify(a.searchParams.getAll(key).sort()) === JSON.stringify(b.searchParams.getAll(key).sort()));
   } catch { return false; }
 }
 
@@ -61,6 +61,7 @@ export function validateConfig(config) {
   }
   cleanSelectors(config);
   if (!selectorsReady(config)) fail('booking_screen_not_verified');
+  verifiedViews(config);
   return config;
 }
 
@@ -78,5 +79,25 @@ export function editableConfig(previous, input) {
 export function publicConfig(config) {
   return {...cleanSelectors(config), deliveryMode: config.deliveryMode || 'local', smartplaceUrl: config.smartplaceUrl || '',
     syncUrl: config.syncUrl || DEFAULT_SYNC_URL, hasSyncKey: Boolean(config.syncToken?.length >= 32 && !/^PASTE_/i.test(config.syncToken)),
-    verified: selectorsReady(config)};
+    verified: selectorsReady(config),viewCount:1+(config.bookingViews?.length||0),openLocalApp:config.openLocalApp!==false};
+}
+
+// Status/date views may change only these reviewed query parameters. Shop identifiers,
+// the path, fragment and all other query parameters remain fixed.
+export function sameShopView(current, primary) {
+  try {
+    const a=new URL(smartplaceUrl(current)),b=new URL(smartplaceUrl(primary));
+    const keys=new Set(['status','bookingStatus','reservationStatus','view','tab','date','startDate','endDate','from','to']);
+    for(const u of [a,b])for(const k of [...u.searchParams.keys()])if(keys.has(k))u.searchParams.delete(k);
+    return pageMatches(a.href,b.href);
+  }catch{return false;}
+}
+export function verifiedViews(config) {
+  const primary={smartplaceUrl:config.smartplaceUrl,...cleanSelectors(config),emptyStateSelector:config.emptyStateSelector,selectorsVerified:config.selectorsVerified,selectorVerification:config.selectorVerification};
+  const extra=config.bookingViews||[];
+  if(!Array.isArray(extra)||extra.length>4)fail('invalid_booking_views');
+  const views=[primary,...extra];
+  if(views.some(v=>!selectorsReady(v)||!sameShopView(v.smartplaceUrl,primary.smartplaceUrl)))fail('booking_screen_not_verified');
+  if(new Set(views.map(v=>smartplaceUrl(v.smartplaceUrl))).size!==views.length)fail('invalid_booking_views');
+  return views;
 }

@@ -495,6 +495,7 @@ function setView(v){
 }
 window.LudiaNaverCalendar={range(){const o=bookingWeekOffsets();return{from:localDateKey(bookingDateFromOffset(o[0])),to:localDateKey(bookingDateFromOffset(o[6]+1))}},apply(rows){integrationAppointments=(Array.isArray(rows)?rows:[]).filter(a=>a&&/^\d{4}-\d{2}-\d{2}$/.test(a.date)&&bookingTimeMinutes(a.time)!==null).map(a=>({...a,id:'naver:'+a.id,cloudId:a.id,dayOffset:Math.round((Date.parse(a.date+'T12:00:00Z')-Date.parse(localDateKey()+'T12:00:00Z'))/86400000),source:'naver',integrationReadOnly:true,note:'네이버 연동 예약 · 매핑된 항목만 표시',membership:'확인 필요',last:'확인 필요'}));if(activeAppointment?.integrationReadOnly)closeOpsDetail();renderOpsToday();renderBooking()}};
 window.LudiaNaverImport={
+ ready:false,
  context(){return{local:salonCloudMode==='demo',today:localDateKey(),staffNames:salonStaffNames.slice(),appointments:structuredClone(allSalonAppointments())}},
  preview(rows,options){if(salonCloudMode!=='demo')throw Error('local_mode_required');return window.LudiaNaverImportCore.plan(rows,salonAppointments,{today:localDateKey(),staffNames:salonStaffNames,...options})},
  async apply(rows,options){if(salonCloudMode!=='demo')throw Error('local_mode_required');const result=this.preview(rows,options),previous=salonAppointments;if(!result.changes.length)return result;
@@ -1388,7 +1389,7 @@ $('#bookingNextWeek')?.addEventListener('click',()=>{bookingDayOffset+=7;refresh
 $$('.more-card:not([data-nav])').forEach(b=>b.onclick=()=>toast(`${b.querySelector('b').textContent} · 필요한 핵심 화면만 단계적으로 연결합니다`));
 
 
-(async function boot(){try{const mode=await loadPersisted();hydrateFromState();renderAll();renderOpsToday();renderBooking();renderCustomers();syncProfilePhoto();setView(state.view);setSaveStatus('saved',mode==='new'?'자동저장 준비':'자동저장됨');if(mode==='restored'||mode==='migrated')toast(mode==='migrated'?'기존 보관함을 새 저장방식으로 옮겼어요':'이전 작업을 복원했어요');if(mode==='new')schedulePersist();initSalonCloud().catch(error=>console.error('[LUDIA cloud init]',error))}catch(error){console.error('[LUDIA boot recovery]',error);renderOpsToday();renderBooking();renderCustomers();setView(state.view);setSaveStatus('error','일부 기능 복구 모드')}})();
+(async function boot(){try{const mode=await loadPersisted();hydrateFromState();renderAll();renderOpsToday();renderBooking();renderCustomers();syncProfilePhoto();setView(state.view);setSaveStatus('saved',mode==='new'?'자동저장 준비':'자동저장됨');if(mode==='restored'||mode==='migrated')toast(mode==='migrated'?'기존 보관함을 새 저장방식으로 옮겼어요':'이전 작업을 복원했어요');if(mode==='new')schedulePersist();await initSalonCloud().catch(error=>console.error('[LUDIA cloud init]',error));window.LudiaNaverImport.ready=true}catch(error){console.error('[LUDIA boot recovery]',error);renderOpsToday();renderBooking();renderCustomers();setView(state.view);setSaveStatus('error','일부 기능 복구 모드')}})();
 if('serviceWorker' in navigator)window.addEventListener('load',()=>navigator.serviceWorker.register('sw.js',{updateViaCache:'none'}).then(reg=>reg.update()).catch(()=>{}));
 
 /* v2.37 · Nail Canvas Pro — commit-on-save editor */

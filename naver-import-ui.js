@@ -1,7 +1,7 @@
 (function(){'use strict';
  const core=window.LudiaNaverImportCore,esc=v=>String(v??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
  const names={bookingNo:'예약번호',date:'이용일',time:'이용시간',dateTime:'이용일시',status:'예약상태',customerName:'고객명',phone:'전화번호',serviceName:'시술·상품',staffName:'담당자',duration:'소요시간(분)'};
- let rawRows=null,parsed=null,plan=null,folder=null,folderOptions=null,lastFileStamp='',pollBusy=false,localMessage='';
+ let rawRows=null,parsed=null,plan=null,folder=null,folderOptions=null,lastFileStamp='',pollBusy=false,localMessage='',directBusy=false,directState=null;
  const message=t=>{localMessage=t;const el=document.querySelector('#nbLocalMessage');if(el)el.textContent=t};
  async function spreadsheet(file){if(file.name.toLowerCase().endsWith('.xls'))throw Error('XLS·암호가 있는 엑셀은 Excel에서 연 뒤 CSV UTF-8로 저장해 주세요.');const bytes=await file.arrayBuffer();try{core.xlsxBudget(bytes)}catch{throw Error('암호·파일 크기를 확인하고 CSV UTF-8로 저장해 주세요.')}return new Promise((resolve,reject)=>{const worker=new Worker('naver-xlsx-worker.mjs?v=2.63.2',{type:'module'}),timer=setTimeout(()=>{worker.terminate();reject(Error('엑셀을 읽는 시간이 길어요. CSV UTF-8로 저장해 주세요.'))},30000),finish=()=>{clearTimeout(timer);worker.terminate()};worker.onmessage=({data})=>{finish();if(data.error)reject(Error('엑셀 형식을 확인하고 예약 시트만 CSV UTF-8로 저장해 주세요.'));else resolve(data.rows)};worker.onerror=()=>{finish();reject(Error('엑셀을 읽지 못했어요. CSV UTF-8로 저장해 주세요.'))};worker.postMessage(bytes,[bytes])})}
 
@@ -19,7 +19,24 @@
  async function pollFolder(initial=false){if(pollBusy||!folder||document.hidden||(!initial&&document.querySelector('#naverImportSheet')))return;pollBusy=true;try{if(!window.LudiaNaverImport.context().local){folder=null;folderOptions=null;throw Error('기기 모드가 바뀌어 PC 폴더 확인을 중단합니다.')}const statusHandle=await folder.getFileHandle('ludia-naver-status.json'),status=JSON.parse(await (await statusHandle.getFile()).text()),handle=await folder.getFileHandle('ludia-naver-bookings.json'),file=await handle.getFile(),stamp=file.lastModified+':'+file.size,raw=JSON.parse(await file.text());core.health(raw,status);if(stamp===lastFileStamp){message('PC 파일 확인 중 · 최근 예약 화면 정상 · 이 PC에만 저장');return}const data=core.json(raw);if(data.errors.length)throw Error('PC 파일에 잘못된 예약이 있어 반영하지 않았어요.');if(initial||!folderOptions){close();rawRows=null;show(data,{folderSource:true});document.querySelector('#niApply').textContent='확인 후 이 PC에서 자동 반영'}else{const result=await window.LudiaNaverImport.apply(data.rows,folderOptions);message('PC 파일 확인 · '+result.changes.length+'건 반영 · '+result.skipped.filter(x=>x.reason!=='unchanged').length+'건 보류')}lastFileStamp=stamp}catch(e){const labels={stale_bridge_file:'PC 브리지의 최근 파일이 아니에요. 브리지와 예약 화면을 확인해 주세요.',login_required:'PC의 네이버 공식 페이지에서 로그인해 주세요. 자동 반영 대기 중입니다.',reauth_required:'PC의 네이버 로그인이 만료됐어요. 공식 페이지에서 다시 로그인해 주세요.',bridge_screen_not_verified:'예약 화면을 확인하기 전에는 자동 반영하지 않습니다.'};message(e.name==='NotFoundError'?'폴더에 브리지 예약·상태 JSON이 없어요. exports 폴더를 선택해 주세요.':labels[e.message]||e.message||'PC 폴더를 읽지 못했어요.')}finally{pollBusy=false}}
 
  async function connectFolder(){if(!window.showDirectoryPicker){message('PC Chrome/Edge에서 폴더 연결을 사용할 수 있어요. 모바일은 파일 가져오기를 사용하세요.');return}if(!window.LudiaNaverImport.context().local){message('기기 모드에서 PC 폴더를 연결해 주세요.');return}try{folder=await window.showDirectoryPicker({mode:'read'});folderOptions=null;lastFileStamp='';await pollFolder(true)}catch(e){if(e.name!=='AbortError')message('폴더 읽기 권한을 확인해 주세요.')}}
- window.LudiaNaverLocalUI={message:()=>localMessage};
+ window.LudiaNaverLocalUI={message:()=>localMessage,
+  directStatus(){if(!directState||!window.LudiaNaverImport.context().local)return null;return{...directState,state:directState.state==='connected'&&Date.now()-Date.parse(directState.lastSyncAt)>180000?'stale':directState.state};},
+  async receiveBridge(payload){
+   if(directBusy)throw Error('local_delivery_busy');
+   if(window.LudiaNaverImport.ready!==true)throw Error('app_not_ready');
+   if(!window.LudiaNaverImport.context().local)throw Error('local_mode_required');
+   if(document.querySelector('#naverImportSheet'))throw Error('import_review_open');
+   directBusy=true;try{
+    core.health(payload?.exported,payload?.status);const data=core.json(payload.exported);
+    if(data.errors.length)throw Error('invalid_bridge_snapshot');
+    const result=await window.LudiaNaverImport.apply(data.rows,{defaultStaff:'미지정',defaultDuration:90}),held=result.skipped.filter(x=>x.reason!=='unchanged').length;
+    directState={state:'connected',lastSyncAt:new Date().toISOString(),held};window.dispatchEvent(new CustomEvent('ludia:naver-local-status'));
+    message('PC 직접 연결 · '+result.changes.length+'건 반영'+(held?' · '+held+'건 시간 중복 보류':'')+' · '+new Date().toLocaleTimeString('ko-KR',{hour:'2-digit',minute:'2-digit'})+' · 이 연결창에 저장');
+    return{ok:true,persisted:true,changed:result.changes.length,held};
+   }finally{directBusy=false}
+  },
+  bridgeStatus(status){const labels={login_required:'PC 네이버 창에서 로그인해 주세요.',reauth_required:'PC 네이버 로그인이 만료됐어요. 다시 로그인하면 반영을 재개합니다.',selector_required:'확인한 예약 목록·항목이 달라져 자동 반영을 멈췄어요.',error:'최근 예약 화면을 확인하지 못했어요. 저장된 예약은 유지하고 재시도합니다.'};if(labels[status]){message(labels[status]);directState={...directState,state:status};window.dispatchEvent(new CustomEvent('ludia:naver-local-status'));}}
+ };
  document.addEventListener('click',e=>{if(e.target.closest('[data-nb-file-import]'))pick();if(e.target.closest('[data-nb-folder-connect]'))connectFolder();if(e.target.closest('[data-nb-folder-disconnect]')){folder=null;folderOptions=null;message('PC 폴더 연결 해제됨')}});
  setInterval(()=>pollFolder(),60000);document.addEventListener('visibilitychange',()=>{if(!document.hidden)pollFolder()});document.addEventListener('keydown',e=>{if(e.key==='Escape')close()});
 })();

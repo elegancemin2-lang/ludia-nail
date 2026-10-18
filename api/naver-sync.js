@@ -24,6 +24,7 @@ export default async function handler(req,res){
  if(body?.source!=='NAVER'||!Array.isArray(body.events)||body.reviews&&(!Array.isArray(body.reviews)||body.reviews.length))return json(res,400,{ok:false,error:'invalid_or_unverified_payload'});
  if(body.events.length>200)return json(res,413,{ok:false,error:'too_many_events'});
  const diag=diagnostics(body.diagnostics),rows=body.events.map(normalizeEvent);if(rows.some(x=>!x))return json(res,400,{ok:false,error:'ambiguous_booking_rejected'});
+ rows.sort((a,b)=>Number(['cancelled','no_show'].includes(b.status))-Number(['cancelled','no_show'].includes(a.status)));
  if(rows.length&&!diag.parser_verified)return json(res,409,{ok:false,error:'selectors_not_verified'});
  let state=states.has(body.bridgeState)?body.bridgeState:'selector_required';if(state==='connected'&&!diag.parser_verified)state='selector_required';if(rows.length&&state!=='connected')return json(res,409,{ok:false,error:'booking_screen_not_verified'});
  try{if(!await salonExists(cfg,sid))return json(res,503,{ok:false,error:'salon_not_configured',retryable:true});let synced=0;

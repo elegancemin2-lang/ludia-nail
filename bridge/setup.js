@@ -4,12 +4,13 @@ import path from 'node:path';
 import {fileURLToPath, pathToFileURL} from 'node:url';
 import {randomBytes, createHash, timingSafeEqual} from 'node:crypto';
 import {spawn} from 'node:child_process';
-import {smartplaceUrl, pageMatches, editableConfig, publicConfig, selectorFingerprint, FIELD_KEYS, validateConfig} from './config.js';
+import {smartplaceUrl, pageMatches, sameShopView, editableConfig, publicConfig, selectorFingerprint, FIELD_KEYS, validateConfig} from './config.js';
 import {checkServer, issueCopy} from './preflight.js';
 import {readRenderedRows, maskedPreview} from './dom-reader.js';
 import {buildChanges} from './booking-reader.js';
 import {atomicJson} from './local-export.js';
 import {installPicker, pickerSnapshot} from './picker.js';
+import {detectRenderedTable} from './auto-fields.js';
 
 const HERE = path.dirname(fileURLToPath(import.meta.url));
 const read = async (file, fallback) => {try{return JSON.parse(await fs.readFile(file, 'utf8'));}catch(error){if(error.code==='ENOENT')return fallback;throw Error('config_file_invalid');}};
@@ -24,12 +25,15 @@ const copy = {
   server_not_ready:'서버 연결 준비가 끝나지 않았어요. 연결 검사의 안내를 확인하세요.',
   operation_busy:'앞선 작업이 끝난 뒤 다시 시도하세요.', invalid_request:'요청을 처리하지 못했어요.',
   sync_key_required:'서버와 같은 매장 PC 연결 키를 입력하세요.', config_file_invalid:'기존 설정 파일을 읽지 못했어요. 파일을 보존한 채 JSON 문법을 확인하세요.',
-  setup_failed:'작업을 완료하지 못했어요. 브리지가 이미 실행 중이면 먼저 종료하고 다시 시도하세요.'
+  setup_failed:'작업을 완료하지 못했어요. 브리지가 이미 실행 중이면 먼저 종료하고 다시 시도하세요.',
+  automatic_fields_unavailable:'예약 표의 제목만으로 항목을 정확히 확인하지 못했어요. 직접 선택을 사용하세요.',
+  another_shop_view:'추가 목록은 같은 매장·같은 예약관리 주소에서 상태나 날짜만 달라야 합니다.',
+  too_many_views:'추가 목록은 최대 4개까지 연결할 수 있어요.',duplicate_view:'이미 확인한 목록입니다.'
 };
 
 export async function createSetupServer({configPath = path.join(HERE, 'config.local.json'), browserFactory, fetcher = fetch, onStart, lifetimeMs = 3600000} = {}) {
   let config = await read(configPath, await read(path.join(HERE,'config.example.json'), {}));
-  let context = null, busy = false, verification = null, started = false;
+  let context = null, busy = false, verification = null, started = false,reviewedViews=[];
   const token = randomBytes(32).toString('base64url');
   const makeBrowser = browserFactory || (async profile => {
     const {chromium} = await import('playwright');
@@ -45,10 +49,10 @@ export async function createSetupServer({configPath = path.join(HERE, 'config.lo
     let page = null, picked = null;
     try {page=officialPage();picked=await page.evaluate(pickerSnapshot);}catch{}
     return {config:publicConfig(config), browserOpen:Boolean(context), pageState:page?'smartplace':context?'login_required':'closed',
-      currentUrl:page?.url()||'', selection:picked, verified:Boolean(verification), started, attachmentsSupported:false};
+      currentUrl:page?.url()||'', selection:picked, verified:Boolean(verification), reviewedViewCount:reviewedViews.length, started, attachmentsSupported:false};
   };
-  const inspect = async next => {
-    const page=officialPage();
+  const inspect = async (next,selectedPage) => {
+    const page=selectedPage||officialPage();
     if(!pageMatches(page.url(), next.smartplaceUrl))throw Error('booking_screen_changed');
     if(!next.bookingRowSelector)throw Error('booking_row_required');
     const f=next.bookingFields||{};
@@ -58,6 +62,17 @@ export async function createSetupServer({configPath = path.join(HERE, 'config.lo
     const changes=buildChanges(rows,{bookings:{}});
     if(changes.rejectedCount||!changes.parsedCount)throw Error('ambiguous_rows');
     return {rowCount:rows.length,parsedCount:changes.parsedCount,preview:maskedPreview(Object.values(changes.next).map(x=>x.row))};
+  };
+  const inspectAll = async next => {
+    const views=[next,...reviewedViews],current=officialPage();
+    if(!views.some(v=>pageMatches(current.url(),v.smartplaceUrl)))throw Error('booking_screen_changed');
+    let primary;
+    for(const [i,view] of views.entries()){
+      let page=context.pages().find(p=>!p.isClosed()&&pageMatches(p.url(),view.smartplaceUrl));
+      if(!page){page=await context.newPage();await page.goto(view.smartplaceUrl,{waitUntil:'domcontentloaded'});}
+      const result=await inspect(view,page);if(i===0)primary=result;
+    }
+    return primary;
   };
   const server=http.createServer(async(req,res)=>{
     const host='127.0.0.1:'+server.address().port;
@@ -98,25 +113,46 @@ export async function createSetupServer({configPath = path.join(HERE, 'config.lo
         const result=await checkServer({syncUrl:input.syncUrl||config.syncUrl,syncToken:input.syncToken||config.syncToken},fetcher);
         return json(200,{ok:true,result:{...result,messages:result.issues.map(code=>issueCopy[code]||copy[code]||copy.server_not_ready)}});
       }
+      if(pathname==='/api/detect'){
+        verification=null;reviewedViews=[];const page=officialPage(),fields=await page.evaluate(detectRenderedTable);
+        if(!fields)throw Error('automatic_fields_unavailable');
+        const next=editableConfig(config,{...input,...fields,smartplaceUrl:page.url()}),result=await inspect(next);
+        verification={fingerprint:selectorFingerprint(next),verifiedAt:new Date().toISOString(),...result};
+        return json(200,{ok:true,...result,detected:{smartplaceUrl:next.smartplaceUrl,...fields},note:'실제 표의 열 제목으로만 확인했습니다. 미리보기를 확인한 뒤 연결하세요.'});
+      }
       if(pathname==='/api/verify'){
-        verification=null;const next=editableConfig(config,input),result=await inspect(next);
+        verification=null;reviewedViews=[];const next=editableConfig(config,input),result=await inspect(next);
         verification={fingerprint:selectorFingerprint(next),verifiedAt:new Date().toISOString(),...result};
         return json(200,{ok:true,...result,note:'지금 화면에 표시된 조회 기간의 예약만 확인했습니다. 목록에서 사라진 예약은 취소로 처리하지 않습니다.'});
+      }
+      if(pathname==='/api/add-view'){
+        const primary=editableConfig(config,input);
+        if(!verification||verification.fingerprint!==selectorFingerprint(primary))throw Error('preview_required');
+        if(reviewedViews.length>=4)throw Error('too_many_views');
+        const page=officialPage(),url=page.url();
+        if(!sameShopView(url,primary.smartplaceUrl))throw Error('another_shop_view');
+        if([primary,...reviewedViews].some(v=>pageMatches(v.smartplaceUrl,url)))throw Error('duplicate_view');
+        const detected=await page.evaluate(detectRenderedTable);
+        const next={smartplaceUrl:url,bookingRowSelector:primary.bookingRowSelector,bookingFields:primary.bookingFields,...detected};
+        const result=await inspect(next);next.selectorsVerified=true;next.selectorVerification={fingerprint:selectorFingerprint(next),verifiedAt:new Date().toISOString(),rowCount:result.rowCount,source:'owner-reviewed-rendered-dom'};
+        reviewedViews.push(next);
+        return json(200,{ok:true,...result,reviewedViewCount:reviewedViews.length,note:'이 추가 목록도 확인했습니다. 취소는 상태가 명시된 예약만 반영합니다. 최종 확인 후 저장하세요.'});
       }
       if(pathname==='/api/save'){
         if(input.confirmed!==true)throw Error('owner_confirmation_required');
         const next=editableConfig(config,input);
         if(!verification||verification.fingerprint!==selectorFingerprint(next))throw Error('preview_required');
-        const result=await inspect(next);
+        const result=await inspectAll(next);
         if(next.deliveryMode==='server'&&!(await checkServer(next,fetcher)).ok)throw Error('server_not_ready');
         next.selectorsVerified=true;next.selectorVerification={fingerprint:selectorFingerprint(next),verifiedAt:new Date().toISOString(),rowCount:result.rowCount,source:'owner-reviewed-rendered-dom'};
+        next.bookingViews=reviewedViews;next.openLocalApp=true;
         validateConfig(next);await atomicJson(configPath,next);config=next;
         return json(200,{ok:true,...await state()});
       }
       if(pathname==='/api/start'){
         validateConfig(config);
         if(!verification||verification.fingerprint!==selectorFingerprint(config))throw Error('preview_required');
-        await inspect(config);
+        await inspectAll(config);
         if(config.deliveryMode==='server'&&!(await checkServer(config,fetcher)).ok)throw Error('server_not_ready');
         if(!onStart)throw Error('setup_failed');
         started=true;await context?.close();context=null;

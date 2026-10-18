@@ -25,3 +25,4 @@ vision/*.test.json
 bridge/exports/
 
 bridge/.bridge-local-state.json
+bridge/.runtime/

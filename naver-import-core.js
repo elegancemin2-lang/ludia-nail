@@ -25,18 +25,27 @@
  function fingerprint(v){return JSON.stringify([v.date,v.time,v.status,v.customerName,v.phone,v.serviceName,v.staffName,v.duration])}
  function plan(rows,existing,{today,staffNames=[],defaultStaff='미지정',defaultDuration=90}={}){if(!date(today)||!Number.isInteger(defaultDuration)||defaultDuration<5||defaultDuration>720)throw Error('import_options_invalid');const changes=[],skipped=[],byId=new Map(),duplicates=new Set();
   for(const input of rows){const r=normalize(input),old=byId.get(r.bookingNo);if(old&&fingerprint(old)!==fingerprint(r))duplicates.add(r.bookingNo);else byId.set(r.bookingNo,r)}
-  const working=existing.map(a=>({...a}));for(const r of byId.values()){
+  const candidates=[],unchanged=[];for(const r of byId.values()){
    if(duplicates.has(r.bookingNo)){skipped.push({bookingNo:r.bookingNo,reason:'duplicate_conflicting'});continue}
-   const id='naver-file:'+r.bookingNo,old=working.find(a=>a.id===id),staff=r.staffName?(staffNames.includes(r.staffName)?r.staffName:'미지정'):old?.staff||defaultStaff;
+   const id='naver-file:'+r.bookingNo,old=existing.find(a=>a.id===id),staff=r.staffName?(staffNames.includes(r.staffName)?r.staffName:'미지정'):old?.staff||defaultStaff;
    if(staff!=='미지정'&&!staffNames.includes(staff))throw Error('staff_mapping_invalid');
    const duration=r.duration||old?.duration||defaultDuration,offset=Math.round((Date.parse(r.date+'T12:00:00Z')-Date.parse(today+'T12:00:00Z'))/86400000);
    const next={...old,id,naverBookingNo:r.bookingNo,naverImportFingerprint:fingerprint(r),source:'naver',importSource:'file',naverStatus:r.status,dayOffset:offset,date:r.date,time:r.time,customer:r.customerName||old?.customer||'네이버 고객',phone:r.phone||old?.phone||'',service:r.serviceName||old?.service||'네이버 예약',staff,duration,status:localStatus(r.status),amount:old?.amount||0,note:old?.note||'네이버 파일 가져오기 · 첨부사진 별도 확인',membership:old?.membership||'확인 필요',last:old?.last||'확인 필요'};
-   const active=a=>!['취소','노쇼','cancelled','no_show'].includes(a.status),mins=t=>+t.slice(0,2)*60+ +t.slice(3),start=mins(next.time);
-   const conflict=active(next)&&staff!=='미지정'&&working.find(a=>a.id!==id&&a.staff===staff&&Number(a.dayOffset||0)===offset&&active(a)&&start<mins(a.time)+(Number(a.duration)||90)&&start+duration>mins(a.time));
-   if(conflict){skipped.push({bookingNo:r.bookingNo,reason:'same_staff_overlap'});continue}
-   if(old&&old.naverImportFingerprint===fingerprint(r)&&old.staff===next.staff&&old.duration===next.duration){skipped.push({bookingNo:r.bookingNo,reason:'unchanged'});continue}
-   changes.push({type:old?'updated':'created',appointment:next,unassigned:staff==='미지정'});if(old)working.splice(working.indexOf(old),1,next);else working.push(next)
+   if(old&&old.naverImportFingerprint===fingerprint(r)&&old.staff===next.staff&&old.duration===next.duration){unchanged.push({bookingNo:r.bookingNo,reason:'unchanged'});continue}
+   candidates.push({type:old?'updated':'created',appointment:next,unassigned:staff==='미지정'})
   }
+  // Compare final slots, then restore rejected moves until capacity is consistent.
+  // Cancellations free capacity independently of row order; valid slot swaps are allowed.
+  const active=a=>!['취소','노쇼','cancelled','no_show'].includes(a.status),mins=t=>+t.slice(0,2)*60+ +t.slice(3);
+  const overlaps=(a,b)=>a.id!==b.id&&a.staff!=='미지정'&&a.staff===b.staff&&Number(a.dayOffset||0)===Number(b.dayOffset||0)&&active(a)&&active(b)&&mins(a.time)<mins(b.time)+(Number(b.duration)||90)&&mins(a.time)+(Number(a.duration)||90)>mins(b.time);
+  const accepted=new Map(candidates.map((c,i)=>[c.appointment.id,{...c,index:i}]));let changed=true;
+  while(changed){changed=false;const fixed=existing.filter(a=>!accepted.has(a.id)),pending=[...accepted.values()];
+   for(const c of pending){if(!accepted.has(c.appointment.id))continue;
+    if(fixed.some(a=>overlaps(c.appointment,a))||pending.some(a=>a.index<c.index&&accepted.has(a.appointment.id)&&overlaps(c.appointment,a.appointment))){accepted.delete(c.appointment.id);skipped.push({bookingNo:c.appointment.naverBookingNo,reason:'same_staff_overlap'});changed=true}
+   }
+  }
+  const working=existing.map(a=>({...a}));for(const c of accepted.values()){const {index,...change}=c;changes.push(change);const i=working.findIndex(a=>a.id===c.appointment.id);if(i<0)working.push(c.appointment);else working[i]=c.appointment}
+  skipped.push(...unchanged);
   return{changes,skipped,appointments:working};
  }
  const api={fields,date,time,status,normalize,parseDelimited,detect,table,json,health,xlsxBudget,plan};if(typeof module==='object'&&module.exports)module.exports=api;else root.LudiaNaverImportCore=api;

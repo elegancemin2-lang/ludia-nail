@@ -1,7 +1,7 @@
 <!doctype html>
 <html lang="ko"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>LUDIA · PC 예약 연결</title><link rel="stylesheet" href="/setup.css"><script src="/setup-client.js" defer></script></head>
 <body><main>
-  <header><p class="eyebrow">LUDIA NAIL · PC 연결</p><h1>네이버 예약 연결</h1><p>이 매장 PC에서 로그인하고, 실제 예약 항목을 확인합니다.</p></header>
+  <header><p class="eyebrow">LUDIA NAIL · PC 연결</p><h1>로그인하고, 예약 연결</h1><p>최초 한 번 예약 내용을 확인하면 다음부터 저장한 설정으로 시작합니다.</p></header>
   <p id="notice" class="notice" role="status">연결 설정을 불러오는 중이에요.</p>
   <section aria-labelledby="loginTitle"><div class="section-head"><span class="step">1</span><h2 id="loginTitle">네이버에 직접 로그인</h2></div>
     <p>전용 네이버 창을 열고 매장의 <b>예약관리 목록</b>으로 이동하세요. 비밀번호·보안문자·2단계 인증은 네이버에서 직접 입력합니다.</p>
@@ -9,7 +9,10 @@
     <label>이 매장의 예약관리 주소<input id="smartplaceUrl" type="url" autocomplete="off" spellcheck="false" placeholder="네이버 창에서 예약관리 화면으로 이동하세요"></label>
     <button id="useCurrent" class="quiet" type="button">현재 네이버 화면 주소 사용</button>
   </section>
-  <section aria-labelledby="fieldsTitle"><div class="section-head"><span class="step">2</span><h2 id="fieldsTitle">예약 항목 지정</h2></div>
+  <section aria-labelledby="fieldsTitle"><div class="section-head"><span class="step">2</span><h2 id="fieldsTitle">예약 내용 한 번 확인</h2></div>
+    <p>예약관리에서 <b>전체 상태 · 취소 포함</b> 목록을 여세요. 실제 표에 예약번호·일시·상태 제목이 있으면 자동으로 확인합니다.</p>
+    <button type="button" id="detect" class="primary">현재 예약 목록 자동 확인</button>
+    <details><summary>자동 확인이 안 될 때 직접 선택</summary>
     <p>아래 버튼을 누른 뒤 네이버 창에서 해당 항목을 클릭하세요. <b>한 줄 전체</b>는 마우스를 올리고 <b>↑</b>로 영역을 넓힌 뒤 <b>Enter</b>로 선택합니다.</p>
     <div class="field-buttons" id="fieldButtons">
       <button type="button" data-pick="row">예약 한 줄 전체<span id="picked-row">미지정</span></button>
@@ -21,13 +24,14 @@
     </div>
     <details><summary>고객·시술·담당자 등 추가 항목</summary><div id="optionalFields" class="field-buttons"></div><p class="muted">화면에서 각각 확인되는 항목만 선택합니다. 사진 첨부는 아직 연결하지 않습니다.</p></details>
     <details><summary>선택 영역 직접 확인·수정</summary><div id="selectorInputs" class="selectors"></div><p class="muted">네이버 화면을 실제로 확인한 선택 영역만 사용하세요. 빈 항목을 임의로 추정하지 않습니다.</p></details>
-    <button type="button" id="verify" class="primary">실제 예약 미리보기</button>
+    <button type="button" id="verify" class="primary">실제 예약 미리보기</button></details>
     <div id="preview" aria-live="polite"></div>
+    <details><summary>취소가 다른 목록에 있을 때</summary><p>먼저 위 예약 미리보기를 확인하세요. 네이버 창에서 <b>같은 매장의 취소 목록</b>으로 이동한 뒤 아래 버튼으로 추가합니다. 같은 형식의 예약이 한 건 이상 보여야 확인할 수 있어요.</p><button type="button" id="addView" disabled>현재 취소·추가 목록도 연결</button><p id="viewCount" class="muted">기본 목록만 연결합니다. 설정을 다시 저장할 때는 추가 목록도 재확인하세요.</p></details>
     <p class="muted">현재 화면의 조회 기간·페이지에 렌더링된 예약만 확인합니다. 다른 매장·조회 기간으로 이동하면 다시 확인합니다. 목록에서 사라졌다는 이유로 취소 처리하지 않습니다.</p>
   </section>
   <section aria-labelledby="deliveryTitle"><div class="section-head"><span class="step">3</span><h2 id="deliveryTitle">예약 전달 방식</h2></div>
-    <label>저장 위치<select id="deliveryMode"><option value="local">이 PC에 저장</option><option value="server">서버에 전송 · 휴대폰에서 확인</option></select></label>
-    <p id="deliveryNote">이 PC의 exports 폴더에 저장합니다. LUDIA의 PC 폴더 연결이 필요하며 휴대폰으로 자동 공유하지 않습니다.</p>
+    <label>저장 위치<select id="deliveryMode"><option value="local">이 PC의 LUDIA 창에 자동 반영</option><option value="server">서버에 전송 · 휴대폰에서 확인</option></select></label>
+    <p id="deliveryNote">연결 프로그램이 여는 LUDIA 창에 바로 저장합니다. 폴더 선택은 필요 없어요. 기존 일반 Chrome·휴대폰의 데이터와는 별도입니다.</p>
     <div id="serverSettings" hidden>
       <label>LUDIA 서버 주소<input id="syncUrl" type="url" value="https://ludianail.vercel.app/api/naver-sync" spellcheck="false"></label>
       <label>매장 PC 연결 키<input id="syncToken" type="password" autocomplete="off" spellcheck="false" placeholder="네이버 비밀번호를 입력하지 마세요"></label>
@@ -35,8 +39,9 @@
       <p class="muted">검사만으로 예약을 저장하거나 연결 상태를 바꾸지 않습니다. 서버 준비가 끝나야 이 방식으로 저장할 수 있어요. PC 키는 예약 조회·관리자 권한을 주지 않습니다.</p>
       <p class="muted">서버 예약표의 담당자·시술 연결은 매장에 등록된 매핑 기준을 사용합니다. 매핑이 없으면 미지정으로 표시하며 선택한 텍스트만으로 직원을 임의 배정하지 않습니다.</p>
     </div>
-    <label class="confirmation"><input id="confirmed" type="checkbox">미리보기의 예약번호·시간·상태와 조회 기간을 실제 화면에서 확인했습니다.</label>
-    <div class="actions"><button id="save" type="button" class="primary" disabled>확인한 설정 저장</button><button id="run" type="button" disabled>예약 연결 실행</button></div>
+    <label class="confirmation"><input id="confirmed" type="checkbox">기본·추가 목록의 예약번호·시간·상태와 매장·조회 기간을 실제 화면에서 확인했습니다.</label>
+    <button id="connect" type="button" class="primary" disabled>확인하고 자동연동 시작</button>
+    <details><summary>저장과 실행 따로 하기</summary><div class="actions"><button id="save" type="button" disabled>확인한 설정 저장</button><button id="run" type="button" disabled>예약 연결 실행</button></div></details>
     <p id="savedState" class="muted">저장 후 실행합니다. 연결됨 표시는 정상 수집과 저장에 성공한 뒤 나타납니다.</p>
   </section>
   <footer><button id="downloadReport" type="button" class="quiet">고객정보 없는 진단 파일 저장</button><p>이 설정 화면은 이 PC에서만 열립니다. 로그인 쿠키와 설정 파일은 PC 밖으로 업로드하지 마세요.</p><p>초기 연결은 네이버 → LUDIA입니다. LUDIA에서 만든 예약이 네이버 빈 시간을 자동으로 막지는 않습니다.</p></footer>

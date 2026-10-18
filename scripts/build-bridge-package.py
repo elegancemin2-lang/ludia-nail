@@ -7,12 +7,12 @@ ROOT = Path(__file__).resolve().parent.parent
 FILES = (
     'START_NAVER_BRIDGE.cmd', 'SETUP_NAVER_BRIDGE.cmd', 'README.md',
     'package.json', 'package-lock.json', 'config.example.json', 'config-check.js',
-    'bridge.js', 'booking-reader.js', 'local-export.js', 'config.js', 'dom-reader.js',
+    'bridge.js', 'app-delivery.js', 'auto-fields.js', 'booking-reader.js', 'local-export.js', 'config.js', 'dom-reader.js',
     'preflight.js', 'picker.js', 'setup.js', 'setup.html', 'setup.css', 'setup-client.js', 'diagnose.js',
 )
 
 def build():
-    destination = ROOT / 'downloads' / 'ludia-naver-bridge-0.4.0.zip'
+    destination = ROOT / 'downloads' / 'ludia-naver-bridge-0.5.0.zip'
     destination.parent.mkdir(exist_ok=True)
     with zipfile.ZipFile(destination, 'w', compression=zipfile.ZIP_DEFLATED, compresslevel=9) as archive:
         for name in FILES:
